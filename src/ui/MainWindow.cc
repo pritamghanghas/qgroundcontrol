@@ -72,6 +72,8 @@ This file is part of the QGROUNDCONTROL project
 #include "CustomCommandWidget.h"
 #include "HomePositionManager.h"
 #include "MissionEditor.h"
+#include "nodeselector.h"
+#include "pidiscoverer.h"
 
 #ifdef UNITTEST_BUILD
 #include "QmlControls/QmlTestWidget.h"
@@ -307,6 +309,8 @@ MainWindow::MainWindow(QSplashScreen* splashScreen)
         qd.close();
 #endif
     }
+
+    piNodeSelector();
 }
 
 MainWindow::~MainWindow()
@@ -401,6 +405,12 @@ void MainWindow::_buildCommonWidgets(void)
         const struct DockWidgetInfo* pDockInfo = &rgDockWidgetInfo[i];
         _createDockWidget(pDockInfo->title, pDockInfo->name, pDockInfo->area, NULL /* no inner widget yet */);
     }
+}
+
+NodeSelector* MainWindow::piNodeSelector()
+{
+    static NodeSelector* nodeSelector = new NodeSelector(new QNetworkAccessManager());
+    return nodeSelector;
 }
 
 void MainWindow::_buildPlanView(void)
@@ -728,6 +738,10 @@ void MainWindow::connectCommonActions()
 
     // Update Tool Bar
     _mainToolBar->setCurrentView(_currentView);
+
+    // pi related
+    connect(_ui.actionShutdown_UAV, &QAction::triggered, piNodeSelector(), &NodeSelector::shutdownAll);
+    connect(_ui.action_Restart_UAV, &QAction::triggered, piNodeSelector(), &NodeSelector::restartAll);
 }
 
 void MainWindow::_openUrl(const QString& url, const QString& errorMessage)

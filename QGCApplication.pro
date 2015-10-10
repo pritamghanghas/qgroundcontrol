@@ -682,6 +682,7 @@ contains (DEFINES, DISABLE_VIDEOSTREAMING) {
     message("Skipping support for video streaming (manual override from user_config.pri)")
 } else {
     include(src/VideoStreaming/VideoStreaming.pri)
+    include(src/hb/hb.pri)
 }
 
 #-------------------------------------------------------------------------------------

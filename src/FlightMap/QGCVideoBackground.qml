@@ -30,24 +30,75 @@ This file is part of the QGROUNDCONTROL project
 import QtQuick 2.4
 import QtQuick.Controls 1.3
 import QGroundControl.QgcQtGStreamer 1.0
+import QGroundControl.ScreenTools    1.0
+import QGroundControl.Controls       1.0
 
 VideoItem {
     id: videoBackground
     property var display
     property var receiver
     surface: display
+
+    ListModel {
+        id: resolutionList
+
+        ListElement {
+            text:           "1080 30p 2mbps";
+            width:          1920;
+            height:         1080;
+            bitrate:        2000000;
+            fps:            30;
+        }
+        ListElement {
+            text:           "720 49p 1mbps";
+            width:          1296;
+            height:          730;
+            bitrate:        1000000;
+            fps:             49;
+        }
+        ListElement {
+            text:           "640 90p 1mbps";
+            width:          640;
+            height:         480;
+            bitrate:        1000000;
+            fps:            90;
+        }
+    }
+
+    QGCComboBox {
+        id:         resolutionSelectionComboBox
+        width: 150
+        x: parent.width - width - 10;
+        y: parent.height - height - 10;
+        visible:    true
+        model:      resolutionList
+
+        onCurrentIndexChanged: {
+            console.debug("lets start the video with resolution" + resolutionList.get(currentIndex).width);
+            videoBackground.receiver.start(resolutionList.get(currentIndex).width, resolutionList.get(currentIndex).height,
+                                           resolutionList.get(currentIndex).fps, resolutionList.get(currentIndex).bitrate);
+        }
+
+    }
+
+
+    Component.onCompleted: {
+        if(videoBackground.visible && videoBackground.receiver) {
+            resolutionSelectionComboBox.currentIndex = 1;
+        }
+    }
+
     onVisibleChanged: {
         if(videoBackground.receiver && videoBackground.display) {
             if(videoBackground.visible) {
-                videoBackground.receiver.start();
+                videoBackground.receiver.start(resolutionList.get(resolutionSelectionComboBox.currentIndex).width,
+                                               resolutionList.get(resolutionSelectionComboBox.currentIndex).height,
+                                               resolutionList.get(resolutionSelectionComboBox.currentIndex).
+                                               fps,
+                                               resolutionList.get(resolutionSelectionComboBox.currentIndex).bitrate);
             } else {
                 videoBackground.receiver.stop();
             }
-        }
-    }
-    Component.onCompleted: {
-        if(videoBackground.visible && videoBackground.receiver) {
-            videoBackground.receiver.start();
         }
     }
 }

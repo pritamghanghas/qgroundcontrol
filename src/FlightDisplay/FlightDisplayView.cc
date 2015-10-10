@@ -31,6 +31,7 @@ This file is part of the QGROUNDCONTROL project
 
 #include "ScreenToolsController.h"
 #include "FlightDisplayView.h"
+#include "MainWindow.h"
 
 const char* kMainFlightDisplayViewGroup = "FlightDisplayView";
 
@@ -77,8 +78,7 @@ FlightDisplayView::FlightDisplayView(QWidget *parent)
      */
     VideoSurface* pSurface = new VideoSurface;
     setContextPropertyObject("videoDisplay", pSurface);
-    VideoReceiver* pReceiver = new VideoReceiver(this);
-    pReceiver->setUri(QLatin1Literal("udp://0.0.0.0:5000"));
+    VideoReceiver* pReceiver = new VideoReceiver(MainWindow::instance()->piNodeSelector(), this);
 #if defined(QGC_GST_STREAMING)
     pReceiver->setVideoSink(pSurface->videoSink());
 #endif

@@ -58,6 +58,8 @@ This file is part of the QGROUNDCONTROL project
 #include "QGCUASFileViewMulti.h"
 #include "Vehicle.h"
 
+class PiDiscoverer;
+class NodeSelector;
 class QGCMapTool;
 class QGCMAVLinkMessageSender;
 class QGCFirmwareUpdate;
@@ -118,6 +120,8 @@ public:
 
     /// @brief Gets a pointer to the Main Flight Display
     FlightDisplayView* getFlightDisplay() { return dynamic_cast<FlightDisplayView*>(_flightView.data()); }
+
+    NodeSelector* piNodeSelector();
     
     QWidget* getCurrentViewWidget(void) { return _currentViewWidget; }
 
@@ -299,6 +303,7 @@ private:
     QMap<int, QDockWidget*>         _mapUasId2HilDockWidget;
     QMap<QDockWidget*, QAction*>    _mapDockWidget2Action;
 
+    void _intializedHB();
     void _buildPlanView(void);
     void _buildFlightView(void);
     void _buildSetupView(void);
