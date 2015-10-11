@@ -41,7 +41,6 @@ class UAS;
 class UASInterface;
 class FirmwarePlugin;
 class AutoPilotPlugin;
-class UASWaypointManager;
 class MissionManager;
 
 Q_DECLARE_LOGGING_CATEGORY(VehicleLog)
@@ -72,6 +71,8 @@ public:
     Q_PROPERTY(bool hilMode READ hilMode WRITE setHilMode NOTIFY hilModeChanged)
     
     Q_PROPERTY(bool missingParameters READ missingParameters NOTIFY missingParametersChanged)
+    
+    Q_PROPERTY(QmlObjectListModel* trajectoryPoints READ trajectoryPoints CONSTANT)
     
     Q_INVOKABLE QString     getMavIconColor();
     
@@ -184,6 +185,8 @@ public:
 
     bool hilMode(void);
     void setHilMode(bool hilMode);
+    
+    QmlObjectListModel* trajectoryPoints(void) { return &_mapTrajectoryList; }
     
     /// Requests the specified data stream from the vehicle
     ///     @param stream Stream which is being requested
@@ -300,6 +303,7 @@ private slots:
     void _linkDisconnected(LinkInterface* link);
     void _sendMessage(mavlink_message_t message);
     void _sendMessageMultipleNext(void);
+    void _addNewMapTrajectoryPoint(void);
 
     void _handleTextMessage                 (int newCount);
     /** @brief Attitude from main autopilot / system state */
@@ -324,7 +328,6 @@ private slots:
     void _setSatelliteCount                 (double val, QString name);
     void _setSatLoc                         (UASInterface* uas, int fix);
     void _updateWaypointViewOnly            (int uas, MissionItem* wp);
-    void _waypointViewOnlyListChanged       ();
 
 private:
     bool _containsLink(LinkInterface* link);
@@ -335,6 +338,8 @@ private:
     void _handleHomePosition(mavlink_message_t& message);
     void _handleHeartbeat(mavlink_message_t& message);
     void _missionManagerError(int errorCode, const QString& errorMsg);
+    void _mapTrajectoryStart(void);
+    void _mapTrajectoryStop(void);
 
     bool    _isAirplane                     ();
     void    _addChange                      (int id);
@@ -401,7 +406,6 @@ private:
     quint16         _currentWaypoint;
     int             _satelliteCount;
     int             _satelliteLock;
-    UASWaypointManager* _wpm;
     int             _updateCount;
     
     MissionManager*     _missionManager;
@@ -424,6 +428,12 @@ private:
     
     QTimer  _sendMultipleTimer;
     int     _nextSendMessageMultipleIndex;
+    
+    QTimer              _mapTrajectoryTimer;
+    QmlObjectListModel  _mapTrajectoryList;
+    QGeoCoordinate      _mapTrajectoryLastCoordinate;
+    bool                _mapTrajectoryHaveFirstCoordinate;
+    static const int    _mapTrajectoryMsecsBetweenPoints = 1000;
     
     // Settings keys
     static const char* _settingsGroup;

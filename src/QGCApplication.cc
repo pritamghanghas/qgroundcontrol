@@ -42,7 +42,6 @@
 
 #include "VideoStreaming.h"
 
-#include "configuration.h"
 #include "QGC.h"
 #include "QGCApplication.h"
 #include "MainWindow.h"
@@ -84,6 +83,8 @@
 #include "QGroundControlQmlGlobal.h"
 #include "HomePositionManager.h"
 #include "FlightMapSettings.h"
+#include "QGCQGeoCoordinate.h"
+#include "CoordinateVector.h"
 
 #ifndef __ios__
     #include "SerialLink.h"
@@ -198,8 +199,12 @@ QGCApplication::QGCApplication(int &argc, char* argv[], bool unitTesting)
 #ifdef __mobile__
     QLoggingCategory::setFilterRules(QStringLiteral("*Log.debug=false"));
 #else
+    QString filterRules;
+    
+    // Turn off bogus ssl warning
+    filterRules += "qt.network.ssl.warning=false\n";
+    
     if (logging) {
-        QString filterRules;
         QStringList logList = loggingOptions.split(",");
         
         if (logList[0] == "full") {
@@ -219,9 +224,6 @@ QGCApplication::QGCApplication(int &argc, char* argv[], bool unitTesting)
             // We need to turn off these warnings until the firmware meta data is cleaned up
             filterRules += "PX4ParameterLoaderLog.warning=false\n";
         }
-        
-        qDebug() << "Filter rules" << filterRules;
-        QLoggingCategory::setFilterRules(filterRules);
     } else {
         if (_runningUnitTests) {
             // We need to turn off these warnings until the firmware meta data is cleaned up
@@ -266,6 +268,9 @@ QGCApplication::QGCApplication(int &argc, char* argv[], bool unitTesting)
             }
         }
     }
+    
+    qDebug() << "Filter rules" << filterRules;
+    QLoggingCategory::setFilterRules(filterRules);
 #endif
 
     // Set up timer for delayed missing fact display
@@ -339,6 +344,8 @@ void QGCApplication::_initCommon(void)
     qmlRegisterUncreatableType<JoystickManager>     ("QGroundControl.JoystickManager",  1, 0, "JoystickManager",        "Reference only");
     qmlRegisterUncreatableType<Joystick>            ("QGroundControl.JoystickManager",  1, 0, "Joystick",               "Reference only");
     qmlRegisterUncreatableType<QmlObjectListModel>  ("QGroundControl",                  1, 0, "QmlObjectListModel",     "Reference only");
+    qmlRegisterUncreatableType<QGCQGeoCoordinate>   ("QGroundControl",                  1, 0, "QGCQGeoCoordinate",      "Reference only");
+    qmlRegisterUncreatableType<CoordinateVector>    ("QGroundControl",                  1, 0, "CoordinateVector",       "Reference only");
     
     qmlRegisterType<ViewWidgetController>           ("QGroundControl.Controllers", 1, 0, "ViewWidgetController");
     qmlRegisterType<ParameterEditorController>      ("QGroundControl.Controllers", 1, 0, "ParameterEditorController");
@@ -820,12 +827,4 @@ void QGCApplication::showToolBarMessage(const QString& message)
     } else {
         QGCMessageBox::information("", message);
     }
-}
-
-void QGCApplication::setUseNewMissionEditor(bool use)
-{
-    // Temp hack for new mission editor
-    QSettings settings;
-    
-    settings.setValue("UseNewMissionEditor", use);
 }

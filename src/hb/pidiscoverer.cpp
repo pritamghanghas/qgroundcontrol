@@ -36,7 +36,7 @@ void PiDiscoverer::datagramReceived()
     QHostAddress addr;
     m_socket.readDatagram(datagram.data(), datagramSize, &addr);
 
-    qDebug() << "data received " << datagram.data();
+//    qDebug() << "data received " << datagram.data();
     PiNode node;
     if (datagram.startsWith("raspberry")) {
         if (datagram.contains("picam")) {
@@ -64,7 +64,7 @@ PiNodeList PiDiscoverer::discoveredNodes() const
 
 void PiDiscoverer::onNodeDiscovered(const PiNode &node)
 {
-    qDebug() << "node discovered " << node.addressString;
+//    qDebug() << "node discovered " << node.addressString;
     if (!m_discoveredNodes.contains(node)) {
         qDebug() << "new unique node adding";
         m_discoveredNodes << node;

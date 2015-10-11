@@ -73,7 +73,7 @@ UAS::UAS(MAVLinkProtocol* protocol, Vehicle* vehicle) : UASInterface(),
     tickLowpassVoltage(12.0f),
     warnLevelPercent(UAS_DEFAULT_BATTERY_WARNLEVEL),
     currentVoltage(12.6f),
-    lpVoltage(12.0f),
+    lpVoltage(-1.0f),
     currentCurrent(0.4f),
     chargeLevel(-1),
     lowBattAlarm(false),
@@ -135,19 +135,35 @@ UAS::UAS(MAVLinkProtocol* protocol, Vehicle* vehicle) : UASInterface(),
     // Initialize HIL sensor noise variances to 0.  If user wants corrupted sensor values they will need to set them
     // Note variances calculated from flight case from this log: http://dash.oznet.ch/view/MRjW8NUNYQSuSZkbn8dEjY
     // TODO: calibrate stand-still pixhawk variances
-    xacc_var(1.2914f),
+    /*
+    xacc_var(0.6457f),
     yacc_var(0.7048f),
-    zacc_var(1.9577f),
+    zacc_var(0.97885f),
     rollspeed_var(0.8126f),
     pitchspeed_var(0.6145f),
     yawspeed_var(0.5852f),
-    xmag_var(0.4786f),
-    ymag_var(0.4566f),
-    zmag_var(0.3333f),
-    abs_pressure_var(1.1604f),
-    diff_pressure_var(1.1604f),
-    pressure_alt_var(1.1604f),
-    temperature_var(1.4290f),
+    xmag_var(0.2393f),
+    ymag_var(0.2283f),
+    zmag_var(0.1665f),
+    abs_pressure_var(0.5802f),
+    diff_pressure_var(0.5802f),
+    pressure_alt_var(0.5802f),
+    temperature_var(0.7145f),
+    */
+    xacc_var(0.0f),
+    yacc_var(0.0f),
+    zacc_var(0.0f),
+    rollspeed_var(0.0f),
+    pitchspeed_var(0.0f),
+    yawspeed_var(0.0f),
+    xmag_var(0.0f),
+    ymag_var(0.0f),
+    zmag_var(0.0f),
+    abs_pressure_var(0.0f),
+    diff_pressure_var(0.0f),
+    pressure_alt_var(0.0f),
+    temperature_var(0.0f),
+
 
 #ifndef __mobile__
     simulation(0),
@@ -163,13 +179,8 @@ UAS::UAS(MAVLinkProtocol* protocol, Vehicle* vehicle) : UASInterface(),
     lastSendTimeGPS(0),
     lastSendTimeSensors(0),
     lastSendTimeOpticalFlow(0),
-    _waypointManager(NULL),
     _vehicle(vehicle)
 {
-
-    if (!qgcApp()->useNewMissionEditor()) {
-        _waypointManager = new UASWaypointManager(vehicle, this);
-    }
     
     for (unsigned int i = 0; i<255;++i)
     {
@@ -479,36 +490,39 @@ void UAS::receiveMessage(mavlink_message_t message)
             emit loadChanged(this,state.load/10.0f);
             emit valueChanged(uasId, name.arg("load"), "%", state.load/10.0f, time);
 
-            // Battery charge/time remaining/voltage calculations
-            currentVoltage = state.voltage_battery/1000.0f;
-            lpVoltage = filterVoltage(currentVoltage);
-            tickLowpassVoltage = tickLowpassVoltage*0.8f + 0.2f*currentVoltage;
+            if (state.voltage_battery > 0.0f && state.voltage_battery != UINT16_MAX) {
+                // Battery charge/time remaining/voltage calculations
+                currentVoltage = state.voltage_battery/1000.0f;
+                filterVoltage(currentVoltage);
+                tickLowpassVoltage = tickLowpassVoltage * 0.8f + 0.2f * currentVoltage;
 
-            // We don't want to tick above the threshold
-            if (tickLowpassVoltage > tickVoltage)
-            {
-                lastTickVoltageValue = tickLowpassVoltage;
+                // We don't want to tick above the threshold
+                if (tickLowpassVoltage > tickVoltage)
+                {
+                    lastTickVoltageValue = tickLowpassVoltage;
+                }
+
+                if ((startVoltage > 0.0f) && (tickLowpassVoltage < tickVoltage) && (fabs(lastTickVoltageValue - tickLowpassVoltage) > 0.1f)
+                        /* warn if lower than treshold */
+                        && (lpVoltage < tickVoltage)
+                        /* warn only if we have at least the voltage of an empty LiPo cell, else we're sampling something wrong */
+                        && (currentVoltage > 3.3f)
+                        /* warn only if current voltage is really still lower by a reasonable amount */
+                        && ((currentVoltage - 0.2f) < tickVoltage)
+                        /* warn only every 20 seconds */
+                        && (QGC::groundTimeUsecs() - lastVoltageWarning) > 20000000)
+                {
+                    _say(QString("Low battery system %1: %2 volts").arg(getUASID()).arg(lpVoltage, 0, 'f', 1, QChar(' ')));
+                    lastVoltageWarning = QGC::groundTimeUsecs();
+                    lastTickVoltageValue = tickLowpassVoltage;
+                }
+
+                if (startVoltage == -1.0f && currentVoltage > 0.1f) startVoltage = currentVoltage;
+                chargeLevel = state.battery_remaining;
+
+                emit batteryChanged(this, lpVoltage, currentCurrent, getChargeLevel(), 0);
             }
 
-            if ((startVoltage > 0.0f) && (tickLowpassVoltage < tickVoltage) && (fabs(lastTickVoltageValue - tickLowpassVoltage) > 0.1f)
-                    /* warn if lower than treshold */
-                    && (lpVoltage < tickVoltage)
-                    /* warn only if we have at least the voltage of an empty LiPo cell, else we're sampling something wrong */
-                    && (currentVoltage > 3.3f)
-                    /* warn only if current voltage is really still lower by a reasonable amount */
-                    && ((currentVoltage - 0.2f) < tickVoltage)
-                    /* warn only every 12 seconds */
-                    && (QGC::groundTimeUsecs() - lastVoltageWarning) > 12000000)
-            {
-                _say(QString("Voltage warning for system %1: %2 volts").arg(getUASID()).arg(lpVoltage, 0, 'f', 1, QChar(' ')));
-                lastVoltageWarning = QGC::groundTimeUsecs();
-                lastTickVoltageValue = tickLowpassVoltage;
-            }
-
-            if (startVoltage == -1.0f && currentVoltage > 0.1f) startVoltage = currentVoltage;
-            chargeLevel = state.battery_remaining;
-
-            emit batteryChanged(this, lpVoltage, currentCurrent, getChargeLevel(), 0);
             emit valueChanged(uasId, name.arg("battery_remaining"), "%", getChargeLevel(), time);
             emit valueChanged(uasId, name.arg("battery_voltage"), "V", currentVoltage, time);
 
@@ -932,161 +946,7 @@ void UAS::receiveMessage(mavlink_message_t message)
             emit valueChanged(uasId, "yaw sp", "rad", yaw, time);
         }
             break;
-        case MAVLINK_MSG_ID_MISSION_COUNT:
-        {
-            if (!qgcApp()->useNewMissionEditor()) {
-                mavlink_mission_count_t mc;
-                mavlink_msg_mission_count_decode(&message, &mc);
-
-                // Special case a 0 for the target system or component, it means that anyone is the target, so we should process this.
-                if (mc.target_system == 0) {
-                    mc.target_system = mavlink->getSystemId();
-                }
-                if (mc.target_component == 0) {
-                    mc.target_component = mavlink->getComponentId();
-                }
-
-                // Check that this message applies to the UAS.
-                if(mc.target_system == mavlink->getSystemId())
-                {
-
-                    if (mc.target_component != mavlink->getComponentId()) {
-                        qDebug() << "The target component ID is not set correctly. This is currently only a warning, but will be turned into an error.";
-                        qDebug() << "Expecting" << mavlink->getComponentId() << "but got" << mc.target_component;
-                    }
-
-                    _waypointManager->handleWaypointCount(message.sysid, message.compid, mc.count);
-                }
-                else
-                {
-                    qDebug() << QString("Received mission count message, but was wrong system id. Expected %1, received %2").arg(mavlink->getSystemId()).arg(mc.target_system);
-                }
-            }
-        }
-            break;
-
-        case MAVLINK_MSG_ID_MISSION_ITEM:
-        {
-            if (!qgcApp()->useNewMissionEditor()) {
-                mavlink_mission_item_t mi;
-                mavlink_msg_mission_item_decode(&message, &mi);
-
-                // Special case a 0 for the target system or component, it means that anyone is the target, so we should process this.
-                if (mi.target_system == 0) {
-                    mi.target_system = mavlink->getSystemId();
-                }
-                if (mi.target_component == 0) {
-                    mi.target_component = mavlink->getComponentId();
-                }
-
-                // Check that the item pertains to this UAS.
-                if(mi.target_system == mavlink->getSystemId())
-                {
-
-                    if (mi.target_component != mavlink->getComponentId()) {
-                        qDebug() << "The target component ID is not set correctly. This is currently only a warning, but will be turned into an error.";
-                        qDebug() << "Expecting" << mavlink->getComponentId() << "but got" << mi.target_component;
-                    }
-
-                    _waypointManager->handleWaypoint(message.sysid, message.compid, &mi);
-                }
-                else
-                {
-                    qDebug() << QString("Received mission item message, but was wrong system id. Expected %1, received %2").arg(mavlink->getSystemId()).arg(mi.target_system);
-                }
-            }
-        }
-            break;
-
-        case MAVLINK_MSG_ID_MISSION_ACK:
-        {
-            if (!qgcApp()->useNewMissionEditor()) {
-                mavlink_mission_ack_t ma;
-                mavlink_msg_mission_ack_decode(&message, &ma);
-
-                // Special case a 0 for the target system or component, it means that anyone is the target, so we should process this.
-                if (ma.target_system == 0) {
-                    ma.target_system = mavlink->getSystemId();
-                }
-                if (ma.target_component == 0) {
-                    ma.target_component = mavlink->getComponentId();
-                }
-
-                // Check that the ack pertains to this UAS.
-                if(ma.target_system == mavlink->getSystemId())
-                {
-
-                    if (ma.target_component != mavlink->getComponentId()) {
-                        qDebug() << tr("The target component ID is not set correctly. This is currently only a warning, but will be turned into an error.");
-                        qDebug() << "Expecting" << mavlink->getComponentId() << "but got" << ma.target_component;
-                    }
-
-                    _waypointManager->handleWaypointAck(message.sysid, message.compid, &ma);
-                }
-                else
-                {
-                    qDebug() << QString("Received mission ack message, but was wrong system id. Expected %1, received %2").arg(mavlink->getSystemId()).arg(ma.target_system);
-                }
-            }
-        }
-            break;
-
-        case MAVLINK_MSG_ID_MISSION_REQUEST:
-        {
-            if (!qgcApp()->useNewMissionEditor()) {
-                mavlink_mission_request_t mr;
-                mavlink_msg_mission_request_decode(&message, &mr);
-
-                // Special case a 0 for the target system or component, it means that anyone is the target, so we should process this.
-                if (mr.target_system == 0) {
-                    mr.target_system = mavlink->getSystemId();
-                }
-                if (mr.target_component == 0) {
-                    mr.target_component = mavlink->getComponentId();
-                }
-
-                // Check that the request pertains to this UAS.
-                if(mr.target_system == mavlink->getSystemId())
-                {
-
-                    if (mr.target_component != mavlink->getComponentId()) {
-                        qDebug() << QString("The target component ID is not set correctly. This is currently only a warning, but will be turned into an error.");
-                        qDebug() << "Expecting" << mavlink->getComponentId() << "but got" << mr.target_component;
-                    }
-
-                    _waypointManager->handleWaypointRequest(message.sysid, message.compid, &mr);
-                }
-                else
-                {
-                    qDebug() << QString("Received mission request message, but was wrong system id. Expected %1, received %2").arg(mavlink->getSystemId()).arg(mr.target_system);
-                }
-            }
-        }
-            break;
-
-        case MAVLINK_MSG_ID_MISSION_ITEM_REACHED:
-        {
-            if (!qgcApp()->useNewMissionEditor()) {
-                mavlink_mission_item_reached_t wpr;
-                mavlink_msg_mission_item_reached_decode(&message, &wpr);
-                _waypointManager->handleWaypointReached(message.sysid, message.compid, &wpr);
-                QString text = QString("System %1 reached waypoint %2").arg(getUASID()).arg(wpr.seq);
-                _say(text);
-                emit textMessageReceived(message.sysid, message.compid, MAV_SEVERITY_INFO, text);
-            }
-        }
-            break;
-
-        case MAVLINK_MSG_ID_MISSION_CURRENT:
-        {
-            if (!qgcApp()->useNewMissionEditor()) {
-                mavlink_mission_current_t wpc;
-                mavlink_msg_mission_current_decode(&message, &wpc);
-                _waypointManager->handleWaypointCurrent(message.sysid, message.compid, &wpc);
-            }
-        }
-            break;
-
+                
         case MAVLINK_MSG_ID_POSITION_TARGET_LOCAL_NED:
         {
             if (multiComponentSourceDetected && wrongComponent)
@@ -1538,9 +1398,14 @@ quint64 UAS::getUnixTime(quint64 time)
 /**
  * @param value battery voltage
  */
-float UAS::filterVoltage(float value) const
+float UAS::filterVoltage(float value)
 {
-    return lpVoltage * 0.6f + value * 0.4f;
+    if (lpVoltage < 0.0f) {
+        lpVoltage = value;
+    }
+
+    lpVoltage = lpVoltage * 0.6f + value * 0.4f;
+    return lpVoltage;
 }
 
 /**

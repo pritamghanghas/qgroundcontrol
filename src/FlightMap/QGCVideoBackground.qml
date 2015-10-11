@@ -43,11 +43,32 @@ VideoItem {
         id: resolutionList
 
         ListElement {
+            text:           "1080 30p 4mbps";
+            width:          1920;
+            height:         1080;
+            bitrate:        4000000;
+            fps:            30;
+        }
+        ListElement {
             text:           "1080 30p 2mbps";
             width:          1920;
             height:         1080;
             bitrate:        2000000;
             fps:            30;
+        }
+        ListElement {
+            text:           "720 49p 4mbps";
+            width:          1296;
+            height:          730;
+            bitrate:        4000000;
+            fps:             49;
+        }
+        ListElement {
+            text:           "720 49p 2mbps";
+            width:          1296;
+            height:          730;
+            bitrate:        2000000;
+            fps:             49;
         }
         ListElement {
             text:           "720 49p 1mbps";
@@ -57,11 +78,25 @@ VideoItem {
             fps:             49;
         }
         ListElement {
-            text:           "640 90p 1mbps";
+            text:           "640 90p 0.7mbps";
             width:          640;
             height:         480;
-            bitrate:        1000000;
+            bitrate:        700000;
             fps:            90;
+        }
+        ListElement {
+            text:           "640 30p 0.5mbps";
+            width:          640;
+            height:         480;
+            bitrate:        500000;
+            fps:            30;
+        }
+        ListElement {
+            text:           "640 15p 0.3mbps";
+            width:          640;
+            height:         480;
+            bitrate:        300000;
+            fps:            15;
         }
     }
 
@@ -84,7 +119,7 @@ VideoItem {
 
     Component.onCompleted: {
         if(videoBackground.visible && videoBackground.receiver) {
-            resolutionSelectionComboBox.currentIndex = 1;
+            resolutionSelectionComboBox.currentIndex = 4;
         }
     }
 

@@ -61,11 +61,13 @@ public:
 
     const MissionItem& operator=(const MissionItem& other);
     
+    /// Returns true if the item has been modified since the last time dirty was false
+    Q_PROPERTY(bool                 dirty               READ dirty                  WRITE setDirty          NOTIFY dirtyChanged)
+    
     Q_PROPERTY(int                  sequenceNumber      READ sequenceNumber         WRITE setSequenceNumber NOTIFY sequenceNumberChanged)
     Q_PROPERTY(bool                 isCurrentItem       READ isCurrentItem          WRITE setIsCurrentItem  NOTIFY isCurrentItemChanged)
     Q_PROPERTY(bool                 specifiesCoordinate READ specifiesCoordinate                            NOTIFY commandChanged)
     Q_PROPERTY(QGeoCoordinate       coordinate          READ coordinate             WRITE setCoordinate     NOTIFY coordinateChanged)
-    Q_PROPERTY(double               yaw                 READ yawDegrees             WRITE setYawDegrees     NOTIFY yawChanged)
     Q_PROPERTY(QStringList          commandNames        READ commandNames                                   CONSTANT)
     Q_PROPERTY(QString              commandName         READ commandName                                    NOTIFY commandChanged)
     Q_PROPERTY(QStringList          valueLabels         READ valueLabels                                    NOTIFY commandChanged)
@@ -105,6 +107,9 @@ public:
     
     double yawDegrees(void) const;
     void setYawDegrees(double yaw);
+    
+    bool dirty(void) { return _dirty; }
+    void setDirty(bool dirty);
     
     // C++ only methods
     
@@ -183,7 +188,7 @@ signals:
     void sequenceNumberChanged(int sequenceNumber);
     void isCurrentItemChanged(bool isCurrentItem);
     void coordinateChanged(const QGeoCoordinate& coordinate);
-    void yawChanged(double yaw);
+    void dirtyChanged(bool dirty);
 
     /** @brief Announces a change to the waypoint data */
     void changed(MissionItem* wp);
@@ -219,6 +224,10 @@ public:
     void setChanged() {
         emit changed(this);
     }
+    
+private slots:
+    void _factValueChanged(QVariant value);
+    void _coordinateFactChanged(QVariant value);
 
 private:
     QString _oneDecimalString(double value);
@@ -253,6 +262,8 @@ private:
     FactMetaData*   _delaySecondsMetaData;
     FactMetaData*   _jumpSequenceMetaData;
     FactMetaData*   _jumpRepeatMetaData;
+    
+    bool _dirty;
     
     static const int            _cMavCmd2Name = 9;
     static const MavCmd2Name_t  _rgMavCmd2Name[_cMavCmd2Name];
