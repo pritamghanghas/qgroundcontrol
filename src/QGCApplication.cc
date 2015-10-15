@@ -74,6 +74,8 @@
 #include "MultiVehicleManager.h"
 #include "Generic/GenericFirmwarePlugin.h"
 #include "APM/ArduCopterFirmwarePlugin.h"
+#include "APM/ArduPlaneFirmwarePlugin.h"
+#include "APM/ArduRoverFirmwarePlugin.h"
 #include "PX4/PX4FirmwarePlugin.h"
 #include "Vehicle.h"
 #include "MavlinkQmlSingleton.h"
@@ -163,9 +165,6 @@ QGCApplication::QGCApplication(int &argc, char* argv[], bool unitTesting)
     , _runningUnitTests(unitTesting)
     , _styleIsDark(true)
 	, _fakeMobile(false)
-#ifdef UNITTEST_BUILD
-    , _useNewMissionEditor(true)    // Unit Tests run new mission editor
-#endif
 #ifdef QT_DEBUG
     , _testHighDPI(false)
 #endif
@@ -219,17 +218,7 @@ QGCApplication::QGCApplication(int &argc, char* argv[], bool unitTesting)
                 filterRules += ".debug=true\n";
             }
         }
-        
-        if (_runningUnitTests) {
-            // We need to turn off these warnings until the firmware meta data is cleaned up
-            filterRules += "PX4ParameterLoaderLog.warning=false\n";
-        }
     } else {
-        if (_runningUnitTests) {
-            // We need to turn off these warnings until the firmware meta data is cleaned up
-            QLoggingCategory::setFilterRules(QStringLiteral("PX4ParameterLoaderLog.warning=false"));
-        }
-        
         // First thing we want to do is set up the qtlogging.ini file. If it doesn't already exist we copy
         // it to the correct location. This way default debug builds will have logging turned off.
 
@@ -347,9 +336,7 @@ void QGCApplication::_initCommon(void)
     qmlRegisterUncreatableType<QGCQGeoCoordinate>   ("QGroundControl",                  1, 0, "QGCQGeoCoordinate",      "Reference only");
     qmlRegisterUncreatableType<CoordinateVector>    ("QGroundControl",                  1, 0, "CoordinateVector",       "Reference only");
     
-    qmlRegisterType<ViewWidgetController>           ("QGroundControl.Controllers", 1, 0, "ViewWidgetController");
     qmlRegisterType<ParameterEditorController>      ("QGroundControl.Controllers", 1, 0, "ParameterEditorController");
-    qmlRegisterType<CustomCommandWidgetController>  ("QGroundControl.Controllers", 1, 0, "CustomCommandWidgetController");
     qmlRegisterType<FlightModesComponentController> ("QGroundControl.Controllers", 1, 0, "FlightModesComponentController");
     qmlRegisterType<AirframeComponentController>    ("QGroundControl.Controllers", 1, 0, "AirframeComponentController");
     qmlRegisterType<SensorsComponentController>     ("QGroundControl.Controllers", 1, 0, "SensorsComponentController");
@@ -358,6 +345,8 @@ void QGCApplication::_initCommon(void)
     qmlRegisterType<ScreenToolsController>          ("QGroundControl.Controllers", 1, 0, "ScreenToolsController");
     
 #ifndef __mobile__
+    qmlRegisterType<ViewWidgetController>           ("QGroundControl.Controllers", 1, 0, "ViewWidgetController");
+    qmlRegisterType<CustomCommandWidgetController>  ("QGroundControl.Controllers", 1, 0, "CustomCommandWidgetController");
     qmlRegisterType<FirmwareUpgradeController>      ("QGroundControl.Controllers", 1, 0, "FirmwareUpgradeController");
     qmlRegisterType<JoystickConfigController>       ("QGroundControl.Controllers", 1, 0, "JoystickConfigController");
 #endif
@@ -429,14 +418,6 @@ bool QGCApplication::_initForNormalAppBoot(void)
 
     _styleIsDark = settings.value(_styleKey, _styleIsDark).toBool();
     _loadCurrentStyle();
-    
-    // Temp hack for new mission editor
-#ifdef __mobile__
-    // Mobile builds always use new Mission Editor
-    _useNewMissionEditor = true;
-#else
-    _useNewMissionEditor = settings.value("UseNewMissionEditor", false).toBool();
-#endif
     
     // Show splash screen
     QPixmap splashImage(":/res/SplashScreen");
@@ -605,6 +586,8 @@ void QGCApplication::_createSingletons(void)
     // No dependencies
     firmwarePlugin = PX4FirmwarePlugin::_createSingleton();
     firmwarePlugin = ArduCopterFirmwarePlugin::_createSingleton();
+    firmwarePlugin = ArduPlaneFirmwarePlugin::_createSingleton();
+    firmwarePlugin = ArduRoverFirmwarePlugin::_createSingleton();
     
     // No dependencies
     FirmwarePluginManager* firmwarePluginManager = FirmwarePluginManager::_createSingleton();

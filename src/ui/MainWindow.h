@@ -41,7 +41,6 @@ This file is part of the QGROUNDCONTROL project
 #include "LinkManager.h"
 #include "LinkInterface.h"
 #include "UASInterface.h"
-#include "UASInfoWidget.h"
 #include "CameraView.h"
 #if (defined QGC_MOUSE_ENABLED_WIN) | (defined QGC_MOUSE_ENABLED_LINUX)
 #include "Mouse6dofInput.h"
@@ -53,18 +52,16 @@ This file is part of the QGROUNDCONTROL project
 #include "QGCMAVLinkInspector.h"
 #include "QGCMAVLinkLogPlayer.h"
 #include "MAVLinkDecoder.h"
-#include "QGCUASFileViewMulti.h"
 #include "Vehicle.h"
 
 class PiDiscoverer;
 class NodeSelector;
-class QGCMAVLinkMessageSender;
+//class QGCMAVLinkMessageSender;
 class QGCFirmwareUpdate;
 class QSplashScreen;
 class QGCStatusBar;
 class Linecharts;
 class QGCDataPlot2D;
-class QGCUASFileViewMulti;
 
 /**
  * @brief Main Application Window
@@ -128,7 +125,6 @@ public slots:
 
     void loadSetupView();
     void loadFlightView();
-    void loadSimulationView();
     void loadAnalyzeView();
     void loadPlanView();
     
@@ -197,7 +193,7 @@ protected:
         VIEW_ANALYZE,           // Engineering/Analyze view mode. Used for analyzing data and modifying onboard parameters
         VIEW_UNUSED3,           // Unused (don't remove, or it will screw up saved settigns indices)
         VIEW_FLIGHT,            // Flight/Fly/Operate view mode. Used for 1st-person observation of the vehicle.
-        VIEW_SIMULATION,        // HIL Simulation view. Useful overview of the entire system when doing hardware-in-the-loop simulations.
+        VIEW_UNUSED4,           // Unused (don't remove, or it will screw up saved settigns indices)
         VIEW_SETUP,             // Setup view. Used for initializing the system for operation.
         VIEW_UNUSED1,           // Unused (don't remove, or it will screw up saved settigns indices)
         VIEW_UNUSED2,           // Unused (don't remove, or it will screw up saved settigns indices)
@@ -217,18 +213,10 @@ protected:
 
     // Center widgets
     QPointer<Linecharts> linechartWidget;
-#ifdef QGC_OSG_ENABLED
-    QPointer<QWidget> q3DWidget;
-#endif
-    QPointer<QGCFirmwareUpdate> firmwareUpdateWidget;
 
     QPointer<MainToolBar> _mainToolBar;
-    QPointer<QDockWidget> mavlinkInspectorWidget;
     QPointer<MAVLinkDecoder> mavlinkDecoder;
-    QPointer<QDockWidget> mavlinkSenderWidget;
     QGCMAVLinkLogPlayer* logPlayer;
-
-    QPointer<QGCUASFileViewMulti> fileWidget;
 
 #ifdef QGC_MOUSE_ENABLED_WIN
     /** @brief 3d Mouse support (WIN only) */
@@ -256,16 +244,17 @@ protected:
     QTimer windowNameUpdateTimer;
 
 private slots:
-    void _showDockWidgetAction(bool show);
     void _linkStateChange(LinkInterface*);
+	void _closeWindow(void) { close(); }
+    void _vehicleAdded(Vehicle* vehicle);
+    
+#ifndef __mobile__
+    void _showDockWidgetAction(bool show);
+#endif
+    
 #ifdef UNITTEST_BUILD
     void _showQmlTestWidget(void);
 #endif
-	void _closeWindow(void) { close(); }
-    
-private slots:
-    void _vehicleAdded(Vehicle* vehicle);
-    void _vehicleRemoved(Vehicle* vehicle);
 
 private:
     /// Constructor is private since all creation should be through MainWindow::_create
@@ -278,13 +267,10 @@ private:
     QPointer<QWidget> _flightView;
     QPointer<QWidget> _setupView;
     QPointer<QWidget> _analyzeView;
-    QPointer<QWidget> _simView;
-    QPointer<QWidget> _terminalView;
     QPointer<QWidget> _missionEditorView;
 
+#ifndef __mobile__
     // Dock widget names
-    static const char* _uasControlDockWidgetName;
-    static const char* _uasListDockWidgetName;
     static const char* _mavlinkDockWidgetName;
     static const char* _customCommandWidgetName;
     static const char* _filesDockWidgetName;
@@ -292,31 +278,29 @@ private:
     static const char* _mapViewDockWidgetName;
     static const char* _pfdDockWidgetName;
     static const char* _uasInfoViewDockWidgetName;
+    static const char* _hilDockWidgetName;
 
     QMap<QString, QDockWidget*>     _mapName2DockWidget;
-    QMap<int, QDockWidget*>         _mapUasId2HilDockWidget;
     QMap<QDockWidget*, QAction*>    _mapDockWidget2Action;
+#endif
 
     void _intializedHB();
     void _buildPlanView(void);
     void _buildFlightView(void);
     void _buildSetupView(void);
     void _buildAnalyzeView(void);
-    void _buildSimView(void);
     void _buildTerminalView(void);
     void _buildMissionEditorView(void);
 
     void _storeCurrentViewState(void);
     void _loadCurrentViewState(void);
 
+#ifndef __mobile__
     void _createDockWidget(const QString& title, const QString& name, Qt::DockWidgetArea area, QWidget* innerWidget);
     void _createInnerDockWidget(const QString& widgetName);
     void _buildCommonWidgets(void);
-    void _hideAllHilDockWidgets(void);
     void _hideAllDockWidgets(void);
     void _showDockWidget(const QString &name, bool show);
-#ifndef __mobile__
-    void _showHILConfigurationWidgets(void);
 #endif
 
     bool                    _autoReconnect;
