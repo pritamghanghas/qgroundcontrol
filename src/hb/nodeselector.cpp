@@ -4,7 +4,7 @@
 #include <QNetworkReply>
 
 static const QString PLAY_CMD("udpsrc port=$PORT ! application/x-rtp,encoding-name=H264,payload=96 ! rtph264depay ! h264parse ! avdec_h264");
-static const QString PICAM_REMOTE_CMD("raspivid -t 0 -vf -hf -h $RESh -w $RESw -fps $FPS -b $BITRATE -o - | gst-launch-1.0 -v fdsrc ! h264parse ! rtph264pay config-interval=1 pt=96 ! udpsink host=$CLIENT_IP port=$UDP_PORT");
+static const QString PICAM_REMOTE_CMD("raspivid -t 0 -vf -hf $OPT_STRING -o - | gst-launch-1.0 -v fdsrc ! h264parse ! rtph264pay config-interval=1 pt=96 ! udpsink host=$CLIENT_IP port=$UDP_PORT");
 //static const QString MAVPROXY_REMOTE_CMD("screen -S MAVPROXY /usr/local/bin/mavproxy.py --master=127.0.0.1:1440 --baudrate 57600 --out $CLIENT_IP:14550 --aircraft MyCopter");
 static const QString MAVPROXY_REMOTE_CMD("/home/pi/ardupilot/ArduCopter/ArduCopter.elf -A udp:$CLIENT_IP:14550 -B /dev/ttyAMA0 > /home/pi/arducopter.log");
 
@@ -131,7 +131,7 @@ void NodeSelector::onNewNodeDiscovered(const PiNode &node)
         startThermal(node);
 }
 
-int NodeSelector::startStreaming(int nodeIndex, int width, int height, int fps, int bitrate)
+int NodeSelector::startStreaming(int nodeIndex, const QString &optionsString)
 {
     PiNodeList nodes = m_discoverer->discoveredNodes();
     if (nodes.count() < nodeIndex -1) {
@@ -139,10 +139,10 @@ int NodeSelector::startStreaming(int nodeIndex, int width, int height, int fps, 
         return -1;
     }
 
-    return startStreaming(nodes.at(nodeIndex), width, height, fps, bitrate);
+    return startStreaming(nodes.at(nodeIndex), optionsString);
 }
 
-int NodeSelector::startStreaming(const PiNode &node, int width, int height, int fps, int bitrate)
+int NodeSelector::startStreaming(const PiNode &node, const QString &optionsString)
 {
     if (node.caps & PiNode::PiCam) { // has picam capability
             if (!(node.capsRunning & PiNode::PiCam)) { //picam is not running
@@ -150,11 +150,7 @@ int NodeSelector::startStreaming(const PiNode &node, int width, int height, int 
                 servercmd = servercmd.replace("$SERVER_IP", node.addressString);
                 servercmd = servercmd.replace("$CLIENT_IP", deviceAddress());
                 servercmd = servercmd.replace("$UDP_PORT", QString::number(node.targetStreamingPort));
-                servercmd = servercmd.replace("$RESw", QString::number(width));
-                servercmd = servercmd.replace("$RESh", QString::number(height));
-                servercmd = servercmd.replace("$FPS", QString::number(fps));
-                servercmd = servercmd.replace("$BITRATE", QString::number(bitrate));
-
+                servercmd = servercmd.replace("$OPT_STRING", optionsString);
                 qDebug() << "SERVER CMD: " << servercmd;
                 QVariantMap map;
                 map.insert("requestFor", PiNode::PiCam);

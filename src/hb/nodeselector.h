@@ -28,8 +28,8 @@ public Q_SLOTS:
     PiNode currentNode() const;
     int currentNodeIndex() const { return m_currentIndex; }
     // returns port on the client side where udp packets are being sents
-    int startStreaming(const PiNode& node, int width, int height, int fps, int bitrate);
-    int startStreaming(int nodeIndex, int width, int height, int fps, int bitrate);
+    int startStreaming(const PiNode& node, const QString& optionsString);
+    int startStreaming(int nodeIndex, const QString& optionsString);
     void stopStreaming(int nodeIndex);
     bool startThermal(int nodeIndex);
     bool startThermal(const PiNode& node);

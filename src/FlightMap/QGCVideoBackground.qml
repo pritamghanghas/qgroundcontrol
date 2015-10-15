@@ -29,6 +29,7 @@ This file is part of the QGROUNDCONTROL project
 
 import QtQuick 2.4
 import QtQuick.Controls 1.3
+import QtQuick.Controls.Styles 1.2
 import QGroundControl.QgcQtGStreamer 1.0
 import QGroundControl.ScreenTools    1.0
 import QGroundControl.Controls       1.0
@@ -57,6 +58,20 @@ VideoItem {
             fps:            30;
         }
         ListElement {
+            text:           "1080 10p 1mbps";
+            width:          1920;
+            height:         1080;
+            bitrate:        2000000;
+            fps:            30;
+        }
+        ListElement {
+            text:           "1080 4p 0.5mbps";
+            width:          1920;
+            height:         1080;
+            bitrate:        2000000;
+            fps:            30;
+        }
+        ListElement {
             text:           "720 49p 4mbps";
             width:          1296;
             height:          730;
@@ -78,7 +93,28 @@ VideoItem {
             fps:             49;
         }
         ListElement {
-            text:           "640 90p 0.7mbps";
+            text:           "720 30p 1mbps";
+            width:          1296;
+            height:          730;
+            bitrate:        1000000;
+            fps:             49;
+        }
+        ListElement {
+            text:           "720 15p 0.7mbps";
+            width:          1296;
+            height:          730;
+            bitrate:        1000000;
+            fps:             49;
+        }
+        ListElement {
+            text:           "720 4p 0.5mbps";
+            width:          1296;
+            height:          730;
+            bitrate:        1000000;
+            fps:             49;
+        }
+        ListElement {
+            text:           "640 60p 0.7mbps";
             width:          640;
             height:         480;
             bitrate:        700000;
@@ -98,39 +134,210 @@ VideoItem {
             bitrate:        300000;
             fps:            15;
         }
+        ListElement {
+            text:           "320 90p 0.5mbps";
+            width:          320;
+            height:         240;
+            bitrate:        500000;
+            fps:            90;
+        }
+        ListElement {
+            text:           "320 60p 0.4mbps";
+            width:          320;
+            height:         240;
+            bitrate:        400000;
+            fps:            60;
+        }
+        ListElement {
+            text:           "320 30p 0.3mbps";
+            width:          320;
+            height:         240;
+            bitrate:        300000;
+            fps:            30;
+        }
+        ListElement {
+            text:           "320 15p 0.1mbps";
+            width:          320;
+            height:         240;
+            bitrate:        100000;
+            fps:            15;
+        }
+        ListElement {
+            text:           "160 90p 0.2mbps";
+            width:          160;
+            height:         120;
+            bitrate:        100000;
+            fps:            90;
+        }
+        ListElement {
+            text:           "160 60p 0.15mbps";
+            width:          160;
+            height:         120;
+            bitrate:        100000;
+            fps:            90;
+        }
+        ListElement {
+            text:           "160 30p 0.1mbps";
+            width:          160;
+            height:         120;
+            bitrate:        100000;
+            fps:            30;
+        }
+        ListElement {
+            text:           "160 15p 0.05mbps";
+            width:          160;
+            height:         120;
+            bitrate:        50000;
+            fps:            15;
+        }
+        ListElement {
+            text:           "160 15p 0.03mbps";
+            width:          160;
+            height:         120;
+            bitrate:        30000;
+            fps:            8;
+        }
     }
 
-    QGCComboBox {
-        id:         resolutionSelectionComboBox
-        width: 150
-        x: parent.width - width - 10;
-        y: parent.height - height - 10;
-        visible:    true
-        model:      resolutionList
+    ListModel {
+        id: exposureModesList
+        ListElement { text: "auto";}
+        ListElement { text: "night";}
+        ListElement { text: "nightpreview"; }
+        ListElement { text: "backlight"; }
+        ListElement { text: "spotlight"; }
+        ListElement { text: "sports";}
+        ListElement { text: "snow";}
+        ListElement { text: "beach";}
+        ListElement { text: "verylong";}
+        ListElement { text: "fixedfps";}
+        ListElement { text: "antishake";}
+        ListElement { text: "fireworks";}
+    }
 
-        onCurrentIndexChanged: {
-            console.debug("lets start the video with resolution" + resolutionList.get(currentIndex).width);
-            videoBackground.receiver.start(resolutionList.get(currentIndex).width, resolutionList.get(currentIndex).height,
-                                           resolutionList.get(currentIndex).fps, resolutionList.get(currentIndex).bitrate);
+
+    ListModel {
+        id: awbModesList
+        ListElement { text: "auto"; }
+        ListElement { text: "off"; }
+        ListElement { text: "sun"; }
+        ListElement { text: "cloud"; }
+        ListElement { text: "shade"; }
+        ListElement { text: "tugsten"; }
+        ListElement { text: "fluorescent"; }
+        ListElement { text: "incadescent"; }
+        ListElement { text: "flash"; }
+        ListElement { text: "horizon"; }
+        ListElement { text: "antishake"; }
+        ListElement { text: "fireworks"; }
+    }
+
+    ListModel {
+        id: meteringModesList
+        ListElement { text: "average"; }
+        ListElement { text: "spot"; }
+        ListElement { text: "backlit"; }
+        ListElement { text: "matrix"; }
+    }
+
+    function onModeChange()
+    {
+        if (videoBackground.visible) {
+            var metringMode = meteringModesList.get(meteringComboBox.currentIndex).text;
+            var awbMode = awbModesList.get(awbComboBox.currentIndex).text;
+            var exposureMode = exposureModesList.get(exposureComboBox.currentIndex).text;
+            var width = resolutionList.get(resolutionSelectionComboBox.currentIndex).width;
+            var height = resolutionList.get(resolutionSelectionComboBox.currentIndex).height;
+            var fps = resolutionList.get(resolutionSelectionComboBox.currentIndex).fps;
+            var bitrate = resolutionList.get(resolutionSelectionComboBox.currentIndex).bitrate;
+            var optString = "-mm " + metringMode + " -awb " + awbMode + " -ex " + exposureMode + " -w " + width + " -h " + height + " -fps " + fps + " -b " + bitrate;
+            console.log("lets start the video with following optons: " + optString);
+            videoBackground.receiver.start(optString)
         }
+    }
 
+    Item {
+        id : combo
+        width: 600
+        x: parent.width - width - 10;
+        y: 10;
+
+        Row {
+            spacing: 10
+            layoutDirection: Qt.LeftToRight
+
+
+            QGCComboBox {
+                id:         meteringComboBox
+                width: 100
+                visible:    true
+                model:      meteringModesList
+
+                onCurrentIndexChanged: {
+                    onModeChange();
+                }
+            }
+
+            QGCComboBox {
+                id:         exposureComboBox
+                width: 130
+                visible:    true
+                model:      exposureModesList
+
+                onCurrentIndexChanged: {
+                    onModeChange();
+                }
+            }
+
+            QGCComboBox {
+                id:         awbComboBox
+                width: 130
+                visible:    true
+                model:      awbModesList
+
+                onCurrentIndexChanged: {
+                    onModeChange();
+                }
+            }
+
+            QGCComboBox {
+                id:         resolutionSelectionComboBox
+                width: 160
+                visible:    true
+                model:      resolutionList
+
+                onCurrentIndexChanged: {
+                    onModeChange();
+                }
+            }
+        }
     }
 
 
     Component.onCompleted: {
+        // some fidgeting to do to get the combo box working correctly. otherwise the model data
+        // comes out to be invalid
+        var visibility = videoBackground.visible;
+        videoBackground.visible = false;
+        meteringComboBox.currentIndex = 1;
+        meteringComboBox.currentIndex = 0;
+        exposureComboBox.currentIndex = 1;
+        exposureComboBox.currentIndex = 0;
+        awbComboBox.currentIndex = 1;
+        awbComboBox.currentIndex = 0;
+        resolutionSelectionComboBox.currentIndex = 1;
+        resolutionSelectionComboBox.currentIndex = 7;
+        videoBackground.visible = visibility;
+
         if(videoBackground.visible && videoBackground.receiver) {
-            resolutionSelectionComboBox.currentIndex = 4;
+            resolutionSelectionComboBox.currentIndex = 7;
         }
     }
 
     onVisibleChanged: {
         if(videoBackground.receiver && videoBackground.display) {
             if(videoBackground.visible) {
-                videoBackground.receiver.start(resolutionList.get(resolutionSelectionComboBox.currentIndex).width,
-                                               resolutionList.get(resolutionSelectionComboBox.currentIndex).height,
-                                               resolutionList.get(resolutionSelectionComboBox.currentIndex).
-                                               fps,
-                                               resolutionList.get(resolutionSelectionComboBox.currentIndex).bitrate);
+               onModeChange();
             } else {
                 videoBackground.receiver.stop();
             }

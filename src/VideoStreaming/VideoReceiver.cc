@@ -74,10 +74,9 @@ void VideoReceiver::previous()
 //    start();
 }
 
-void VideoReceiver::start(int width, int height, int fps, int bitrate)
+void VideoReceiver::start(const QString &optionsString)
 {
 #if defined(QGC_GST_STREAMING)
-    _nodeSelector->startStreaming(_nodeSelector->currentNode(), width, height, fps, bitrate);
     QString newUri = QString("udp://0.0.0.0:") + QString::number(_nodeSelector->currentNode().targetStreamingPort);
     qDebug() << newUri;
     setUri(newUri);
@@ -93,6 +92,9 @@ void VideoReceiver::start(int width, int height, int fps, int bitrate)
     }
 
     stop();
+    // start new stream
+    _nodeSelector->startStreaming(_nodeSelector->currentNode(), optionsString);
+
 
     bool running = false;
 
