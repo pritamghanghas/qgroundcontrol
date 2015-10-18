@@ -42,6 +42,7 @@
 
 #include "VideoStreaming.h"
 
+#include "git_version.h"
 #include "QGC.h"
 #include "QGCApplication.h"
 #include "MainWindow.h"
@@ -87,6 +88,11 @@
 #include "FlightMapSettings.h"
 #include "QGCQGeoCoordinate.h"
 #include "CoordinateVector.h"
+#include "MainToolBarController.h"
+#include "MissionEditorController.h"
+#include "FlightDisplayViewController.h"
+#include "VideoSurface.h"
+#include "VideoReceiver.h"
 
 #ifndef __ios__
     #include "SerialLink.h"
@@ -278,18 +284,21 @@ QGCApplication::QGCApplication(int &argc, char* argv[], bool unitTesting)
     setOrganizationName(QGC_ORG_NAME);
     setOrganizationDomain(QGC_ORG_DOMAIN);
 
-    // Version string is build from component parts. Format is:
-    //  vMajor.Minor.BuildNumber BuildType
-    QString versionString("v%1.%2.%3 %4");
-    versionString = versionString.arg(QGC_APPLICATION_VERSION_MAJOR).arg(QGC_APPLICATION_VERSION_MINOR).arg(QGC_APPLICATION_VERSION_BUILDNUMBER).arg(QGC_APPLICATION_VERSION_BUILDTYPE);
+    QString versionString(git_version());
+    // stable versions are on tags (v1.2.3)
+    // development versions are full git describe versions (v1.2.3-18-g879e8b3)
+    if (versionString.length() > 8) {
+        versionString.append(" (Development)");
+    }
     this->setApplicationVersion(versionString);
 
     // Set settings format
     QSettings::setDefaultFormat(QSettings::IniFormat);
 
     QSettings settings;
+    qDebug() << "Settings location" << settings.fileName() << settings.isWritable();
+
 #ifdef UNITTEST_BUILD
-    qDebug() << "Settings location" << settings.fileName();
     Q_ASSERT(settings.isWritable());
 #endif
     // The setting will delete all settings on this boot
@@ -308,7 +317,6 @@ QGCApplication::QGCApplication(int &argc, char* argv[], bool unitTesting)
 
     // Initialize Video Streaming
     initializeVideoStreaming(argc, argv);
-
 }
 
 QGCApplication::~QGCApplication()
@@ -335,7 +343,9 @@ void QGCApplication::_initCommon(void)
     qmlRegisterUncreatableType<QmlObjectListModel>  ("QGroundControl",                  1, 0, "QmlObjectListModel",     "Reference only");
     qmlRegisterUncreatableType<QGCQGeoCoordinate>   ("QGroundControl",                  1, 0, "QGCQGeoCoordinate",      "Reference only");
     qmlRegisterUncreatableType<CoordinateVector>    ("QGroundControl",                  1, 0, "CoordinateVector",       "Reference only");
-    
+    qmlRegisterUncreatableType<VideoSurface>        ("QGroundControl",                  1, 0, "VideoSurface",           "Reference only");
+    qmlRegisterUncreatableType<VideoReceiver>       ("QGroundControl",                  1, 0, "VideoReceiver",          "Reference only");
+
     qmlRegisterType<ParameterEditorController>      ("QGroundControl.Controllers", 1, 0, "ParameterEditorController");
     qmlRegisterType<FlightModesComponentController> ("QGroundControl.Controllers", 1, 0, "FlightModesComponentController");
     qmlRegisterType<AirframeComponentController>    ("QGroundControl.Controllers", 1, 0, "AirframeComponentController");
@@ -343,7 +353,10 @@ void QGCApplication::_initCommon(void)
     qmlRegisterType<PowerComponentController>       ("QGroundControl.Controllers", 1, 0, "PowerComponentController");
     qmlRegisterType<RadioComponentController>       ("QGroundControl.Controllers", 1, 0, "RadioComponentController");
     qmlRegisterType<ScreenToolsController>          ("QGroundControl.Controllers", 1, 0, "ScreenToolsController");
-    
+    qmlRegisterType<MainToolBarController>          ("QGroundControl.Controllers", 1, 0, "MainToolBarController");
+    qmlRegisterType<MissionEditorController>        ("QGroundControl.Controllers", 1, 0, "MissionEditorController");
+    qmlRegisterType<FlightDisplayViewController>    ("QGroundControl.Controllers", 1, 0, "FlightDisplayViewController");
+
 #ifndef __mobile__
     qmlRegisterType<ViewWidgetController>           ("QGroundControl.Controllers", 1, 0, "ViewWidgetController");
     qmlRegisterType<CustomCommandWidgetController>  ("QGroundControl.Controllers", 1, 0, "CustomCommandWidgetController");
@@ -408,6 +421,8 @@ void QGCApplication::_initCommon(void)
     }
     qDebug() << "Saved files location" << savedFilesLocation;
     settings.setValue(_savedFilesLocationKey, savedFilesLocation);
+
+    settings.sync();
 }
 
 bool QGCApplication::_initForNormalAppBoot(void)
@@ -450,9 +465,11 @@ bool QGCApplication::_initForNormalAppBoot(void)
     splashScreen->finish(mainWindow);
     mainWindow->splashScreenFinished();
 
+#ifndef __mobile__
     // Now that main window is up check for lost log files
     connect(this, &QGCApplication::checkForLostLogFiles, MAVLinkProtocol::instance(), &MAVLinkProtocol::checkForLostLogFiles);
     emit checkForLostLogFiles();
+#endif
 
     // Load known link configurations
     LinkManager::instance()->loadLinkConfigurationList();
@@ -638,8 +655,9 @@ void QGCApplication::_createSingletons(void)
 
 void QGCApplication::_destroySingletons(void)
 {
-    if (MainWindow::instance()) {
-        delete MainWindow::instance();
+    MainWindow* mainWindow = MainWindow::instance();
+    if (mainWindow) {
+        delete mainWindow;
     }
 
     if (LinkManager::instance(true /* nullOk */)) {
@@ -664,6 +682,8 @@ void QGCApplication::_destroySingletons(void)
     GenericFirmwarePlugin::_deleteSingleton();
     PX4FirmwarePlugin::_deleteSingleton();
     ArduCopterFirmwarePlugin::_deleteSingleton();
+    ArduPlaneFirmwarePlugin::_deleteSingleton();
+    ArduRoverFirmwarePlugin::_deleteSingleton();
     HomePositionManager::_deleteSingleton();
     FlightMapSettings::_deleteSingleton();
 }
@@ -806,7 +826,7 @@ void QGCApplication::showToolBarMessage(const QString& message)
 {
     MainWindow* mainWindow = MainWindow::instance();
     if (mainWindow) {
-        mainWindow->getMainToolBar()->showToolBarMessage(message);
+        mainWindow->showToolbarMessage(message);
     } else {
         QGCMessageBox::information("", message);
     }

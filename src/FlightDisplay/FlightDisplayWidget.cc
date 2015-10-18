@@ -35,8 +35,8 @@ This file is part of the QGROUNDCONTROL project
 
 const char* kMainFlightDisplayWidgetGroup = "FlightDisplayWidget";
 
-FlightDisplayWidget::FlightDisplayWidget(QWidget *parent)
-    : QGCQmlWidgetHolder(parent)
+FlightDisplayWidget::FlightDisplayWidget(const QString& title, QAction* action, QWidget *parent)
+    : QGCQmlWidgetHolder(title, action, parent)
 {
     setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::MinimumExpanding);
     setObjectName("FlightDisplayWidget");
@@ -87,6 +87,8 @@ FlightDisplayWidget::FlightDisplayWidget(QWidget *parent)
 
     setSource(QUrl::fromUserInput("qrc:/qml/FlightDisplayWidget.qml"));
     setVisible(true);
+    
+    loadSettings();
 }
 
 FlightDisplayWidget::~FlightDisplayWidget()

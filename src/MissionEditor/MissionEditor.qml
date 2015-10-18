@@ -33,28 +33,53 @@ import QGroundControl.ScreenTools   1.0
 import QGroundControl.Controls      1.0
 import QGroundControl.Palette       1.0
 import QGroundControl.Mavlink       1.0
+import QGroundControl.Controllers   1.0
 
 /// Mission Editor
 
 QGCView {
     viewPanel: panel
 
-    readonly property int   _decimalPlaces:     7
-    readonly property real  _horizontalMargin:  ScreenTools.defaultFontPixelWidth / 2
-    readonly property real  _verticalMargin:    ScreenTools.defaultFontPixelHeight / 2
-    readonly property var   _activeVehicle:     multiVehicleManager.activeVehicle
-    readonly property real  _editFieldWidth:    ScreenTools.defaultFontPixelWidth * 16
+    // zOrder comes from the Loader in MainWindow.qml
+    z: zOrder
+
+    readonly property int       _decimalPlaces:     8
+    readonly property real      _horizontalMargin:  ScreenTools.defaultFontPixelWidth / 2
+    readonly property real      _margin:            ScreenTools.defaultFontPixelHeight / 2
+    readonly property var       _activeVehicle:     multiVehicleManager.activeVehicle
+    readonly property real      _editFieldWidth:    ScreenTools.defaultFontPixelWidth * 16
+    readonly property real      _rightPanelWidth:   ScreenTools.defaultFontPixelWidth * 30
+    readonly property real      _rightPanelOpacity: 0.8
+    readonly property int       _toolButtonCount:   6
+    readonly property string    _autoSyncKey:       "AutoSync"
+    readonly property int       _addMissionItemsButtonAutoOffTimeout:   10000
 
     property var    _missionItems:              controller.missionItems
-    property bool   _showHomePositionManager:   false
-    property bool   _addMissionItems:           false
-    property bool   _showHelpPanel:             true
 
     property var    _homePositionManager:       QGroundControl.homePositionManager
     property string _homePositionName:          _homePositionManager.homePositions.get(0).name
-    property var    homePositionCoordinate:     _homePositionManager.homePositions.get(0).coordinate
 
-    QGCPalette { id: _qgcPal; colorGroupEnabled: enabled }
+    property var    offlineHomePosition:        _homePositionManager.homePositions.get(0).coordinate
+    property var    liveHomePosition:           controller.liveHomePosition
+    property var    liveHomePositionAvailable:  controller.liveHomePositionAvailable
+    property var    homePosition:               offlineHomePosition // live or offline depending on state
+
+    property bool _syncNeeded:                  controller.missionItems.dirty
+    property bool _syncInProgress:              _activeVehicle ? _activeVehicle.missionManager.inProgress : false
+
+    MissionEditorController {
+        id:         controller
+        autoSync:   QGroundControl.flightMapSettings.loadMapSetting(editorMap.mapName, _autoSyncKey, true)
+
+        onAutoSyncChanged:      QGroundControl.flightMapSettings.saveMapSetting(editorMap.mapName, _autoSyncKey, autoSync)
+
+        onMissionItemsChanged:  {
+            updateHomePosition()
+            itemEditor.clearItem()
+        }
+    }
+
+    QGCPalette { id: qgcPal; colorGroupEnabled: enabled }
 
     ExclusiveGroup {
         id: _mapTypeButtonsExclusiveGroup
@@ -64,33 +89,21 @@ QGCView {
         id: _dropButtonsExclusiveGroup
     }
 
-    function disableToggles() {
-        _showHomePositionManager    = false
-        _addMissionItems            = false
-        _showHelpPanel              = false
-    }
-
     function setCurrentItem(index) {
         for (var i=0; i<_missionItems.count; i++) {
             _missionItems.get(i).isCurrentItem = (i == index)
         }
     }
 
-    // Home position is mission item 0, so keep them in sync
-    onHomePositionCoordinateChanged: {
-        // Changing the coordinate will set the dirty bit, so we save and reset it
-        var dirtyBit = _missionItems.dirty
-        _missionItems.get(0).coordinate = homePositionCoordinate
-        _missionItems.dirty = dirtyBit
+    function updateHomePosition() {
+        homePosition = liveHomePositionAvailable ? liveHomePosition : offlineHomePosition
+        _missionItems.get(0).coordinate = homePosition
     }
 
-    Component.onCompleted: onHomePositionCoordinateChanged
-
-    Connections {
-        target: controller
-
-        onMissionItemsChanged: _missionItems.get(0).coordinate = homePositionCoordinate
-    }
+    Component.onCompleted:              updateHomePosition()
+    onOfflineHomePositionChanged:       updateHomePosition()
+    onLiveHomePositionAvailableChanged: updateHomePosition()
+    onLiveHomePositionChanged:          updateHomePosition()
 
     QGCViewPanel {
         id:             panel
@@ -101,15 +114,35 @@ QGCView {
 
             FlightMap {
                 id:             editorMap
-                anchors.left:   parent.left
-                anchors.right:  missionItemView.left
-                anchors.top:    parent.top
-                anchors.bottom: parent.bottom
+                anchors.fill:   parent
                 mapName:        "MissionEditor"
 
                 Component.onCompleted: {
-                    latitude = homePositionCoordinate.latitude
-                    longitude = homePositionCoordinate.longitude
+                    latitude = homePosition.latitude
+                    longitude = homePosition.longitude
+                }
+
+                readonly property real animationDuration: 500
+
+                Behavior on zoomLevel {
+                    NumberAnimation {
+                        duration:       editorMap.animationDuration
+                        easing.type:    Easing.InOutQuad
+                    }
+                }
+
+                Behavior on latitude {
+                    NumberAnimation {
+                        duration:       editorMap.animationDuration
+                        easing.type:    Easing.InOutQuad
+                    }
+                }
+
+                Behavior on longitude {
+                    NumberAnimation {
+                        duration:       editorMap.animationDuration
+                        easing.type:    Easing.InOutQuad
+                    }
                 }
 
                 MouseArea {
@@ -120,277 +153,103 @@ QGCView {
                         coordinate.latitude = coordinate.latitude.toFixed(_decimalPlaces)
                         coordinate.longitude = coordinate.longitude.toFixed(_decimalPlaces)
                         coordinate.altitude = coordinate.altitude.toFixed(_decimalPlaces)
-                        if (_showHomePositionManager) {
-                            homePositionCoordinate = coordinate
-                        } else if (_addMissionItems) {
+                        if (homePositionManagerButton.checked) {
+                            offlineHomePosition = coordinate
+                        } else if (addMissionItemsButton.checked) {
                             var index = controller.addMissionItem(coordinate)
+                            addMissionItemsButtonAutoOffTimer.start()
                             setCurrentItem(index)
+                        } else {
+                            editorMap.zoomLevel = editorMap.maxZoomLevel - 2
                         }
                     }
                 }
 
-                Rectangle {
-                    anchors.horizontalCenter:   parent.horizontalCenter
-                    anchors.bottom:             parent.bottom
-                    width:                      parent.width * 0.75
-                    height:                     syncNeededText.height + (ScreenTools.defaultFontPixelWidth * 2)
-                    border.width:               1
-                    border.color:               "white"
-                    color:                      "black"
-                    opacity:                    0.75
-                    visible:                    controller.missionItems.dirty
+                // We use this item to support dragging since dragging a MapQuickItem just doesn't seem to work
+                Item {
+                    id:         itemEditor
+                    x:          missionItemIndicator ? (missionItemIndicator.x + missionItemIndicator.anchorPoint.x - (itemEditor.width / 2)) : 100
+                    y:          missionItemIndicator ? (missionItemIndicator.y + missionItemIndicator.anchorPoint.y - (itemEditor.height / 2)) : 100
+                    width:      ScreenTools.defaultFontPixelHeight * 7
+                    height:     ScreenTools.defaultFontPixelHeight * 7
+                    visible:    false
+                    z:          editorMap.zOrderMapItems + 1    // Above item icons
 
-                    QGCLabel {
-                        id:                     syncNeededText
-                        anchors.margins:        ScreenTools.defaultFontPixelWidth
-                        anchors.top:            parent.top
-                        anchors.left:           parent.left
-                        anchors.right:          parent.right
-                        wrapMode:               Text.WordWrap
-                        horizontalAlignment:    Text.AlignHCenter
-                        verticalAlignment:      Text.AlignVCenter
-                        font.pixelSize:         ScreenTools.mediumFontPixelSize
-                        text:                   "You have unsaved changes. Be sure to use the Sync tool to save when ready."
-                    }
-                }
+                    property var    missionItem
+                    property var    missionItemIndicator
+                    property real   heading: missionItem ? missionItem.heading : 0
 
-                Row {
-                    spacing:            ScreenTools.defaultFontPixelWidth
-                    anchors.top:        parent.top
-                    anchors.right:      parent.right
-                    anchors.margins:    ScreenTools.defaultFontPixelWidth
-
-                    RoundButton {
-                        id:                     addMissionItemsButton
-                        buttonImage:            "/qmlimages/MapAddMission.svg"
-                        exclusiveGroup:         _dropButtonsExclusiveGroup
-                        onClicked: {
-                            disableToggles()
-                            _addMissionItems = addMissionItemsButton.checked
-                        }
+                    function clearItem() {
+                        itemEditor.visible = false
+                        itemEditor.missionItem = undefined
+                        itemEditor.missionItemIndicator = undefined
                     }
 
-                    RoundButton {
-                        id:                     homePositionManagerButton
-                        buttonImage:            "/qmlimages/MapHome.svg"
-                        exclusiveGroup:         _dropButtonsExclusiveGroup
-                        onClicked: {
-                            disableToggles()
-                            _showHomePositionManager = homePositionManagerButton.checked
-                        }
+                    Drag.active:    itemDrag.drag.active
+                    Drag.hotSpot.x: width  / 2
+                    Drag.hotSpot.y: height / 2
+
+                    MissionItemIndexLabel {
+                        x:              (itemEditor.width / 2) - (width / 2)
+                        y:              (itemEditor.height / 2) - (height / 2)
+                        label:          itemEditor.missionItemIndicator ? itemEditor.missionItemIndicator.label : ""
+                        isCurrentItem:  true
                     }
 
-                    DropButton {
-                        id:                     centerMapButton
-                        dropDirection:          dropDown
-                        buttonImage:            "/qmlimages/MapCenter.svg"
-                        viewportMargins:        ScreenTools.defaultFontPixelWidth / 2
-                        exclusiveGroup:         _dropButtonsExclusiveGroup
+                    MouseArea {
+                        id:             itemDrag
+                        anchors.fill:   parent
+                        drag.target:    parent
 
-                        onClicked: {
-                            disableToggles()
-                        }
+                        property bool dragActive: drag.active
 
-                        dropDownComponent: Component {
-                            Row {
-                                spacing: ScreenTools.defaultFontPixelWidth
-
-                                QGCButton {
-                                    text: "Home"
-
-                                    onClicked: {
-                                        centerMapButton.hideDropDown()
-                                        editorMap.center = QtPositioning.coordinate(homePositionCoordinate.latitude, homePositionCoordinate.longitude)
-                                        _showHomePositionManager = true
-                                    }
-                                }
-
-                                QGCButton {
-                                    text:       "Vehicle"
-                                    enabled:    activeVehicle && activeVehicle.latitude != 0 && activeVehicle.longitude != 0
-
-                                    property var activeVehicle: multiVehicleManager.activeVehicle
-
-                                    onClicked: {
-                                        centerMapButton.hideDropDown()
-                                        editorMap.latitude = activeVehicle.latitude
-                                        editorMap.longitude = activeVehicle.longitude
-                                    }
-                                }
-
-    /*
-
-    This code will need to wait for Qml 5.5 support since Map.visibleRegion is only in Qt 5.5
-
-                                QGCButton {
-                                    text: "All Items"
-
-                                    onClicked: {
-                                        centerMapButton.hideDropDown()
-
-                                        // Begin with only the home position in the region
-                                        var region = QtPositioning.rectangle(QtPositioning.coordinate(homePositionCoordinate.latitude, _homePositionCoordinate.longitude),
-                                                                             QtPositioning.coordinate(homePositionCoordinate.latitude, _homePositionCoordinate.longitude))
-
-                                        // Now expand the region to include all mission items
-                                        for (var i=0; i<_missionItems.count; i++) {
-                                            var missionItem = _missionItems.get(i)
-
-                                            region.topLeft.latitude = Math.max(missionItem.coordinate.latitude, region.topLeft.latitude)
-                                            region.topLeft.longitude = Math.min(missionItem.coordinate.longitude, region.topLeft.longitude)
-
-                                            region.topRight.latitude = Math.max(missionItem.coordinate.latitude, region.topRight.latitude)
-                                            region.topRight.longitude = Math.max(missionItem.coordinate.longitude, region.topRight.longitude)
-
-                                            region.bottomLeft.latitude = Math.min(missionItem.coordinate.latitude, region.bottomLeft.latitude)
-                                            region.bottomLeft.longitude = Math.min(missionItem.coordinate.longitude, region.bottomLeft.longitude)
-
-                                            region.bottomRight.latitude = Math.min(missionItem.coordinate.latitude, region.bottomRight.latitude)
-                                            region.bottomRight.longitude = Math.max(missionItem.coordinate.longitude, region.bottomRight.longitude)
-                                        }
-
-                                        editorMap.visibleRegion = region
-                                    }
-                                }
-    */
+                        onDragActiveChanged: {
+                            if (!drag.active) {
+                                var point = Qt.point(itemEditor.x + (itemEditor.width  / 2), itemEditor.y + (itemEditor.height / 2))
+                                itemEditor.missionItem.coordinate = editorMap.toCoordinate(point)
                             }
                         }
                     }
-
-                    DropButton {
-                        id:                     syncButton
-                        dropDirection:          dropDown
-                        buttonImage:            "/qmlimages/MapSync.svg"
-                        viewportMargins:        ScreenTools.defaultFontPixelWidth / 2
-                        exclusiveGroup:         _dropButtonsExclusiveGroup
-
-                        onClicked: {
-                            disableToggles()
-                        }
-
-                        dropDownComponent: Component {
-                            Row {
-                                spacing: ScreenTools.defaultFontPixelWidth
-
-                                QGCButton {
-                                    text:       "Load from vehicle"
-                                    enabled:    _activeVehicle && !_activeVehicle.missionManager.inProgress
-
-                                    onClicked: {
-                                        syncButton.hideDropDown()
-                                        controller.getMissionItems()
-                                    }
-                                }
-
-                                QGCButton {
-                                    text:       "Save to vehicle"
-                                    enabled:    _activeVehicle && !_activeVehicle.missionManager.inProgress
-
-                                    onClicked: {
-                                        syncButton.hideDropDown()
-                                        controller.setMissionItems()
-                                    }
-                                }
-
-                                QGCButton {
-                                    text:       "Load from file..."
-
-                                    onClicked: {
-                                        syncButton.hideDropDown()
-                                        controller.loadMissionFromFile()
-                                    }
-                                }
-
-                                QGCButton {
-                                    text:       "Save to file..."
-
-                                    onClicked: {
-                                        syncButton.hideDropDown()
-                                        controller.saveMissionToFile()
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    DropButton {
-                        id:                 mapTypeButton
-                        dropDirection:      dropDown
-                        buttonImage:        "/qmlimages/MapType.svg"
-                        viewportMargins:    ScreenTools.defaultFontPixelWidth / 2
-                        exclusiveGroup:         _dropButtonsExclusiveGroup
-
-                        onClicked: {
-                            disableToggles()
-                        }
-
-                        dropDownComponent: Component {
-                            Row {
-                                spacing: ScreenTools.defaultFontPixelWidth
-
-                                Repeater {
-                                    model: QGroundControl.flightMapSettings.mapTypes
-
-                                    QGCButton {
-                                        checkable:      true
-                                        checked:        editorMap.mapType == text
-                                        text:           modelData
-                                        exclusiveGroup: _mapTypeButtonsExclusiveGroup
-
-                                        onClicked: {
-                                            editorMap.mapType = text
-                                            checked = true
-                                            mapTypeButton.hideDropDown()
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    RoundButton {
-                        id:                     showHelpButton
-                        buttonImage:            "/qmlimages/Help.svg"
-                        exclusiveGroup:         _dropButtonsExclusiveGroup
-                        checked:                true
-                        onClicked: {
-                            disableToggles()
-                            _showHelpPanel = showHelpButton.checked
-                        }
-                    }
-
                 }
 
                 // Add the mission items to the map
                 MapItemView {
                     model: controller.missionItems
-                    
+
                     delegate:
                         MissionItemIndicator {
                             id:             itemIndicator
-                            label:          object.sequenceNumber == 0 ? "H" : object.sequenceNumber
-                            isCurrentItem:  !_showHomePositionManager && object.isCurrentItem
+                            label:          object.sequenceNumber == 0 ? (liveHomePositionAvailable ? "H" : "F") : object.sequenceNumber
+                            isCurrentItem:  !homePositionManagerButton.checked && object.isCurrentItem
                             coordinate:     object.coordinate
-                            z:              2
+                            z:              editorMap.zOrderMapItems
                             visible:        object.specifiesCoordinate
 
-                            onClicked: {
-                                disableToggles()
-                                if (_dropButtonsExclusiveGroup.current) {
-                                    _dropButtonsExclusiveGroup.current.checked = false
+                            onClicked: setCurrentItem(object.sequenceNumber)
+
+                            Connections {
+                                target: object
+
+                                onIsCurrentItemChanged: {
+                                    if (isCurrentItem) {
+                                        // Setup our drag item
+                                        if (object.sequenceNumber != 0) {
+                                            itemEditor.visible = true
+                                            itemEditor.missionItem = Qt.binding(function() { return object })
+                                            itemEditor.missionItemIndicator = Qt.binding(function() { return itemIndicator })
+                                        } else {
+                                            itemEditor.clearItem()
+                                        }
+
+                                        // Zoom the map and move to the new position
+                                        editorMap.zoomLevel = editorMap.maxZoomLevel
+                                        editorMap.latitude = object.coordinate.latitude
+                                        editorMap.longitude = object.coordinate.longitude
+                                    }
                                 }
-                                //-- Home?
-                                if (object.sequenceNumber === 0) {
-                                    homePositionManagerButton.checked = true
-                                    _showHomePositionManager = true
-                                //-- Otherwise it's a mission item
-                                } else {
-                                    addMissionItemsButton.checked = true
-                                    _addMissionItems = true
-                                }
-                                setCurrentItem(object.sequenceNumber)
                             }
 
+                            // These are the non-coordinate child mission items attached to this item
                             Row {
                                 anchors.top:    parent.top
                                 anchors.left:   parent.right
@@ -401,12 +260,12 @@ QGCView {
                                     delegate:
                                         MissionItemIndexLabel {
                                             label:          object.sequenceNumber
-                                            isCurrentItem:  !_showHomePositionManager && object.isCurrentItem
+                                            isCurrentItem:  !homePositionManagerButton.checked && object.isCurrentItem
                                             z:              2
 
                                             onClicked: {
-                                                _showHomePositionManager = false
                                                 setCurrentItem(object.sequenceNumber)
+                                                missionItemEditorButton.checked
                                             }
 
                                         }
@@ -422,8 +281,8 @@ QGCView {
                     delegate:
                         MapPolyline {
                             line.width: 3
-                            line.color: _qgcPal.mapButtonHighlight
-                            z:          1
+                            line.color: qgcPal.mapButtonHighlight
+                            z:          editorMap.zOrderMapItems - 1 // Under item indicators
 
                             path: [
                                 { latitude: object.coordinate1.latitude, longitude: object.coordinate1.longitude },
@@ -432,256 +291,341 @@ QGCView {
                         }
                 }
 
-                Column {
-                    id:                 controlWidgets
-                    anchors.margins:    ScreenTools.defaultFontPixelWidth
-                    anchors.right:      parent.left
-                    anchors.bottom:     parent.top
-                    spacing:            ScreenTools.defaultFontPixelWidth / 2
-
-                    QGCButton {
-                        id:         addMode
-                        text:       "+"
-                        checkable:  true
-                    }
-                }
-            } // FlightMap
-
-            Rectangle {
-                id:                 missionItemView
-                anchors.right:      parent.right
-                anchors.top:        parent.top
-                anchors.bottom:     parent.bottom
-                width:              ScreenTools.defaultFontPixelWidth * 30
-                color: _qgcPal.window
-
+                // Mission Item Editor
                 Item {
-                    anchors.margins:    _verticalMargin
-                    anchors.fill:       parent
+                    id:             missionItemEditor
+                    anchors.top:    parent.top
+                    anchors.bottom: parent.bottom
+                    anchors.right:  parent.right
+                    width:          _rightPanelWidth
+                    visible:        !helpButton.checked && !homePositionManagerButton.checked && _missionItems.count > 1
+                    opacity:        _rightPanelOpacity
+                    z:              editorMap.zOrderTopMost
 
-                    // Mission Item Editor
-                    Item {
+                    ListView {
+                        id:             missionItemSummaryList
                         anchors.fill:   parent
-                        visible:        !_showHomePositionManager && controller.missionItems.count != 1 && ! _showHelpPanel
+                        spacing:        _margin / 2
+                        orientation:    ListView.Vertical
+                        model:          controller.canEdit ? controller.missionItems : 0
 
-                        ListView {
-                            id:             missionItemSummaryList
-                            anchors.fill:   parent
-                            spacing:        _verticalMargin
-                            orientation:    ListView.Vertical
-                            model:          controller.canEdit ? controller.missionItems : 0
+                        property real _maxItemHeight: 0
 
-                            property real _maxItemHeight: 0
+                        delegate:
+                            MissionItemEditor {
+                            missionItem:    object
+                            width:          parent.width
+                            readOnly:       object.sequenceNumber == 0 && liveHomePositionAvailable
 
-                            delegate:
-                                MissionItemEditor {
-                                    missionItem:    object
-                                    width:          parent.width
+                            onClicked:  setCurrentItem(object.sequenceNumber)
 
-                                    onClicked:  setCurrentItem(object.sequenceNumber)
-
-                                    onRemove: {
-                                        var newCurrentItem = object.sequenceNumber - 1
-                                        controller.removeMissionItem(object.sequenceNumber)
-                                        if (_missionItems.count > 1) {
-                                            newCurrentItem = Math.min(_missionItems.count - 1, newCurrentItem)
-                                            setCurrentItem(newCurrentItem)
-                                        }
-                                    }
-
-                                    onMoveUp:   controller.moveUp(object.sequenceNumber)
-                                    onMoveDown: controller.moveDown(object.sequenceNumber)
+                            onRemove: {
+                                var newCurrentItem = object.sequenceNumber - 1
+                                controller.removeMissionItem(object.sequenceNumber)
+                                if (_missionItems.count > 1) {
+                                    newCurrentItem = Math.min(_missionItems.count - 1, newCurrentItem)
+                                    setCurrentItem(newCurrentItem)
                                 }
-                        } // ListView
+                            }
+                        }
+                    } // ListView
+
+                    QGCLabel {
+                        anchors.fill:   parent
+                        visible:        !controller.canEdit
+                        wrapMode:       Text.WordWrap
+                        text:           "The set of mission items you have loaded cannot be edited by QGroundControl. " +
+                                        "You will only be able to save these to a file, or send them to a vehicle."
+                    }
+                } // Item - Mission Item editor
+
+                // Home Position Manager
+                Rectangle {
+                    id:             homePositionManager
+                    anchors.top:    parent.top
+                    anchors.bottom: parent.bottom
+                    anchors.right:  parent.right
+                    width:          _rightPanelWidth
+                    visible:        homePositionManagerButton.checked
+                    color:          qgcPal.window
+                    opacity:        _rightPanelOpacity
+                    z:              editorMap.zOrderTopMost
+
+                    Column {
+                        anchors.margins:    _margin
+                        anchors.fill:       parent
+                        visible:            !liveHomePositionAvailable
 
                         QGCLabel {
-                            anchors.fill:   parent
-                            visible:        !controller.canEdit
-                            wrapMode:       Text.WordWrap
-                            text:           "The set of mission items you have loaded cannot be edited by QGroundControl. " +
-                                            "You will only be able to save these to a file, or send them to a vehicle."
+                            font.pixelSize: ScreenTools.mediumFontPixelSize
+                            text:           "Flying Field Manager"
                         }
-                    } // Item - Mission Item editor
 
-                    // Home Position Manager
+                        Item {
+                            width: 10
+                            height: ScreenTools.defaultFontPixelHeight
+                        }
+
+                        QGCLabel {
+                            width:      parent.width
+                            wrapMode:   Text.WordWrap
+                            text:       "This is used to save locations associated with your flying field for use while creating missions with no vehicle connection."
+                        }
+
+                        Item {
+                            width: 10
+                            height: ScreenTools.defaultFontPixelHeight
+                        }
+
+                        QGCLabel {
+                            text:       "Select field to use:"
+                        }
+
+                        QGCComboBox {
+                            id:         homePosCombo
+                            width:      parent.width
+                            textRole:   "text"
+                            model:      _homePositionManager.homePositions
+
+                            onCurrentIndexChanged: {
+                                if (currentIndex != -1) {
+                                    var homePos = _homePositionManager.homePositions.get(currentIndex)
+                                    _homePositionName = homePos.name
+                                    offlineHomePosition = homePos.coordinate
+                                    editorMap.latitude = offlineHomePosition.latitude
+                                    editorMap.longitude = offlineHomePosition.longitude
+                                }
+                            }
+                        }
+
+                        Item {
+                            width: 10
+                            height: ScreenTools.defaultFontPixelHeight
+                        }
+
+                        QGCLabel {
+                            width:      parent.width
+                            wrapMode:   Text.WordWrap
+                            text:       "To add a new flying field, click on the Map to set the position. " +
+                                        "Then give it a new name and click Add/Update. " +
+                                        "To change the current field position, click on the Map to set the new position. " +
+                                        "Then click Add/Update without changing the name."
+                        }
+
+                        Item {
+                            width: 10
+                            height: ScreenTools.defaultFontPixelHeight / 3
+                        }
+
+                        Item {
+                            width:  parent.width
+                            height: nameField.height
+
+                            QGCLabel {
+                                anchors.baseline:   nameField.baseline
+                                text:               "Name:"
+                            }
+
+                            QGCTextField {
+                                id:             nameField
+                                anchors.right:  parent.right
+                                width:          _editFieldWidth
+                                text:           _homePositionName
+                            }
+                        }
+
+                        Item {
+                            width: 10
+                            height: ScreenTools.defaultFontPixelHeight / 3
+                        }
+
+                        Item {
+                            width:  parent.width
+                            height: offlineLatitudeField.height
+
+                            QGCLabel {
+                                anchors.baseline:   offlineLatitudeField.baseline
+                                text:               "Lat:"
+                            }
+
+                            QGCTextField {
+                                id:             offlineLatitudeField
+                                anchors.right:  parent.right
+                                width:          _editFieldWidth
+                                text:           offlineHomePosition.latitude
+                            }
+                        }
+
+                        Item {
+                            width: 10
+                            height: ScreenTools.defaultFontPixelHeight / 3
+                        }
+
+                        Item {
+                            width:  parent.width
+                            height: offlineLongitudeField.height
+
+                            QGCLabel {
+                                anchors.baseline:   offlineLongitudeField.baseline
+                                text:               "Lon:"
+                            }
+
+                            QGCTextField {
+                                id:             offlineLongitudeField
+                                anchors.right:  parent.right
+                                width:          _editFieldWidth
+                                text:           offlineHomePosition.longitude
+                            }
+                        }
+
+                        Item {
+                            width: 10
+                            height: ScreenTools.defaultFontPixelHeight / 3
+                        }
+
+                        Item {
+                            width:  parent.width
+                            height: offlineAltitudeField.height
+
+                            QGCLabel {
+                                anchors.baseline:   offlineAltitudeField.baseline
+                                text:               "Alt:"
+                            }
+
+                            QGCTextField {
+                                id:             offlineAltitudeField
+                                anchors.right:  parent.right
+                                width:          _editFieldWidth
+                                text:           offlineHomePosition.altitude
+                            }
+                        }
+
+                        Item {
+                            width: 10
+                            height: ScreenTools.defaultFontPixelHeight
+                        }
+
+                        Row {
+                            spacing: ScreenTools.defaultFontPixelWidth
+
+                            QGCButton {
+                                text: "Add/Update"
+
+                                onClicked: {
+                                    offlineHomePosition = QtPositioning.coordinate(latitudeField.text, longitudeField.text, altitudeField.text)
+                                    _homePositionManager.updateHomePosition(nameField.text, offlineHomePosition)
+                                    homePosCombo.currentIndex = homePosCombo.find(nameField.text)
+                                }
+                            }
+
+                            QGCButton {
+                                text: "Delete"
+
+                                onClicked: {
+                                    homePosCombo.currentIndex = -1
+                                    _homePositionManager.deleteHomePosition(nameField.text)
+                                    homePosCombo.currentIndex = 0
+                                    var homePos = _homePositionManager.homePositions.get(0)
+                                    _homePositionName = homePos.name
+                                    offlineHomePosition = homePos.coordinate
+                                }
+                            }
+                        }
+                    } // Column - Offline view
+
+                    Column {
+                        anchors.margins:    _margin
+                        anchors.fill:       parent
+                        visible:            liveHomePositionAvailable
+
+                        QGCLabel {
+                            font.pixelSize: ScreenTools.mediumFontPixelSize
+                            text:           "Vehicle Home Position"
+                        }
+
+                        Item {
+                            width: 10
+                            height: ScreenTools.defaultFontPixelHeight
+                        }
+
+                        Item {
+                            width:  parent.width
+                            height: liveLatitudeField.height
+
+                            QGCLabel {
+                                anchors.baseline:   liveLatitudeField.baseline
+                                text:               "Lat:"
+                            }
+
+                            QGCLabel {
+                                id:             liveLatitudeField
+                                anchors.right:  parent.right
+                                width:          _editFieldWidth
+                                text:           liveHomePosition.latitude
+                            }
+                        }
+
+                        Item {
+                            width: 10
+                            height: ScreenTools.defaultFontPixelHeight / 3
+                        }
+
+                        Item {
+                            width:  parent.width
+                            height: liveLongitudeField.height
+
+                            QGCLabel {
+                                anchors.baseline:   liveLongitudeField.baseline
+                                text:               "Lon:"
+                            }
+
+                            QGCLabel {
+                                id:             liveLongitudeField
+                                anchors.right:  parent.right
+                                width:          _editFieldWidth
+                                text:           liveHomePosition.longitude
+                            }
+                        }
+
+                        Item {
+                            width: 10
+                            height: ScreenTools.defaultFontPixelHeight / 3
+                        }
+
+                        Item {
+                            width:  parent.width
+                            height: liveAltitudeField.height
+
+                            QGCLabel {
+                                anchors.baseline:   liveAltitudeField.baseline
+                                text:               "Alt:"
+                            }
+
+                            QGCLabel {
+                                id:             liveAltitudeField
+                                anchors.right:  parent.right
+                                width:          _editFieldWidth
+                                text:           liveHomePosition.altitude
+                            }
+                        }
+                    } // Column - Online view
+                } // Item - Home Position Manager
+
+                // Help Panel
+                Rectangle {
+                    id:             helpPanel
+                    anchors.top:    parent.top
+                    anchors.bottom: parent.bottom
+                    anchors.right:  parent.right
+                    width:          _rightPanelWidth
+                    visible:        !homePositionManagerButton.checked && (_missionItems.count == 1 || helpButton.checked)
+                    color:          qgcPal.window
+                    opacity:        _rightPanelOpacity
+                    z:              editorMap.zOrderTopMost
+
                     Item {
-                        anchors.fill:   parent
-                        visible:        _showHomePositionManager && !_showHelpPanel
-
-                        Column {
-                            anchors.fill: parent
-
-                            QGCLabel {
-                                font.pixelSize: ScreenTools.mediumFontPixelSize
-                                text:           "Home Position Manager"
-                            }
-
-                            Item {
-                                width: 10
-                                height: ScreenTools.defaultFontPixelHeight
-                            }
-
-                            QGCLabel {
-                                text: "Select home position to use:"
-                            }
-
-                            QGCComboBox {
-                                id:         homePosCombo
-                                width:      parent.width
-                                textRole:   "text"
-                                model:      _homePositionManager.homePositions
-
-                                onCurrentIndexChanged: {
-                                    if (currentIndex != -1) {
-                                        var homePos = _homePositionManager.homePositions.get(currentIndex)
-                                        _homePositionName = homePos.name
-                                        homePositionCoordinate = homePos.coordinate
-                                        editorMap.latitude = homePositionCoordinate.latitude
-                                        editorMap.longitude = homePositionCoordinate.longitude
-                                    }
-                                }
-                            }
-
-                            Item {
-                                width: 10
-                                height: ScreenTools.defaultFontPixelHeight
-                            }
-
-                            QGCLabel {
-                                width:      parent.width
-                                wrapMode:   Text.WordWrap
-                                text:       "To add a new home position, click on the Map to set the position. " +
-                                            "Then give it a new name and click Add/Update. " +
-                                            "To change the current home position, click on the Map to set the new position. " +
-                                            "Then click Add/Update without changing the name."
-                            }
-
-                            Item {
-                                width: 10
-                                height: ScreenTools.defaultFontPixelHeight / 3
-                            }
-
-                            Item {
-                                width:  parent.width
-                                height: nameField.height
-
-                                QGCLabel {
-                                    anchors.baseline:   nameField.baseline
-                                    text:               "Name:"
-                                }
-
-                                QGCTextField {
-                                    id:             nameField
-                                    anchors.right:  parent.right
-                                    width:          _editFieldWidth
-                                    text:           _homePositionName
-                                }
-                            }
-
-                            Item {
-                                width: 10
-                                height: ScreenTools.defaultFontPixelHeight / 3
-                            }
-
-                            Item {
-                                width:  parent.width
-                                height: latitudeField.height
-
-                                QGCLabel {
-                                    anchors.baseline:   latitudeField.baseline
-                                    text:               "Lat:"
-                                }
-
-                                QGCTextField {
-                                    id:             latitudeField
-                                    anchors.right:  parent.right
-                                    width:          _editFieldWidth
-                                    text:           homePositionCoordinate.latitude
-                                }
-                            }
-
-                            Item {
-                                width: 10
-                                height: ScreenTools.defaultFontPixelHeight / 3
-                            }
-
-                            Item {
-                                width:  parent.width
-                                height: longitudeField.height
-
-                                QGCLabel {
-                                    anchors.baseline:   longitudeField.baseline
-                                    text:               "Lon:"
-                                }
-
-                                QGCTextField {
-                                    id:             longitudeField
-                                    anchors.right:  parent.right
-                                    width:          _editFieldWidth
-                                    text:           homePositionCoordinate.longitude
-                                }
-                            }
-
-                            Item {
-                                width: 10
-                                height: ScreenTools.defaultFontPixelHeight / 3
-                            }
-
-                            Item {
-                                width:  parent.width
-                                height: altitudeField.height
-
-                                QGCLabel {
-                                    anchors.baseline:   altitudeField.baseline
-                                    text:               "Alt:"
-                                }
-
-                                QGCTextField {
-                                    id:             altitudeField
-                                    anchors.right:  parent.right
-                                    width:          _editFieldWidth
-                                    text:           homePositionCoordinate.altitude
-                                }
-                            }
-
-                            Item {
-                                width: 10
-                                height: ScreenTools.defaultFontPixelHeight
-                            }
-
-                            Row {
-                                spacing: ScreenTools.defaultFontPixelWidth
-
-                                QGCButton {
-                                    text: "Add/Update"
-
-                                    onClicked: {
-                                        homePositionCoordinate = QtPositioning.coordinate(latitudeField.text, longitudeField.text, altitudeField.text)
-                                        _homePositionManager.updateHomePosition(nameField.text, homePositionCoordinate)
-                                        homePosCombo.currentIndex = homePosCombo.find(nameField.text)
-                                    }
-                                }
-
-                                QGCButton {
-                                    text: "Delete"
-
-                                    onClicked: {
-                                        homePosCombo.currentIndex = -1
-                                        _homePositionManager.deleteHomePosition(nameField.text)
-                                        homePosCombo.currentIndex = 0
-                                        var homePos = _homePositionManager.homePositions.get(0)
-                                        _homePositionName = homePos.name
-                                        homePositionCoordinate = homePos.coordinate
-                                    }
-                                }
-                            }
-                        } // Column
-                    } // Item - Home Position Manager
-
-                    // Help Panel
-                    Item {
-                        anchors.fill:   parent
-                        visible:        !_showHomePositionManager && (controller.missionItems.count == 1 || _showHelpPanel)
+                        anchors.margins:    _margin
+                        anchors.fill:       parent
 
                         QGCLabel {
                             id:             helpTitle
@@ -738,9 +682,9 @@ QGCView {
                             anchors.right:      parent.right
                             anchors.top:        homePositionManagerHelpIcon.top
                             wrapMode:           Text.WordWrap
-                            text:               "<b>Home Position Manager</b><br>" +
-                                                "When enabled, allows you to select/add/update home positions. " +
-                                                "You can save multiple home position to represent multiple flying areas."
+                            text:               "<b>Flying Field Manager</b><br>" +
+                                                "When enabled, allows you to select/add/update flying field locations. " +
+                                                "You can save multiple flying field locations for use while creating missions while you are not connected to your vehicle."
                         }
 
                         Image {
@@ -808,9 +752,247 @@ QGCView {
                             text:               "<b>Map Type</b><br>" +
                                                 "Map type options."
                         }
-                    } // Item - Help Panel
-                } // Item
-            } // Rectangle - mission item list
+                    } // Item - margin
+                } // Item - Help Panel
+
+                RoundButton {
+                    id:                 addMissionItemsButton
+                    anchors.margins:    _margin
+                    anchors.left:       parent.left
+                    y:                  (parent.height - (_toolButtonCount * height) - ((_toolButtonCount - 1) * _margin)) / 2
+                    buttonImage:        "/qmlimages/MapAddMission.svg"
+                    exclusiveGroup:     _dropButtonsExclusiveGroup
+                    z:                  editorMap.zOrderWidgets
+
+                    onCheckedChanged: {
+                        if (checked) {
+                            addMissionItemsButtonAutoOffTimer.start()
+                        } else {
+                            addMissionItemsButtonAutoOffTimer.stop()
+                        }
+                    }
+
+                    Timer {
+                        id:         addMissionItemsButtonAutoOffTimer
+                        interval:   _addMissionItemsButtonAutoOffTimeout
+                        repeat:     false
+
+                        onTriggered: addMissionItemsButton.checked = false
+                    }
+                }
+
+                RoundButton {
+                    id:                 deleteMissionItemButton
+                    anchors.margins:    _margin
+                    anchors.left:       parent.left
+                    anchors.top:        addMissionItemsButton.bottom
+                    buttonImage:        "/qmlimages/TrashDelete.svg"
+                    exclusiveGroup:     _dropButtonsExclusiveGroup
+                    z:                  editorMap.zOrderWidgets
+
+                    onClicked: {
+                        itemEditor.clearItem()
+                        controller.deleteCurrentMissionItem()
+                        checked = false
+                    }
+                }
+
+                RoundButton {
+                    id:                 homePositionManagerButton
+                    anchors.margins:    _margin
+                    anchors.left:       parent.left
+                    anchors.top:        deleteMissionItemButton.bottom
+                    buttonImage:        "/qmlimages/MapHome.svg"
+                    exclusiveGroup:     _dropButtonsExclusiveGroup
+                    z:                  editorMap.zOrderWidgets
+                }
+
+                DropButton {
+                    id:                 centerMapButton
+                    anchors.margins:    _margin
+                    anchors.left:       parent.left
+                    anchors.top:        homePositionManagerButton.bottom
+                    dropDirection:      dropRight
+                    buttonImage:        "/qmlimages/MapCenter.svg"
+                    viewportMargins:    ScreenTools.defaultFontPixelWidth / 2
+                    exclusiveGroup:     _dropButtonsExclusiveGroup
+                    z:                  editorMap.zOrderWidgets
+
+                    dropDownComponent: Component {
+                        Column {
+                            QGCLabel { text: "Center map:" }
+
+                            Row {
+                                spacing: ScreenTools.defaultFontPixelWidth
+
+                                QGCButton {
+                                    text: "Home"
+
+                                    onClicked: {
+                                        centerMapButton.hideDropDown()
+                                        editorMap.center = QtPositioning.coordinate(homePosition.latitude, homePosition.longitude)
+                                    }
+                                }
+
+                                QGCButton {
+                                    text:       "Vehicle"
+                                    enabled:    activeVehicle && activeVehicle.latitude != 0 && activeVehicle.longitude != 0
+
+                                    property var activeVehicle: multiVehicleManager.activeVehicle
+
+                                    onClicked: {
+                                        centerMapButton.hideDropDown()
+                                        editorMap.latitude = activeVehicle.latitude
+                                        editorMap.longitude = activeVehicle.longitude
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                DropButton {
+                    id:                 syncButton
+                    anchors.margins:    _margin
+                    anchors.left:       parent.left
+                    anchors.top:        centerMapButton.bottom
+                    dropDirection:      dropRight
+                    buttonImage:        _syncNeeded ? "/qmlimages/MapSyncChanged.svg" : "/qmlimages/MapSync.svg"
+                    viewportMargins:    ScreenTools.defaultFontPixelWidth / 2
+                    exclusiveGroup:     _dropButtonsExclusiveGroup
+                    z:                  editorMap.zOrderWidgets
+                    dropDownComponent:  syncDropDownComponent
+                    enabled:            !_syncInProgress
+                }
+
+                DropButton {
+                    id:                 mapTypeButton
+                    anchors.margins:    _margin
+                    anchors.left:       parent.left
+                    anchors.top:        syncButton.bottom
+                    dropDirection:      dropRight
+                    buttonImage:        "/qmlimages/MapType.svg"
+                    viewportMargins:    ScreenTools.defaultFontPixelWidth / 2
+                    exclusiveGroup:     _dropButtonsExclusiveGroup
+                    z:                  editorMap.zOrderWidgets
+
+                    dropDownComponent: Component {
+                        Column {
+                            QGCLabel { text: "Map type:" }
+
+                            Row {
+                                spacing: ScreenTools.defaultFontPixelWidth
+
+                                Repeater {
+                                    model: QGroundControl.flightMapSettings.mapTypes
+
+                                    QGCButton {
+                                        checkable:      true
+                                        checked:        editorMap.mapType == text
+                                        text:           modelData
+                                        exclusiveGroup: _mapTypeButtonsExclusiveGroup
+
+                                        onClicked: {
+                                            editorMap.mapType = text
+                                            checked = true
+                                            mapTypeButton.hideDropDown()
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                RoundButton {
+                    id:                 helpButton
+                    anchors.margins:    _margin
+                    anchors.left:       parent.left
+                    anchors.top:        mapTypeButton.bottom
+                    buttonImage:        "/qmlimages/Help.svg"
+                    exclusiveGroup:     _dropButtonsExclusiveGroup
+                    z:                  editorMap.zOrderWidgets
+                }
+            } // FlightMap
         } // Item - split view container
     } // QGCViewPanel
+
+    Component {
+        id: syncDropDownComponent
+
+        Column {
+            id:         columnHolder
+            spacing:    _margin
+
+            QGCLabel {
+                width:      columnHolder.width
+                wrapMode:   Text.WordWrap
+                text:       _syncNeeded && !controller.autoSync ?
+                                "You have unsaved changed to you mission. You should send to your vehicle, or save to a file:" :
+                                "Sync:"
+            }
+
+            Row {
+                visible:    autoSyncCheckBox.enabled && autoSyncCheckBox.checked
+                spacing:    ScreenTools.defaultFontPixelWidth
+
+                QGCButton {
+                    text:       "Send to vehicle"
+                    enabled:    _activeVehicle && !_activeVehicle.missionManager.inProgress
+
+                    onClicked: {
+                        syncButton.hideDropDown()
+                        controller.sendMissionItems()
+                    }
+                }
+
+                QGCButton {
+                    text:       "Load from vehicle"
+                    enabled:    _activeVehicle && !_activeVehicle.missionManager.inProgress
+
+                    onClicked: {
+                        syncButton.hideDropDown()
+                        controller.getMissionItems()
+                    }
+                }
+            }
+
+            Row {
+                spacing: ScreenTools.defaultFontPixelWidth
+
+                QGCButton {
+                    text:       "Save to file..."
+
+                    onClicked: {
+                        syncButton.hideDropDown()
+                        controller.saveMissionToFile()
+                    }
+                }
+
+                QGCButton {
+                    text:       "Load from file..."
+
+                    onClicked: {
+                        syncButton.hideDropDown()
+                        controller.loadMissionFromFile()
+                    }
+                }
+            }
+
+            QGCLabel {
+                id:         autoSyncDisallowedLabel
+                visible:    _activeVehicle && _activeVehicle.armed
+                text:       "AutoSync is not allowed whie vehicle is armed"
+            }
+
+            QGCCheckBox {
+                id:         autoSyncCheckBox
+                checked:    controller.autoSync
+                text:       "Automatically sync changes with vehicle"
+                enabled:    _activeVehicle ? !_activeVehicle.armed : false
+
+                onClicked: controller.autoSync = checked
+            }
+        }
+    }
 } // QGCVIew

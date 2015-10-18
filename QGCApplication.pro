@@ -18,9 +18,10 @@
 # -------------------------------------------------
 
 include(QGCCommon.pri)
+include(git_version.pri)
 
 TARGET = qgroundcontrol
-TEMPLATE =  app
+TEMPLATE = app
 
 # Load additional config flags from user_config.pri
 exists(user_config.pri):infile(user_config.pri, CONFIG) {
@@ -162,12 +163,10 @@ INCLUDEPATH += \
 
 FORMS += \
     src/QGCQmlWidgetHolder.ui \
-    src/ui/Linechart.ui \
     src/ui/LogReplayLinkConfigurationWidget.ui \
     src/ui/MainWindow.ui \
     src/ui/MAVLinkSettingsWidget.ui \
     src/ui/QGCCommConfiguration.ui \
-    src/ui/QGCDataPlot2D.ui \
     src/ui/QGCLinkConfiguration.ui \
     src/ui/QGCMapRCToParamDialog.ui \
     src/ui/QGCMAVLinkLogPlayer.ui \
@@ -185,7 +184,9 @@ FORMS += \
 
 !MobileBuild {
 FORMS += \
+    src/ui/Linechart.ui \
     src/ui/MultiVehicleDockWidget.ui \
+    src/ui/QGCDataPlot2D.ui \
     src/ui/QGCHilConfiguration.ui \
     src/ui/QGCHilFlightGearConfiguration.ui \
     src/ui/QGCHilJSBSimConfiguration.ui \
@@ -216,7 +217,7 @@ HEADERS += \
     src/comm/TCPLink.h \
     src/comm/UDPLink.h \
     src/FlightDisplay/FlightDisplayWidget.h \
-    src/FlightDisplay/FlightDisplayView.h \
+    src/FlightDisplay/FlightDisplayViewController.h \
     src/FlightMap/FlightMapSettings.h \
     src/GAudioOutput.h \
     src/HomePositionManager.h \
@@ -224,12 +225,13 @@ HEADERS += \
     src/Joystick/JoystickManager.h \
     src/LogCompressor.h \
     src/MG.h \
-    src/MissionEditor/MissionEditor.h \
+    src/MissionEditor/MissionEditorController.h \
     src/MissionManager/MissionManager.h \
     src/QGC.h \
     src/QGCApplication.h \
     src/QGCComboBox.h \
     src/QGCConfig.h \
+    src/QGCDockWidget.h \
     src/QGCFileDialog.h \
     src/QGCGeo.h \
     src/QGCLoggingCategory.h \
@@ -251,19 +253,11 @@ HEADERS += \
     src/uas/UAS.h \
     src/uas/UASInterface.h \
     src/uas/UASMessageHandler.h \
-    src/ui/linechart/ChartPlot.h \
-    src/ui/linechart/IncrementalPlot.h \
-    src/ui/linechart/LinechartPlot.h \
-    src/ui/linechart/Linecharts.h \
-    src/ui/linechart/LinechartWidget.h \
-    src/ui/linechart/Scrollbar.h \
-    src/ui/linechart/ScrollZoomer.h \
     src/ui/LogReplayLinkConfigurationWidget.h \
     src/ui/MainWindow.h \
     src/ui/MAVLinkDecoder.h \
     src/ui/MAVLinkSettingsWidget.h \
     src/ui/QGCCommConfiguration.h \
-    src/ui/QGCDataPlot2D.h \
     src/ui/QGCLinkConfiguration.h \
     src/ui/QGCMapRCToParamDialog.h \
     src/ui/QGCMAVLinkLogPlayer.h \
@@ -271,11 +265,17 @@ HEADERS += \
     src/ui/QGCTCPLinkConfiguration.h \
     src/ui/QGCUDPLinkConfiguration.h \
     src/ui/SettingsDialog.h \
-    src/ui/toolbar/MainToolBar.h \
+    src/ui/toolbar/MainToolBarController.h \
     src/ui/uas/QGCUnconnectedInfoWidget.h \
     src/ui/uas/UASMessageView.h \
     src/MissionItem.h \
     src/AutoPilotPlugins/PX4/PX4AirframeLoader.h
+
+WindowsBuild {
+    PRECOMPILED_HEADER += src/stable_headers.h
+    HEADERS += src/stable_headers.h
+}
+
 
 !iOSBuild {
 HEADERS += \
@@ -289,10 +289,17 @@ HEADERS += \
     src/comm/QGCHilLink.h \
     src/comm/QGCJSBSimLink.h \
     src/comm/QGCXPlaneLink.h \
-    src/QGCDockWidget.h \
     src/ui/CameraView.h \
     src/ui/HILDockWidget.h \
+    src/ui/linechart/ChartPlot.h \
+    src/ui/linechart/IncrementalPlot.h \
+    src/ui/linechart/LinechartPlot.h \
+    src/ui/linechart/Linecharts.h \
+    src/ui/linechart/LinechartWidget.h \
+    src/ui/linechart/Scrollbar.h \
+    src/ui/linechart/ScrollZoomer.h \
     src/ui/MultiVehicleDockWidget.h \
+    src/ui/QGCDataPlot2D.h \
     src/ui/QGCHilConfiguration.h \
     src/ui/QGCHilFlightGearConfiguration.h \
     src/ui/QGCHilJSBSimConfiguration.h \
@@ -327,7 +334,7 @@ SOURCES += \
     src/comm/TCPLink.cc \
     src/comm/UDPLink.cc \
     src/FlightDisplay/FlightDisplayWidget.cc \
-    src/FlightDisplay/FlightDisplayView.cc \
+    src/FlightDisplay/FlightDisplayViewController.cc \
     src/FlightMap/FlightMapSettings.cc \
     src/GAudioOutput.cc \
     src/HomePositionManager.cc \
@@ -335,11 +342,12 @@ SOURCES += \
     src/Joystick/JoystickManager.cc \
     src/LogCompressor.cc \
     src/main.cc \
-    src/MissionEditor/MissionEditor.cc \
+    src/MissionEditor/MissionEditorController.cc \
     src/MissionManager/MissionManager.cc \
     src/QGC.cc \
     src/QGCApplication.cc \
     src/QGCComboBox.cc \
+    src/QGCDockWidget.cc \
     src/QGCFileDialog.cc \
     src/QGCLoggingCategory.cc \
     src/QGCPalette.cc \
@@ -356,19 +364,11 @@ SOURCES += \
     src/uas/FileManager.cc \
     src/uas/UAS.cc \
     src/uas/UASMessageHandler.cc \
-    src/ui/linechart/ChartPlot.cc \
-    src/ui/linechart/IncrementalPlot.cc \
-    src/ui/linechart/LinechartPlot.cc \
-    src/ui/linechart/Linecharts.cc \
-    src/ui/linechart/LinechartWidget.cc \
-    src/ui/linechart/Scrollbar.cc \
-    src/ui/linechart/ScrollZoomer.cc \
     src/ui/LogReplayLinkConfigurationWidget.cc \
     src/ui/MainWindow.cc \
     src/ui/MAVLinkDecoder.cc \
     src/ui/MAVLinkSettingsWidget.cc \
     src/ui/QGCCommConfiguration.cc \
-    src/ui/QGCDataPlot2D.cc \
     src/ui/QGCLinkConfiguration.cc \
     src/ui/QGCMapRCToParamDialog.cpp \
     src/ui/QGCMAVLinkLogPlayer.cc \
@@ -376,7 +376,7 @@ SOURCES += \
     src/ui/QGCTCPLinkConfiguration.cc \
     src/ui/QGCUDPLinkConfiguration.cc \
     src/ui/SettingsDialog.cc \
-    src/ui/toolbar/MainToolBar.cc \
+    src/ui/toolbar/MainToolBarController.cc \
     src/ui/uas/QGCUnconnectedInfoWidget.cc \
     src/ui/uas/UASMessageView.cc \
     src/MissionItem.cc \
@@ -393,10 +393,17 @@ SOURCES += \
     src/comm/QGCFlightGearLink.cc \
     src/comm/QGCJSBSimLink.cc \
     src/comm/QGCXPlaneLink.cc \
-    src/QGCDockWidget.cc \
     src/ui/CameraView.cc \
     src/ui/HILDockWidget.cc \
+    src/ui/linechart/ChartPlot.cc \
+    src/ui/linechart/IncrementalPlot.cc \
+    src/ui/linechart/LinechartPlot.cc \
+    src/ui/linechart/Linecharts.cc \
+    src/ui/linechart/LinechartWidget.cc \
+    src/ui/linechart/Scrollbar.cc \
+    src/ui/linechart/ScrollZoomer.cc \
     src/ui/MultiVehicleDockWidget.cc \
+    src/ui/QGCDataPlot2D.cc \
     src/ui/QGCHilConfiguration.cc \
     src/ui/QGCHilFlightGearConfiguration.cc \
     src/ui/QGCHilJSBSimConfiguration.cc \
@@ -520,7 +527,6 @@ HEADERS+= \
     src/FirmwarePlugin/PX4/PX4FirmwarePlugin.h \
     src/Vehicle/MultiVehicleManager.h \
     src/Vehicle/Vehicle.h \
-    src/VehicleSetup/SetupView.h \
     src/VehicleSetup/VehicleComponent.h \
 
 !MobileBuild {
@@ -561,7 +567,6 @@ SOURCES += \
     src/FirmwarePlugin/PX4/PX4FirmwarePlugin.cc \
     src/Vehicle/MultiVehicleManager.cc \
     src/Vehicle/Vehicle.cc \
-    src/VehicleSetup/SetupView.cc \
     src/VehicleSetup/VehicleComponent.cc \
 
 !MobileBuild {

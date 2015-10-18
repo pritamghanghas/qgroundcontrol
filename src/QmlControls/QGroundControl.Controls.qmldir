@@ -18,6 +18,7 @@ RoundButton         1.0 RoundButton.qml
 VehicleRotationCal  1.0 VehicleRotationCal.qml
 VehicleSummaryRow   1.0 VehicleSummaryRow.qml
 ViewWidget          1.0 ViewWidget.qml
+ExclusiveGroupItem  1.0 ExclusiveGroupItem.qml
 
 ParameterEditor         1.0 ParameterEditor.qml
 ParameterEditorDialog   1.0 ParameterEditorDialog.qml
@@ -32,4 +33,7 @@ QGCViewMessage  1.0 QGCViewMessage.qml
 MissionItemIndexLabel   1.0 MissionItemIndexLabel.qml
 MissionItemSummary      1.0 MissionItemSummary.qml
 MissionItemEditor       1.0 MissionItemEditor.qml
+
+MainToolBar         1.0 MainToolBar.qml
+FlightDisplayView   1.0 FlightDisplayView.qml
 
