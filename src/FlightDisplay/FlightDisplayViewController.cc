@@ -29,6 +29,7 @@ This file is part of the QGROUNDCONTROL project
 
 #include "ScreenToolsController.h"
 #include "FlightDisplayViewController.h"
+#include "MainWindow.h"
 
 const char* kMainFlightDisplayViewControllerGroup = "FlightDisplayViewController";
 
