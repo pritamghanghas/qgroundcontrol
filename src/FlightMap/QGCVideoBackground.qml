@@ -128,6 +128,13 @@ VideoItem {
             fps:            30;
         }
         ListElement {
+            text:           "640 15p 0.5mbps";
+            width:          640;
+            height:         480;
+            bitrate:        300000;
+            fps:            15;
+        }
+        ListElement {
             text:           "640 15p 0.3mbps";
             width:          640;
             height:         480;
@@ -260,7 +267,7 @@ VideoItem {
         id : combo
         width: 600
         x: parent.width - width - 10;
-        y: 10;
+        y: 100;
 
         Row {
             spacing: 10
