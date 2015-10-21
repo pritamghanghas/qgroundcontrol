@@ -50,6 +50,13 @@ const QVariantList& GenericAutoPilotPlugin::vehicleComponents(void)
     return emptyList;
 }
 
+Fact *GenericAutoPilotPlugin::getRCMode()
+{
+    static Fact fact(-1, "COM_RC_IN_MODE", FactMetaData::valueTypeInt32);
+    fact.setValue("1");
+    return &fact;
+}
+
 void GenericAutoPilotPlugin::_parametersReadySlot(bool missingParameters)
 {
     _parametersReady = true;

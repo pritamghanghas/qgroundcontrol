@@ -102,6 +102,11 @@ void PX4AutoPilotPlugin::clearStaticData(void)
     PX4AirframeLoader::clearStaticData();
 }
 
+Fact *PX4AutoPilotPlugin::getRCMode()
+{
+    return _getParameterLoader()->getFact(-1, "COM_RC_IN_MODE");
+}
+
 const QVariantList& PX4AutoPilotPlugin::vehicleComponents(void)
 {
     if (_components.count() == 0 && !_incorrectParameterVersion) {

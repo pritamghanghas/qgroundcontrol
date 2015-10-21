@@ -43,6 +43,8 @@ public:
     virtual const QVariantList& vehicleComponents(void);
 
     static void clearStaticData(void);
+
+    virtual Fact* getRCMode(void);
     
 private slots:
     void _parametersReadySlot(bool missingParameters);

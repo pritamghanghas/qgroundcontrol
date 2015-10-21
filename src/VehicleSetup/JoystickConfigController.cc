@@ -142,6 +142,11 @@ void JoystickConfigController::_setupCurrentState(void)
     _skipButton->setEnabled(state->skipFn != NULL);
 }
 
+Fact* JoystickConfigController::getRCMode()
+{
+    return _autopilot->getRCMode();
+}
+
 void JoystickConfigController::_axisValueChanged(int axis, int value)
 {
     if (axis >= 0 && axis < _axisMax) {

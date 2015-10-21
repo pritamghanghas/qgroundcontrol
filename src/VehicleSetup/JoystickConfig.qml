@@ -361,7 +361,7 @@ QGCView {
                             checked:    _activeVehicle.joystickEnabled
 
                             property bool allowEnableDisable:   _activeJoystick.calibrated && rcInMode.value < 2
-                            property Fact rcInMode:             controller.getParameterFact(-1, "COM_RC_IN_MODE")
+                            property Fact rcInMode:             controller.getRCMode()
 
                             onClicked:  _activeVehicle.joystickEnabled = checked
                         }

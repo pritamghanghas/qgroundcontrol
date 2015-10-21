@@ -95,6 +95,8 @@ public:
 	/// Reads the parameters from the stream and updates values
     /// @return Errors during load. Empty string for no errors
 	QString readParametersFromStream(QTextStream &stream);
+
+    virtual Fact* getRCMode(void) = 0;
 	
     /// Returns true if the specifed fact exists
     Q_INVOKABLE bool factExists(FactSystem::Provider_t  provider,       ///< fact provider
