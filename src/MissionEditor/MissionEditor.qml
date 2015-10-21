@@ -69,9 +69,13 @@ QGCView {
 
     MissionEditorController {
         id:         controller
+/*
+        FIXME: autoSync is temporarily disconnected since it's still buggy
+
         autoSync:   QGroundControl.flightMapSettings.loadMapSetting(editorMap.mapName, _autoSyncKey, true)
 
         onAutoSyncChanged:      QGroundControl.flightMapSettings.saveMapSetting(editorMap.mapName, _autoSyncKey, autoSync)
+*/
 
         onMissionItemsChanged:  {
             updateHomePosition()
@@ -98,6 +102,7 @@ QGCView {
     function updateHomePosition() {
         homePosition = liveHomePositionAvailable ? liveHomePosition : offlineHomePosition
         _missionItems.get(0).coordinate = homePosition
+        _missionItems.get(0).homePositionValid = true
     }
 
     Component.onCompleted:              updateHomePosition()
@@ -215,82 +220,16 @@ QGCView {
                 }
 
                 // Add the mission items to the map
-                MapItemView {
-                    model: controller.missionItems
-
-                    delegate:
-                        MissionItemIndicator {
-                            id:             itemIndicator
-                            label:          object.sequenceNumber == 0 ? (liveHomePositionAvailable ? "H" : "F") : object.sequenceNumber
-                            isCurrentItem:  !homePositionManagerButton.checked && object.isCurrentItem
-                            coordinate:     object.coordinate
-                            z:              editorMap.zOrderMapItems
-                            visible:        object.specifiesCoordinate
-
-                            onClicked: setCurrentItem(object.sequenceNumber)
-
-                            Connections {
-                                target: object
-
-                                onIsCurrentItemChanged: {
-                                    if (isCurrentItem) {
-                                        // Setup our drag item
-                                        if (object.sequenceNumber != 0) {
-                                            itemEditor.visible = true
-                                            itemEditor.missionItem = Qt.binding(function() { return object })
-                                            itemEditor.missionItemIndicator = Qt.binding(function() { return itemIndicator })
-                                        } else {
-                                            itemEditor.clearItem()
-                                        }
-
-                                        // Zoom the map and move to the new position
-                                        editorMap.zoomLevel = editorMap.maxZoomLevel
-                                        editorMap.latitude = object.coordinate.latitude
-                                        editorMap.longitude = object.coordinate.longitude
-                                    }
-                                }
-                            }
-
-                            // These are the non-coordinate child mission items attached to this item
-                            Row {
-                                anchors.top:    parent.top
-                                anchors.left:   parent.right
-
-                                Repeater {
-                                    model: object.childItems
-
-                                    delegate:
-                                        MissionItemIndexLabel {
-                                            label:          object.sequenceNumber
-                                            isCurrentItem:  !homePositionManagerButton.checked && object.isCurrentItem
-                                            z:              2
-
-                                            onClicked: {
-                                                setCurrentItem(object.sequenceNumber)
-                                                missionItemEditorButton.checked
-                                            }
-
-                                        }
-                                }
-                            }
-                        }
+                MissionItemView {
+                    model:          controller.missionItems
+                    zOrderMapItems: editorMap.zOrderMapItems
+                    itemDragger:    itemEditor
                 }
 
                 // Add lines between waypoints
-                MapItemView {
-                    model: controller.waypointLines
-
-                    delegate:
-                        MapPolyline {
-                            line.width: 3
-                            line.color: qgcPal.mapButtonHighlight
-                            z:          editorMap.zOrderMapItems - 1 // Under item indicators
-
-                            path: [
-                                { latitude: object.coordinate1.latitude, longitude: object.coordinate1.longitude },
-                                { latitude: object.coordinate2.latitude, longitude: object.coordinate2.longitude },
-                            ]
-                        }
+                MissionLineView {
+                    model:          controller.waypointLines
+                    zOrderMapItems: editorMap.zOrderMapItems
                 }
 
                 // Mission Item Editor
@@ -935,7 +874,7 @@ QGCView {
             }
 
             Row {
-                visible:    autoSyncCheckBox.enabled && autoSyncCheckBox.checked
+                visible:    true //autoSyncCheckBox.enabled && autoSyncCheckBox.checked
                 spacing:    ScreenTools.defaultFontPixelWidth
 
                 QGCButton {
@@ -980,6 +919,8 @@ QGCView {
                     }
                 }
             }
+/*
+        FIXME: autoSync is temporarily disconnected since it's still buggy
 
             QGCLabel {
                 id:         autoSyncDisallowedLabel
@@ -995,6 +936,7 @@ QGCView {
 
                 onClicked: controller.autoSync = checked
             }
+*/
         }
     }
 } // QGCVIew

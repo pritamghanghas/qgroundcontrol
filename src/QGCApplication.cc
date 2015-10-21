@@ -88,6 +88,7 @@
 #include "QGCQGeoCoordinate.h"
 #include "CoordinateVector.h"
 #include "MainToolBarController.h"
+#include "MissionController.h"
 #include "MissionEditorController.h"
 #include "FlightDisplayViewController.h"
 #include "VideoSurface.h"
@@ -353,6 +354,7 @@ void QGCApplication::_initCommon(void)
     qmlRegisterType<RadioComponentController>       ("QGroundControl.Controllers", 1, 0, "RadioComponentController");
     qmlRegisterType<ScreenToolsController>          ("QGroundControl.Controllers", 1, 0, "ScreenToolsController");
     qmlRegisterType<MainToolBarController>          ("QGroundControl.Controllers", 1, 0, "MainToolBarController");
+    qmlRegisterType<MissionController>              ("QGroundControl.Controllers", 1, 0, "MissionController");
     qmlRegisterType<MissionEditorController>        ("QGroundControl.Controllers", 1, 0, "MissionEditorController");
     qmlRegisterType<FlightDisplayViewController>    ("QGroundControl.Controllers", 1, 0, "FlightDisplayViewController");
 
@@ -759,17 +761,6 @@ void QGCApplication::_loadCurrentStyle(void)
         }
     }
     
-    // Now that we have the styles loaded we need to adjust the font sizes.
-    
-    QString fSmall  = QString("%1px;").arg(ScreenToolsController::smallFontPixelSize_s());
-    QString fNormal = QString("%1px;").arg(ScreenToolsController::defaultFontPixelSize_s());
-    QString fLarge  = QString("%1px;").arg(ScreenToolsController::largeFontPixelSize_s());
-    
-    qDebug() << fSmall << fNormal << fLarge;
-
-    styles.replace("FONT_SMALL",  fSmall);
-    styles.replace("FONT_NORMAL", fNormal);
-    styles.replace("FONT_LARGE",  fLarge);
     setStyleSheet(styles);
 
     if (!success) {

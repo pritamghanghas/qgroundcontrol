@@ -124,7 +124,7 @@
         <!-- Main Window -->
         <file alias="MainWindow.qml">src/ui/MainWindow.qml</file>
         <file alias="QGroundControl/Controls/MainToolBar.qml">src/ui/toolbar/MainToolBar.qml</file>
-        <file alias="QGroundControl/Controls/FlightDisplayView.qml">src/FlightDisplay/FlightDisplayView.qml</file>
+        <file alias="MainToolBarActiveVehicleComponent.qml">src/ui/toolbar/MainToolBarActiveVehicleComponent.qml</file>
 
         <!-- Vehicle Setup -->
         <file alias="SetupView.qml">src/VehicleSetup/SetupView.qml</file>
@@ -133,7 +133,6 @@
         <file alias="JoystickConfig.qml">src/VehicleSetup/JoystickConfig.qml</file>
         <file alias="SetupParameterEditor.qml">src/VehicleSetup/SetupParameterEditor.qml</file>
 
-        <file alias="ScreenToolsFontQuery.qml">src/QmlControls/ScreenToolsFontQuery.qml</file>
         <file alias="CustomCommandWidget.qml">src/ViewWidgets/CustomCommandWidget.qml</file>
         <file alias="SafetyComponent.qml">src/AutoPilotPlugins/PX4/SafetyComponent.qml</file>
         <file alias="RadioComponent.qml">src/AutoPilotPlugins/PX4/RadioComponent.qml</file>
@@ -153,12 +152,17 @@
         <file alias="FlightDisplayWidget.qml">src/FlightDisplay/FlightDisplayWidget.qml</file>
         <file alias="MissionEditor.qml">src/MissionEditor/MissionEditor.qml</file>
 
+        <!-- FlightDisplay module -->
+        <file alias="QGroundControl/FlightDisplay/qmldir">src/FlightDisplay/qmldir</file>
+        <file alias="QGroundControl/FlightDisplay/FlightDisplayView.qml">src/FlightDisplay/FlightDisplayView.qml</file>
+        <file alias="QGroundControl/FlightDisplay/FlightDisplayViewDelayLoadInner.qml">src/FlightDisplay/FlightDisplayViewDelayLoadInner.qml</file>
+        <file alias="QGroundControl/FlightDisplay/FlightDisplayViewDelayLoadOuter.qml">src/FlightDisplay/FlightDisplayViewDelayLoadOuter.qml</file>
+
+
         <!-- FlightMap module -->
         <file alias="QGroundControl/FlightMap/qmldir">src/FlightMap/qmldir</file>
         <file alias="QGroundControl/FlightMap/FlightMap.qml">src/FlightMap/FlightMap.qml</file>
         <file alias="QGroundControl/FlightMap/QGCVideoBackground.qml">src/FlightMap/QGCVideoBackground.qml</file>
-
-        <!-- FlightMap Widgets -->
         <file alias="QGroundControl/FlightMap/QGCAltitudeWidget.qml">src/FlightMap/Widgets/QGCAltitudeWidget.qml</file>
         <file alias="QGroundControl/FlightMap/QGCArtificialHorizon.qml">src/FlightMap/Widgets/QGCArtificialHorizon.qml</file>
         <file alias="QGroundControl/FlightMap/QGCAttitudeWidget.qml">src/FlightMap/Widgets/QGCAttitudeWidget.qml</file>
@@ -170,10 +174,10 @@
         <file alias="QGroundControl/FlightMap/QGCPitchIndicator.qml">src/FlightMap/Widgets/QGCPitchIndicator.qml</file>
         <file alias="QGroundControl/FlightMap/QGCSlider.qml">src/FlightMap/Widgets/QGCSlider.qml</file>
         <file alias="QGroundControl/FlightMap/QGCSpeedWidget.qml">src/FlightMap/Widgets/QGCSpeedWidget.qml</file>
-
-        <!-- FlightMap MapQuickItems -->
         <file alias="QGroundControl/FlightMap/MissionItemIndicator.qml">src/FlightMap/MapItems/MissionItemIndicator.qml</file>
         <file alias="QGroundControl/FlightMap/VehicleMapItem.qml">src/FlightMap/MapItems/VehicleMapItem.qml</file>
+        <file alias="QGroundControl/FlightMap/MissionItemView.qml">src/FlightMap/MapItems/MissionItemView.qml</file>
+        <file alias="QGroundControl/FlightMap/MissionLineView.qml">src/FlightMap/MapItems/MissionLineView.qml</file>
 
     </qresource>
     <qresource prefix="/res">
