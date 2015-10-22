@@ -29,7 +29,7 @@
 #include <QXmlStreamReader>
 #include <QLoggingCategory>
 
-#include "XMLParameterLoader.h"
+#include "Generic/XMLParameterLoader.h"
 #include "FactSystem.h"
 #include "AutoPilotPlugin.h"
 #include "Vehicle.h"

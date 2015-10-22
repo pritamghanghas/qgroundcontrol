@@ -521,6 +521,9 @@ HEADERS+= \
     src/AutoPilotPlugins/PX4/SafetyComponent.h \
     src/AutoPilotPlugins/PX4/SensorsComponent.h \
     src/AutoPilotPlugins/PX4/SensorsComponentController.h \
+    src/AutoPilotPlugins/APM/APMParameterLoader.h \
+    src/AutoPilotPlugins/APM/APMAutoPilotPlugin.h \
+    src/AutoPilotPlugins/Generic/XMLParameterLoader.h \
     src/FirmwarePlugin/FirmwarePluginManager.h \
     src/FirmwarePlugin/FirmwarePlugin.h \
     src/FirmwarePlugin/APM/APMFirmwarePlugin.h \
@@ -562,6 +565,9 @@ SOURCES += \
     src/AutoPilotPlugins/PX4/SafetyComponent.cc \
     src/AutoPilotPlugins/PX4/SensorsComponent.cc \
     src/AutoPilotPlugins/PX4/SensorsComponentController.cc \
+    src/AutoPilotPlugins/APM/APMParameterLoader.cc \
+    src/AutoPilotPlugins/APM/APMAutoPilotPlugin.cc \
+    src/AutoPilotPlugins/Generic/XMLParameterLoader.cc \
     src/FirmwarePlugin/APM/APMFirmwarePlugin.cc \
     src/FirmwarePlugin/APM/ArduCopterFirmwarePlugin.cc \
     src/FirmwarePlugin/APM/ArduPlaneFirmwarePlugin.cc \
