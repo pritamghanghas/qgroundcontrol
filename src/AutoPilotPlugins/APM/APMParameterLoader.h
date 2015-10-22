@@ -21,8 +21,8 @@
  
  ======================================================================*/
 
-#ifndef PX4PARAMETERLOADER_H
-#define PX4PARAMETERLOADER_H
+#ifndef APMPARAMETERLOADER_H
+#define APMPARAMETERLOADER_H
 
 #include <QObject>
 #include <QMap>
@@ -41,13 +41,13 @@ Q_DECLARE_LOGGING_CATEGORY(PX4ParameterLoaderLog)
 
 /// Collection of Parameter Facts for PX4 AutoPilot
 
-class PX4ParameterLoader : public XMLParameterLoader
+class APMParameterLoader : public XMLParameterLoader
 {
     Q_OBJECT
     
 public:
     /// @param uas Uas which this set of facts is associated with
-    PX4ParameterLoader(AutoPilotPlugin* autopilot, Vehicle* vehicle, QObject* parent = NULL);
+    APMParameterLoader(AutoPilotPlugin* autopilot, Vehicle* vehicle, QObject* parent = NULL);
 
     virtual QString getXMLMetaDataFileName();
     

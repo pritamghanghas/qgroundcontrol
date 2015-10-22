@@ -51,7 +51,7 @@ class AutoPilotPlugin : public QObject
     Q_OBJECT
 
 public:
-    AutoPilotPlugin(Vehicle* vehicle, QObject* parent);
+    AutoPilotPlugin(Vehicle* vehicle, QObject* parent = NULL);
     ~AutoPilotPlugin();
     
 	/// true: parameters are ready for use

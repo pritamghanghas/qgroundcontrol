@@ -21,37 +21,43 @@
  
  ======================================================================*/
 
-#ifndef PX4PARAMETERLOADER_H
-#define PX4PARAMETERLOADER_H
+#ifndef APMAUTOPILOTPLUGIN_H
+#define APMAUTOPILOTPLUGIN_H
 
-#include <QObject>
-#include <QMap>
-#include <QXmlStreamReader>
-#include <QLoggingCategory>
-
-#include "XMLParameterLoader.h"
-#include "FactSystem.h"
 #include "AutoPilotPlugin.h"
+#include "APMParameterLoader.h"
 #include "Vehicle.h"
 
+#include <QImage>
+
 /// @file
+///     @brief This is the PX4 specific implementation of the AutoPilot class.
 ///     @author Don Gagne <don@thegagnes.com>
 
-Q_DECLARE_LOGGING_CATEGORY(PX4ParameterLoaderLog)
-
-/// Collection of Parameter Facts for PX4 AutoPilot
-
-class PX4ParameterLoader : public XMLParameterLoader
+class APMAutoPilotPlugin : public AutoPilotPlugin
 {
     Q_OBJECT
-    
-public:
-    /// @param uas Uas which this set of facts is associated with
-    PX4ParameterLoader(AutoPilotPlugin* autopilot, Vehicle* vehicle, QObject* parent = NULL);
 
-    virtual QString getXMLMetaDataFileName();
+public:
+    APMAutoPilotPlugin(Vehicle* vehicle, QObject* parent = NULL);
+    ~APMAutoPilotPlugin();
+
+    // Overrides from AutoPilotPlugin
+    virtual const QVariantList& vehicleComponents(void);
+
+    static void clearStaticData(void);
+
+    virtual Fact* getRCMode();
+
+private slots:
+    void _parametersReadyPreChecks(bool missingParameters);
     
 private:
+	// Overrides from AutoPilotPlugin
+	virtual ParameterLoader* _getParameterLoader(void) { return _parameterFacts; }
+	
+    APMParameterLoader*     _parameterFacts;
+    bool                    _incorrectParameterVersion; ///< true: parameter version incorrect, setup not allowed
 };
 
 #endif

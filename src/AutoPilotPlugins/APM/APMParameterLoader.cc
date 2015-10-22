@@ -22,9 +22,9 @@
  ======================================================================*/
 
 /// @file
-///     @author Don Gagne <don@thegagnes.com>
+///     @author Pritam Ghanghas <pritam.ghanghas@gmail.com>
 
-#include "PX4ParameterLoader.h"
+#include "APMParameterLoader.h"
 #include "QGCApplication.h"
 #include "QGCLoggingCategory.h"
 
@@ -33,17 +33,17 @@
 #include <QDir>
 #include <QDebug>
 
-QGC_LOGGING_CATEGORY(PX4ParameterLoaderLog, "PX4ParameterLoaderLog")
+QGC_LOGGING_CATEGORY(APMParameterLoaderLog, "APMParameterLoaderLog")
 
 
-PX4ParameterLoader::PX4ParameterLoader(AutoPilotPlugin* autopilot, Vehicle* vehicle, QObject* parent) :
+APMParameterLoader::APMParameterLoader(AutoPilotPlugin* autopilot, Vehicle* vehicle, QObject* parent) :
     XMLParameterLoader(autopilot, vehicle, parent)
 {
     Q_ASSERT(vehicle);
 }
 
 
-QString PX4ParameterLoader::getXMLMetaDataFileName()
+QString APMParameterLoader::getXMLMetaDataFileName()
 {
     QString parameterFilename;
 
@@ -52,10 +52,10 @@ QString PX4ParameterLoader::getXMLMetaDataFileName()
         // First look for meta data that comes from a firmware download. Fall back to resource if not there.
         QSettings settings;
         QDir parameterDir = QFileInfo(settings.fileName()).dir();
-        parameterFilename = parameterDir.filePath("PX4ParameterFactMetaData.xml");
+        parameterFilename = parameterDir.filePath("APMParameterFactMetaData.xml");
     }
     if (parameterFilename.isEmpty() || !QFile(parameterFilename).exists()) {
-        parameterFilename = ":/AutoPilotPlugins/PX4/ParameterFactMetaData.xml";
+        parameterFilename = ":/AutoPilotPlugins/APM/ParameterFactMetaData.xml";
     }
 
     return parameterFilename;
