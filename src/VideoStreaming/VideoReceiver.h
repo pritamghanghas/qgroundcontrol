@@ -33,8 +33,8 @@ This file is part of the QGROUNDCONTROL project
 #include <QObject>
 #if defined(QGC_GST_STREAMING)
 #include <gst/gst.h>
-#endif
 #include "nodeselector.h"
+#endif
 
 class VideoReceiver : public QObject
 {
