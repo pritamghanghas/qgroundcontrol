@@ -561,7 +561,8 @@ QGCView {
                     anchors.margins:    margins
                     anchors.top:        parent.top
                     anchors.bottom:     parent.bottom
-                    anchors.left:       parent.left
+                    anchors.left:       addMissionItemsButton.right
+                    anchors.right:      missionItemEditor.left
                     width:              parent.width - (margins * 2) - _rightPanelWidth
                     visible:            helpButton.checked
                     color:              qgcPal.window
@@ -569,7 +570,7 @@ QGCView {
                     radius:             ScreenTools.defaultFontPixelHeight
                     z:                  editorMap.zOrderTopMost
 
-                    readonly property real margins:  ScreenTools.defaultFontPixelHeight * 4
+                    readonly property real margins:  ScreenTools.defaultFontPixelHeight
 
                     Image {
                         anchors.margins:    ScreenTools.defaultFontPixelHeight
@@ -577,7 +578,7 @@ QGCView {
                         anchors.right:      parent.right
                         width:              ScreenTools.defaultFontPixelHeight * 1.5
                         height:             ScreenTools.defaultFontPixelHeight * 1.5
-                        source:             "/qmlimages/XDelete.svg"
+                        source:             (qgcPal.globalTheme === QGCPalette.Light) ? "/qmlimages/XDeleteBlack.svg" : "/qmlimages/XDelete.svg"
                         fillMode:           Image.PreserveAspectFit
                         mipmap:             true
                         smooth:             true
@@ -615,7 +616,7 @@ QGCView {
                             fillMode:           Image.PreserveAspectFit
                             mipmap:             true
                             smooth:             true
-                            source:             "/qmlimages/MapAddMission.svg"
+                            source:             (qgcPal.globalTheme === QGCPalette.Light) ? "/qmlimages/MapAddMissionBlack.svg" : "/qmlimages/MapAddMission.svg"
                         }
 
                         QGCLabel {
@@ -637,7 +638,7 @@ QGCView {
                             fillMode:           Image.PreserveAspectFit
                             mipmap:             true
                             smooth:             true
-                            source:             "/qmlimages/TrashDelete.svg"
+                            source:             (qgcPal.globalTheme === QGCPalette.Light) ? "/qmlimages/TrashDeleteBlack.svg" : "/qmlimages/TrashDelete.svg"
                         }
 
                         QGCLabel {
@@ -659,7 +660,7 @@ QGCView {
                             fillMode:           Image.PreserveAspectFit
                             mipmap:             true
                             smooth:             true
-                            source:             "/qmlimages/MapHome.svg"
+                            source:             (qgcPal.globalTheme === QGCPalette.Light) ? "/qmlimages/MapHomeBlack.svg" : "/qmlimages/MapHome.svg"
                         }
 
                         QGCLabel {
@@ -682,7 +683,7 @@ QGCView {
                             fillMode:           Image.PreserveAspectFit
                             mipmap:             true
                             smooth:             true
-                            source:             "/qmlimages/MapCenter.svg"
+                            source:             (qgcPal.globalTheme === QGCPalette.Light) ? "/qmlimages/MapCenterBlack.svg" : "/qmlimages/MapCenter.svg"
                         }
 
                         QGCLabel {
@@ -704,7 +705,7 @@ QGCView {
                             fillMode:           Image.PreserveAspectFit
                             mipmap:             true
                             smooth:             true
-                            source:             "/qmlimages/MapSync.svg"
+                            source:             (qgcPal.globalTheme === QGCPalette.Light) ? "/qmlimages/MapSyncBlack.svg" : "/qmlimages/MapSync.svg"
                         }
 
                         QGCLabel {
@@ -726,7 +727,7 @@ QGCView {
                             fillMode:           Image.PreserveAspectFit
                             mipmap:             true
                             smooth:             true
-                            source:             "/qmlimages/MapType.svg"
+                            source:             (qgcPal.globalTheme === QGCPalette.Light) ? "/qmlimages/MapTypeBlack.svg" : "/qmlimages/MapType.svg"
                         }
 
                         QGCLabel {
@@ -741,12 +742,13 @@ QGCView {
                         }
 
                         QGCCheckBox {
-                            anchors.left:   parent.left
-                            anchors.bottom: parent.bottom
-                            checked:        !_showHelp
-                            text:           "Don't show me again"
+                            anchors.left:       parent.left
+                            anchors.bottom:     parent.bottom
+                            anchors.margins:    _margin
+                            checked:            !_showHelp
+                            text:               "Don't show me again"
 
-                            onClicked:      QGroundControl.flightMapSettings.saveBoolMapSetting(editorMap.mapName, _showHelpKey, !checked)
+                            onClicked:          QGroundControl.flightMapSettings.saveBoolMapSetting(editorMap.mapName, _showHelpKey, !checked)
                         }
                     } // Item - margin
                 } // Item - Help Panel
