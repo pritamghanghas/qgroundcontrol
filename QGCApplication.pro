@@ -127,7 +127,9 @@ include(QGCExternalLibs.pri)
 # Main QGroundControl portion of project file
 #
 
-RESOURCES += qgroundcontrol.qrc
+RESOURCES += \
+    qgroundcontrol.qrc \
+    qgcresources.qrc
 
 DEPENDPATH += \
     . \
@@ -226,7 +228,6 @@ HEADERS += \
     src/Joystick/JoystickManager.h \
     src/LogCompressor.h \
     src/MG.h \
-    src/MissionEditor/MissionEditorController.h \
     src/MissionManager/MissionManager.h \
     src/MissionManager/MissionController.h \
     src/QGC.h \
@@ -345,7 +346,6 @@ SOURCES += \
     src/Joystick/JoystickManager.cc \
     src/LogCompressor.cc \
     src/main.cc \
-    src/MissionEditor/MissionEditorController.cc \
     src/MissionManager/MissionManager.cc \
     src/MissionManager/MissionController.cc \
     src/QGC.cc \
