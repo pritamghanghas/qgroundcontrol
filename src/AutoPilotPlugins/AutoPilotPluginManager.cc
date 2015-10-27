@@ -25,7 +25,6 @@
 ///     @author Don Gagne <don@thegagnes.com>
 
 #include "AutoPilotPluginManager.h"
-#include "APM/APMAutoPilotPlugin.h"
 #include "PX4/PX4AutoPilotPlugin.h"
 #include "Generic/GenericAutoPilotPlugin.h"
 
@@ -40,23 +39,14 @@ AutoPilotPluginManager::AutoPilotPluginManager(QObject* parent) :
 AutoPilotPluginManager::~AutoPilotPluginManager()
 {
     PX4AutoPilotPlugin::clearStaticData();
-    APMAutoPilotPlugin::clearStaticData();
     GenericAutoPilotPlugin::clearStaticData();
 }
 
 AutoPilotPlugin* AutoPilotPluginManager::newAutopilotPluginForVehicle(Vehicle* vehicle)
 {
-    AutoPilotPlugin* autoPilotPlugin = NULL;
-    switch(vehicle->firmwareType()) {
-        case MAV_AUTOPILOT_ARDUPILOTMEGA:
-            autoPilotPlugin = new APMAutoPilotPlugin(vehicle, vehicle);
-        break;
-        case MAV_AUTOPILOT_PX4:
-            autoPilotPlugin = new PX4AutoPilotPlugin(vehicle, vehicle);
-        break;
-        default:
-            autoPilotPlugin = new GenericAutoPilotPlugin(vehicle, vehicle);
-        break;
+    if (vehicle->firmwareType() == MAV_AUTOPILOT_PX4) {
+        return new PX4AutoPilotPlugin(vehicle, vehicle);
+    } else {
+        return new GenericAutoPilotPlugin(vehicle, vehicle);
     }
-    return autoPilotPlugin;
 }

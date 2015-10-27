@@ -21,8 +21,8 @@
  
  ======================================================================*/
 
-#ifndef PX4AUTOPILOTPLUGIN_H
-#define PX4AUTOPILOTPLUGIN_H
+#ifndef PX4AUTOPILOT_H
+#define PX4AUTOPILOT_H
 
 #include "AutoPilotPlugin.h"
 #include "PX4ParameterLoader.h"
