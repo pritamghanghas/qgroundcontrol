@@ -350,12 +350,6 @@ void MainWindow::_buildCommonWidgets(void)
     }
 }
 
-NodeSelector* MainWindow::piNodeSelector()
-{
-    static NodeSelector* nodeSelector = new NodeSelector(new QNetworkAccessManager());
-    return nodeSelector;
-}
-
 /// Shows or hides the specified dock widget, creating if necessary
 void MainWindow::_showDockWidget(const QString& name, bool show)
 {
@@ -419,6 +413,12 @@ void MainWindow::_showDockWidgetAction(bool show)
     _showDockWidget(action->text(), show);
 }
 #endif
+
+NodeSelector* MainWindow::piNodeSelector()
+{
+    static NodeSelector* nodeSelector = new NodeSelector(new QNetworkAccessManager());
+    return nodeSelector;
+}
 
 void MainWindow::fullScreenActionItemCallback(bool)
 {
