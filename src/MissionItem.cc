@@ -20,15 +20,6 @@ This file is part of the QGROUNDCONTROL project
 
 ======================================================================*/
 
-/**
- * @file
- *   @brief MissionItem class
- *
- *   @author Benjamin Knecht <mavteam@student.ethz.ch>
- *   @author Petri Tanskanen <mavteam@student.ethz.ch>
- *
- */
-
 #include <QStringList>
 #include <QDebug>
 
@@ -89,6 +80,7 @@ MissionItem::MissionItem(QObject*       parent,
     , _autocontinue(autocontinue)
     , _isCurrentItem(isCurrentItem)
     , _reachedTime(0)
+    , _distance(0.0)
     , _headingDegreesFact(NULL)
     , _dirty(false)
     , _homePositionSpecialCase(false)
@@ -115,10 +107,12 @@ MissionItem::MissionItem(QObject*       parent,
     
     FactMetaData* latitudeMetaData = new FactMetaData(FactMetaData::valueTypeDouble, _latitudeFact);
     latitudeMetaData->setUnits("deg");
-    
+    latitudeMetaData->setDecimalPlaces(7);
+
     FactMetaData* longitudeMetaData = new FactMetaData(FactMetaData::valueTypeDouble, _longitudeFact);
     longitudeMetaData->setUnits("deg");
-    
+    longitudeMetaData->setDecimalPlaces(7);
+
     FactMetaData* altitudeMetaData = new FactMetaData(FactMetaData::valueTypeDouble, _altitudeFact);
     altitudeMetaData->setUnits("meters");
     
@@ -196,6 +190,7 @@ const MissionItem& MissionItem::operator=(const MissionItem& other)
     _command                    = other._command;
     _autocontinue               = other._autocontinue;
     _reachedTime                = other._reachedTime;
+    _distance                   = other._distance;
     _altitudeRelativeToHomeFact = other._altitudeRelativeToHomeFact;
     _dirty                      = other._dirty;
     _homePositionSpecialCase    = other._homePositionSpecialCase;
@@ -238,7 +233,8 @@ void MissionItem::_connectSignals(void)
     connect(_longitudeFact, &Fact::valueChanged, this, &MissionItem::_coordinateFactChanged);
     connect(_altitudeFact,  &Fact::valueChanged, this, &MissionItem::_coordinateFactChanged);
 
-    connect(_headingDegreesFact, &Fact::valueChanged, this, &MissionItem::_headingDegreesFactChanged);
+    connect(_headingDegreesFact,            &Fact::valueChanged, this, &MissionItem::_headingDegreesFactChanged);
+    connect(_altitudeRelativeToHomeFact,    &Fact::valueChanged, this, &MissionItem::_altitudeRelativeToHomeFactChanged);
 }
 
 MissionItem::~MissionItem()
@@ -289,7 +285,6 @@ void MissionItem::setSequenceNumber(int sequenceNumber)
 {
     _sequenceNumber = sequenceNumber;
     emit sequenceNumberChanged(_sequenceNumber);
-    emit changed(this);
 }
 
 void MissionItem::setX(double x)
@@ -321,7 +316,6 @@ void MissionItem::setLatitude(double lat)
     if (_latitudeFact->value().toDouble() != lat)
     {
         _latitudeFact->setValue(lat);
-        emit changed(this);
         emit coordinateChanged(coordinate());
     }
 }
@@ -331,7 +325,6 @@ void MissionItem::setLongitude(double lon)
     if (_longitudeFact->value().toDouble() != lon)
     {
         _longitudeFact->setValue(lon);
-        emit changed(this);
         emit coordinateChanged(coordinate());
     }
 }
@@ -341,7 +334,6 @@ void MissionItem::setAltitude(double altitude)
     if (_altitudeFact->value().toDouble() != altitude)
     {
         _altitudeFact->setValue(altitude);
-        emit changed(this);
         emit valueStringsChanged(valueStrings());
         emit coordinateChanged(coordinate());
     }
@@ -383,7 +375,6 @@ void MissionItem::setAction(int /*MAV_CMD*/ action)
             setFrame(MAV_FRAME_MISSION);
         }
 
-        emit changed(this);
         emit commandNameChanged(commandName());
         emit commandChanged((MavlinkQmlSingleton::Qml_MAV_CMD)_command);
         emit valueLabelsChanged(valueLabels());
@@ -405,7 +396,7 @@ void MissionItem::setFrame(int /*MAV_FRAME*/ frame)
     if (_frame != frame) {
         _altitudeRelativeToHomeFact->setValue(frame == MAV_FRAME_GLOBAL_RELATIVE_ALT);
         _frame = frame;
-        emit changed(this);
+        emit frameChanged(_frame);
     }
 }
 
@@ -413,7 +404,7 @@ void MissionItem::setAutocontinue(bool autoContinue)
 {
     if (_autocontinue != autoContinue) {
         _autocontinue = autoContinue;
-        emit changed(this);
+        emit autoContinueChanged(_autocontinue);
     }
 }
 
@@ -435,7 +426,6 @@ void MissionItem::setParam1(double param)
     if (param1() != param)
     {
         _param1Fact->setValue(param);
-        emit changed(this);
         emit valueStringsChanged(valueStrings());
     }
 }
@@ -446,7 +436,6 @@ void MissionItem::setParam2(double param)
     {
         _param2Fact->setValue(param);
         emit valueStringsChanged(valueStrings());
-        emit changed(this);
     }
 }
 
@@ -480,7 +469,6 @@ void MissionItem::setLoiterOrbitRadius(double radius)
     if (loiterOrbitRadius() != radius) {
         _loiterOrbitRadiusFact->setValue(radius);
         emit valueStringsChanged(valueStrings());
-        emit changed(this);
     }
 }
 
@@ -820,7 +808,6 @@ void MissionItem::setHeadingDegrees(double headingDegrees)
 {
     if (_headingDegreesFact->value().toDouble() != headingDegrees) {
         _headingDegreesFact->setValue(headingDegrees);
-        emit changed(this);
         emit valueStringsChanged(valueStrings());
         emit headingDegreesChanged(headingDegrees);
     }
@@ -918,8 +905,25 @@ void MissionItem::_headingDegreesFactChanged(QVariant value)
     emit headingDegreesChanged(value.toDouble());
 }
 
+void MissionItem::_altitudeRelativeToHomeFactChanged(QVariant value)
+{
+    // Don't call setFrame, that will cause a signalling loop
+
+    int frame = value.toBool() ? MAV_FRAME_GLOBAL_RELATIVE_ALT : MAV_FRAME_GLOBAL;
+    if (_frame != frame) {
+        _frame = frame;
+        emit frameChanged(_frame);
+    }
+}
+
 void MissionItem::setHomePositionValid(bool homePositionValid)
 {
     _homePositionValid = homePositionValid;
     emit homePositionValidChanged(_homePositionValid);
+}
+
+void MissionItem::setDistance(double distance)
+{
+    _distance = distance;
+    emit distanceChanged(_distance);
 }

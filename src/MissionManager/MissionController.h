@@ -28,6 +28,9 @@ This file is part of the QGROUNDCONTROL project
 
 #include "QmlObjectListModel.h"
 #include "Vehicle.h"
+#include "QGCLoggingCategory.h"
+
+Q_DECLARE_LOGGING_CATEGORY(MissionControllerLog)
 
 class MissionController : public QObject
 {
@@ -72,8 +75,9 @@ signals:
     void autoSyncChanged(bool autoSync);
 
 private slots:
-    void _newMissionItemsAvailable();
+    void _newMissionItemsAvailableFromVehicle();
     void _itemCoordinateChanged(const QGeoCoordinate& coordinate);
+    void _itemFrameChanged(int frame);
     void _itemCommandChanged(MavlinkQmlSingleton::Qml_MAV_CMD command);
     void _activeVehicleChanged(Vehicle* activeVehicle);
     void _activeVehicleHomePositionAvailableChanged(bool homePositionAvailable);
@@ -91,6 +95,9 @@ private:
     void _initMissionItem(MissionItem* item);
     void _deinitMissionItem(MissionItem* item);
     void _autoSyncSend(void);
+    void _setupMissionItems(bool loadFromVehicle, bool forceLoad);
+    void _setupActiveVehicle(Vehicle* activeVehicle, bool forceLoadFromVehicle);
+    double _calcDistance(bool homePositionValid, double homeAlt, MissionItem* item1, MissionItem* item2);
 
 private:
     bool                _editMode;
@@ -101,7 +108,7 @@ private:
     bool                _liveHomePositionAvailable;
     QGeoCoordinate      _liveHomePosition;
     bool                _autoSync;
-    bool                _firstMissionItemSync;
+    bool                _firstItemsFromVehicle;
     bool                _missionItemsRequested;
     bool                _queuedSend;
 
