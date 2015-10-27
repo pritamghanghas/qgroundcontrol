@@ -99,7 +99,7 @@ void PX4AutoPilotPlugin::clearStaticData(void)
 
 Fact *PX4AutoPilotPlugin::getRCMode()
 {
-    return _getParameterLoader()->getFact(-1, "COM_RC_IN_MODE");
+    return _firmwarePlugin->getParameterLoader(this, _vehicle)->getFact(-1, "COM_RC_IN_MODE");
 }
 
 const QVariantList& PX4AutoPilotPlugin::vehicleComponents(void)

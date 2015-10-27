@@ -36,6 +36,8 @@ public:
     APMAutoPilotPlugin(Vehicle* vehicle, QObject* parent);
     ~APMAutoPilotPlugin();
 
+    virtual Fact* getRCMode(void);
+
     // Overrides from AutoPilotPlugin
     virtual const QVariantList& vehicleComponents(void);
 

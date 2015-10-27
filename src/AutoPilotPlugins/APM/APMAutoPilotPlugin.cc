@@ -44,6 +44,13 @@ APMAutoPilotPlugin::~APMAutoPilotPlugin()
 
 }
 
+Fact *APMAutoPilotPlugin::getRCMode()
+{
+    static Fact fact(-1, "COM_RC_IN_MODE", FactMetaData::valueTypeInt32);
+    fact.setValue("1");
+    return &fact;
+}
+
 void APMAutoPilotPlugin::clearStaticData(void)
 {
     APMParameterLoader::clearStaticData();
