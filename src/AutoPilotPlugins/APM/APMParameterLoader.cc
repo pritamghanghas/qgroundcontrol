@@ -52,10 +52,10 @@ QString APMParameterLoader::getXMLMetaDataFileName()
         // First look for meta data that comes from a firmware download. Fall back to resource if not there.
         QSettings settings;
         QDir parameterDir = QFileInfo(settings.fileName()).dir();
-        parameterFilename = parameterDir.filePath("APMParameterMetaData.xml");
+        parameterFilename = parameterDir.filePath("APMParameterFactMetaData.xml");
     }
     if (parameterFilename.isEmpty() || !QFile(parameterFilename).exists()) {
-        parameterFilename = ":/AutoPilotPlugins/APM/ParameterMetaData.xml";
+        parameterFilename = ":/AutoPilotPlugins/APM/ParameterFactMetaData.xml";
     }
 
     return parameterFilename;

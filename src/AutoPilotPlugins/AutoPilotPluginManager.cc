@@ -28,7 +28,6 @@
 #include "APM/APMAutoPilotPlugin.h"
 #include "PX4/PX4AutoPilotPlugin.h"
 #include "Generic/GenericAutoPilotPlugin.h"
-#include <QDebug>
 
 IMPLEMENT_QGC_SINGLETON(AutoPilotPluginManager, AutoPilotPluginManager)
 
@@ -51,11 +50,10 @@ AutoPilotPlugin* AutoPilotPluginManager::newAutopilotPluginForVehicle(Vehicle* v
     switch(vehicle->firmwareType()) {
         case MAV_AUTOPILOT_ARDUPILOTMEGA:
             autoPilotPlugin = new APMAutoPilotPlugin(vehicle, vehicle);
-            qDebug() << "loading apm autopilot plugin";
-            break;
+        break;
         case MAV_AUTOPILOT_PX4:
             autoPilotPlugin = new PX4AutoPilotPlugin(vehicle, vehicle);
-            break;
+        break;
         default:
             autoPilotPlugin = new GenericAutoPilotPlugin(vehicle, vehicle);
         break;
