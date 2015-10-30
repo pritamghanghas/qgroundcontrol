@@ -50,7 +50,7 @@ ParameterLoader::ParameterLoader(AutoPilotPlugin* autopilot, Vehicle* vehicle, Q
     QObject(parent),
     _autopilot(autopilot),
     _vehicle(vehicle),
-    _mavlink(MAVLinkProtocol::instance()),
+    _mavlink(qgcApp()->toolbox()->mavlinkProtocol()),
     _parametersReady(false),
     _initialLoadComplete(false),
     _defaultComponentId(FactSystem::defaultComponentId),
@@ -198,7 +198,7 @@ void ParameterLoader::_parameterUpdate(int uasId, int componentId, QString param
     
     // Attempt to determine default component id
     if (_defaultComponentId == FactSystem::defaultComponentId && _defaultComponentIdParam.isEmpty()) {
-        _defaultComponentIdParam = getDefaultComponentIdParam();
+        _defaultComponentIdParam = _vehicle->firmwarePlugin()->getDefaultComponentIdParam();
     }
     if (!_defaultComponentIdParam.isEmpty() && _defaultComponentIdParam == parameterName) {
         _defaultComponentId = componentId;
@@ -255,7 +255,7 @@ void ParameterLoader::_parameterUpdate(int uasId, int componentId, QString param
     fact->_containerSetValue(value);
     
     if (setMetaData) {
-        _addMetaDataToFact(fact);
+        _vehicle->firmwarePlugin()->addMetaDataToFact(fact);
     }
     
     _dataMutex.unlock();
@@ -293,12 +293,6 @@ void ParameterLoader::_valueUpdated(const QVariant& value)
     qCDebug(ParameterLoaderLog) << "Set parameter (componentId:" << componentId << "name:" << name << value << ")";
 }
 
-void ParameterLoader::_addMetaDataToFact(Fact* fact)
-{
-    FactMetaData* metaData = new FactMetaData(fact->type(), this);
-    fact->setMetaData(metaData);
-}
-
 void ParameterLoader::refreshAllParameters(void)
 {
     _dataMutex.lock();
@@ -314,7 +308,7 @@ void ParameterLoader::refreshAllParameters(void)
     
     _dataMutex.unlock();
     
-    MAVLinkProtocol* mavlink = MAVLinkProtocol::instance();
+    MAVLinkProtocol* mavlink = qgcApp()->toolbox()->mavlinkProtocol();
     Q_ASSERT(mavlink);
     
     mavlink_message_t msg;
@@ -507,7 +501,7 @@ void ParameterLoader::_tryCacheLookup()
     /* Start waiting for 2.5 seconds to get a cache hit and avoid loading all params over the radio */
     _cacheTimeoutTimer.start();
 
-    MAVLinkProtocol* mavlink = MAVLinkProtocol::instance();
+    MAVLinkProtocol* mavlink = qgcApp()->toolbox()->mavlinkProtocol();
     Q_ASSERT(mavlink);
 
     mavlink_message_t msg;
@@ -714,9 +708,9 @@ QString ParameterLoader::readParametersFromStream(QTextStream& stream)
     return errors;
 }
 
-void ParameterLoader::writeParametersToStream(QTextStream &stream, const QString& name)
+void ParameterLoader::writeParametersToStream(QTextStream &stream)
 {
-    stream << "# Onboard parameters for system " << name << "\n";
+    stream << "# Onboard parameters for vehicle " << _vehicle->id() << "\n";
     stream << "#\n";
     stream << "# MAV ID  COMPONENT ID  PARAM NAME  VALUE (FLOAT)\n";
 
@@ -831,7 +825,7 @@ void ParameterLoader::_checkInitialLoadComplete(void)
     
     // Check for any errors during vehicle boot
     
-    UASMessageHandler* msgHandler = UASMessageHandler::instance();
+    UASMessageHandler* msgHandler = qgcApp()->toolbox()->uasMessageHandler();
     if (msgHandler->getErrorCountTotal()) {
         QString errors;
         bool firstError = true;

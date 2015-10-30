@@ -38,6 +38,7 @@
 Q_DECLARE_LOGGING_CATEGORY(JoystickConfigControllerLog)
 
 class RadioConfigest;
+class JoystickManager;
 
 namespace Ui {
     class JoystickConfigController;
@@ -255,6 +256,8 @@ private:
     QQuickItem* _skipButton;
     
     QString _imageHelp;
+
+    JoystickManager*    _joystickManager;
 };
 
 #endif // JoystickConfigController_H

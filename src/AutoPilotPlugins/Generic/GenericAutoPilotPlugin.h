@@ -41,8 +41,6 @@ public:
     // Overrides from AutoPilotPlugin
     virtual const QVariantList& vehicleComponents(void);
 
-    static void clearStaticData(void);
-
     virtual Fact* getRCMode(void);
     
 public slots:

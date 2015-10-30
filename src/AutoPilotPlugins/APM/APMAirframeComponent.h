@@ -21,17 +21,36 @@
  
  ======================================================================*/
 
-#include "GenericParameterLoader.h"
+#ifndef APMAirframeComponent_H
+#define APMAirframeComponent_H
 
-GenericParameterLoader::GenericParameterLoader(AutoPilotPlugin* autopilot, Vehicle* vehicle, QObject* parent) :
-    ParameterLoader(autopilot, vehicle, parent)
-{
-    Q_ASSERT(vehicle);
-}
+#include "APMComponent.h"
 
-/// Override from ParameterLoader which connects the meta data to the fact
-void GenericParameterLoader::_addMetaDataToFact(Fact* fact)
+class APMAirframeComponent : public APMComponent
 {
-    // Use generic meta data
-    ParameterLoader::_addMetaDataToFact(fact);
-}
+    Q_OBJECT
+    
+public:
+    APMAirframeComponent(Vehicle* vehicle, AutoPilotPlugin* autopilot, QObject* parent = NULL);
+    
+    // Virtuals from APMComponent
+    virtual QStringList setupCompleteChangedTriggerList(void) const;
+
+    // Virtuals from VehicleComponent
+    virtual QString name(void) const;
+    virtual QString description(void) const;
+    virtual QString iconResource(void) const;
+    virtual bool requiresSetup(void) const;
+    virtual bool setupComplete(void) const;
+    virtual QString setupStateDescription(void) const;
+    virtual QUrl setupSource(void) const;
+    virtual QStringList paramFilterList(void) const;
+    virtual QUrl summaryQmlSource(void) const;    
+    virtual QString prerequisiteSetup(void) const;
+
+private:
+    const QString   _name;
+    QVariantList    _summaryItems;
+};
+
+#endif

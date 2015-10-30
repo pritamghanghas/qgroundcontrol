@@ -38,6 +38,7 @@ VideoItem {
     id: videoBackground
     property var display
     property var receiver
+    property var runVideo:  false
     surface: display
 
     ListModel {
@@ -345,9 +346,22 @@ VideoItem {
         if(videoBackground.receiver && videoBackground.display) {
             if(videoBackground.visible) {
                onModeChange();
+            }
+    }
+
+    onRunVideoChanged: {
+        if(videoBackground.receiver && videoBackground.display) {
+            if(videoBackground.runVideo) {
+                videoBackground.receiver.start();
             } else {
                 videoBackground.receiver.stop();
             }
+        }
+    }
+
+    Component.onCompleted: {
+        if(videoBackground.runVideo && videoBackground.receiver) {
+            videoBackground.receiver.start();
         }
     }
 }

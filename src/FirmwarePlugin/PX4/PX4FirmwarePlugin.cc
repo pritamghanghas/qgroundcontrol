@@ -39,6 +39,7 @@ enum PX4_CUSTOM_MAIN_MODE {
     PX4_CUSTOM_MAIN_MODE_ACRO,
     PX4_CUSTOM_MAIN_MODE_OFFBOARD,
     PX4_CUSTOM_MAIN_MODE_STABILIZED,
+    PX4_CUSTOM_MAIN_MODE_RATTITUDE
 };
 
 enum PX4_CUSTOM_SUB_MODE_AUTO {
@@ -74,6 +75,7 @@ static const struct Modes2Name rgModes2Name[] = {
     { PX4_CUSTOM_MAIN_MODE_MANUAL,      0,                                  "Manual",           true },
     { PX4_CUSTOM_MAIN_MODE_ACRO,        0,                                  "Acro",             true },
     { PX4_CUSTOM_MAIN_MODE_STABILIZED,  0,                                  "Stabilized",       true },
+    { PX4_CUSTOM_MAIN_MODE_RATTITUDE,   0,                                  "Rattitude",        true },
     { PX4_CUSTOM_MAIN_MODE_ALTCTL,      0,                                  "Altitude control", true },
     { PX4_CUSTOM_MAIN_MODE_POSCTL,      0,                                  "Position control", true },
     { PX4_CUSTOM_MAIN_MODE_OFFBOARD,    0,                                  "Offboard control", true },
@@ -86,9 +88,7 @@ static const struct Modes2Name rgModes2Name[] = {
 };
 
 
-PX4FirmwarePlugin::PX4FirmwarePlugin(QObject* parent)
-    : FirmwarePlugin(parent)
-    , _parameterLoader(NULL)
+PX4FirmwarePlugin::PX4FirmwarePlugin(void)
 {
     
 }
@@ -210,18 +210,7 @@ bool PX4FirmwarePlugin::sendHomePositionToVehicle(void)
     return false;
 }
 
-ParameterLoader* PX4FirmwarePlugin::getParameterLoader(AutoPilotPlugin* autopilotPlugin, Vehicle* vehicle)
+void PX4FirmwarePlugin::addMetaDataToFact(Fact* fact)
 {
-    if (!_parameterLoader) {
-        _parameterLoader = new PX4ParameterLoader(autopilotPlugin, vehicle, this);
-        Q_CHECK_PTR(_parameterLoader);
-
-        // FIXME: Why do I need SIGNAL/SLOT to make this work
-        connect(_parameterLoader, SIGNAL(parametersReady(bool)),                autopilotPlugin, SLOT(_parametersReadyPreChecks(bool)));
-        connect(_parameterLoader, &PX4ParameterLoader::parameterListProgress,   autopilotPlugin, &PX4AutoPilotPlugin::parameterListProgress);
-
-        _parameterLoader->loadParameterFactMetaData();
-    }
-
-    return _parameterLoader;
+    _parameterMetaData.addMetaDataToFact(fact);
 }

@@ -39,27 +39,27 @@
 #define MEAN_EARTH_DIAMETER	12756274.0
 #define UMR	0.017453292519943295769236907684886
 
-IMPLEMENT_QGC_SINGLETON(HomePositionManager, HomePositionManager)
-
 const char* HomePositionManager::_settingsGroup =   "HomePositionManager";
 const char* HomePositionManager::_latitudeKey =     "Latitude";
 const char* HomePositionManager::_longitudeKey =    "Longitude";
 const char* HomePositionManager::_altitudeKey =     "Altitude";
 
-HomePositionManager::HomePositionManager(QObject* parent)
-    : QObject(parent)
+HomePositionManager::HomePositionManager(QGCApplication* app)
+    : QGCTool(app)
     , homeLat(47.3769)
     , homeLon(8.549444)
     , homeAlt(470.0)
 {
-    qmlRegisterUncreatableType<HomePositionManager> ("QGroundControl", 1, 0, "HomePositionManager", "Reference only");
-    
-    _loadSettings();
+
 }
 
-HomePositionManager::~HomePositionManager()
+void HomePositionManager::setToolbox(QGCToolbox *toolbox)
 {
+    QGCTool::setToolbox(toolbox);
 
+    qmlRegisterUncreatableType<HomePositionManager> ("QGroundControl", 1, 0, "HomePositionManager", "Reference only");
+
+    _loadSettings();
 }
 
 void HomePositionManager::_storeSettings(void)
@@ -116,63 +116,8 @@ void HomePositionManager::_loadSettings(void)
     settings.endGroup();
     
     if (_homePositions.count() == 0) {
-        _homePositions.append(new HomePosition("ETH Campus", QGeoCoordinate(47.3769, 8.549444, 470.0)));
-    }
-    
-    // Deprecated settings for old editor
-
-    settings.beginGroup("QGC_UASMANAGER");
-    bool changed =  setHomePosition(settings.value("HOMELAT", homeLat).toDouble(),
-                                    settings.value("HOMELON", homeLon).toDouble(),
-                                    settings.value("HOMEALT", homeAlt).toDouble());
-
-    // Make sure to fire the change - this will
-    // make sure widgets get the signal once
-    if (!changed)
-    {
-        emit homePositionChanged(homeLat, homeLon, homeAlt);
-    }
-
-    settings.endGroup();
-}
-
-bool HomePositionManager::setHomePosition(double lat, double lon, double alt)
-{
-    // Checking for NaN and infitiny
-    // and checking for borders
-    bool changed = false;
-    if (!isnan(lat) && !isnan(lon) && !isnan(alt)
-        && !isinf(lat) && !isinf(lon) && !isinf(alt)
-        && lat <= 90.0 && lat >= -90.0 && lon <= 180.0 && lon >= -180.0)
-        {
-
-        if (fabs(homeLat - lat) > 1e-7) changed = true;
-        if (fabs(homeLon - lon) > 1e-7) changed = true;
-        if (fabs(homeAlt - alt) > 0.5f) changed = true;
-
-        if (changed)
-        {
-            homeLat = lat;
-            homeLon = lon;
-            homeAlt = alt;
-
-            emit homePositionChanged(homeLat, homeLon, homeAlt);
-        }
-    }
-    return changed;
-}
-
-bool HomePositionManager::setHomePositionAndNotify(double lat, double lon, double alt)
-{
-    // Checking for NaN and infitiny
-    // and checking for borders
-    bool changed = setHomePosition(lat, lon, alt);
-
-    if (changed) {
-        MultiVehicleManager::instance()->setHomePositionForAllVehicles(homeLat, homeLon, homeAlt);
-    }
-
-	return changed;
+        _homePositions.append(new HomePosition("ETH Campus", QGeoCoordinate(47.3769, 8.549444, 470.0), this));
+    }    
 }
 
 void HomePositionManager::updateHomePosition(const QString& name, const QGeoCoordinate& coordinate)
@@ -218,9 +163,10 @@ void HomePositionManager::deleteHomePosition(const QString& name)
     _storeSettings();
 }
 
-HomePosition::HomePosition(const QString& name, const QGeoCoordinate& coordinate, QObject* parent)
+HomePosition::HomePosition(const QString& name, const QGeoCoordinate& coordinate, HomePositionManager* homePositionManager, QObject* parent)
     : QObject(parent)
     , _coordinate(coordinate)
+    , _homePositionManager(homePositionManager)
 {
     setObjectName(name);
 }
@@ -238,7 +184,7 @@ QString HomePosition::name(void)
 void HomePosition::setName(const QString& name)
 {
     setObjectName(name);
-    HomePositionManager::instance()->_storeSettings();
+    _homePositionManager->_storeSettings();
     emit nameChanged(name);
 }
 
@@ -250,6 +196,6 @@ QGeoCoordinate HomePosition::coordinate(void)
 void HomePosition::setCoordinate(const QGeoCoordinate& coordinate)
 {
     _coordinate = coordinate;
-    HomePositionManager::instance()->_storeSettings();
+    _homePositionManager->_storeSettings();
     emit coordinateChanged(coordinate);
 }
