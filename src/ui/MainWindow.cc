@@ -566,15 +566,14 @@ void MainWindow::connectCommonActions()
     connect(_ui.actionFlight,   &QAction::triggered,    this, &MainWindow::showFlyView);
     connect(_ui.actionPlan,     &QAction::triggered,    this, &MainWindow::showPlanView);
     connect(_ui.actionSetup,    &QAction::triggered,    this, &MainWindow::showSetupView);
-<<<<<<< HEAD
+
     // pi related
     connect(_ui.actionShutdown_UAV, &QAction::triggered, piNodeSelector(), &NodeSelector::shutdownAll);
     connect(_ui.action_Restart_UAV, &QAction::triggered, piNodeSelector(), &NodeSelector::restartAll);
-=======
+
     connect(_ui.actionFlight,   &QAction::triggered,    this, &MainWindow::handleActiveViewActionState);
     connect(_ui.actionPlan,     &QAction::triggered,    this, &MainWindow::handleActiveViewActionState);
     connect(_ui.actionSetup,    &QAction::triggered,    this, &MainWindow::handleActiveViewActionState);
->>>>>>> origin/master
 
     // Connect internal actions
     connect(qgcApp()->toolbox()->multiVehicleManager(), &MultiVehicleManager::vehicleAdded, this, &MainWindow::_vehicleAdded);

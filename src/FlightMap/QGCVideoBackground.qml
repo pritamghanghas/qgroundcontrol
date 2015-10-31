@@ -266,9 +266,11 @@ VideoItem {
 
     Item {
         id : combo
-        width: 600
-        x: parent.width - width - 10;
-        y: 100;
+        width: parent.width*0.4
+        anchors.right: parent.right
+        x: parent.width - width;
+        y: parent.height * 0.01;
+        visible: true;
 
         Row {
             spacing: 10
@@ -277,7 +279,7 @@ VideoItem {
 
             QGCComboBox {
                 id:         meteringComboBox
-                width: 100
+                width: combo.width*0.2
                 visible:    true
                 model:      meteringModesList
 
@@ -288,7 +290,7 @@ VideoItem {
 
             QGCComboBox {
                 id:         exposureComboBox
-                width: 130
+                width: combo.width*0.22
                 visible:    true
                 model:      exposureModesList
 
@@ -299,7 +301,7 @@ VideoItem {
 
             QGCComboBox {
                 id:         awbComboBox
-                width: 130
+                width: combo.width*0.22
                 visible:    true
                 model:      awbModesList
 
@@ -310,7 +312,7 @@ VideoItem {
 
             QGCComboBox {
                 id:         resolutionSelectionComboBox
-                width: 160
+                width: combo.width*0.3
                 visible:    true
                 model:      resolutionList
 
@@ -325,7 +327,6 @@ VideoItem {
     Component.onCompleted: {
         // some fidgeting to do to get the combo box working correctly. otherwise the model data
         // comes out to be invalid
-        var visibility = videoBackground.visible;
         videoBackground.visible = false;
         meteringComboBox.currentIndex = 1;
         meteringComboBox.currentIndex = 0;
@@ -335,33 +336,32 @@ VideoItem {
         awbComboBox.currentIndex = 0;
         resolutionSelectionComboBox.currentIndex = 1;
         resolutionSelectionComboBox.currentIndex = 7;
-        videoBackground.visible = visibility;
+        videoBackground.visible = true;
 
-        if(videoBackground.visible && videoBackground.receiver) {
+        if(videoBackground.display && videoBackground.receiver) {
             resolutionSelectionComboBox.currentIndex = 7;
+        }
+
+        if(videoBackground.runVideo && videoBackground.receiver) {
+            onModeChange();
         }
     }
 
     onVisibleChanged: {
         if(videoBackground.receiver && videoBackground.display) {
-            if(videoBackground.visible) {
+            if(videoBackground.runVideo) {
                onModeChange();
             }
+        }
     }
 
     onRunVideoChanged: {
         if(videoBackground.receiver && videoBackground.display) {
             if(videoBackground.runVideo) {
-                videoBackground.receiver.start();
+                onModeChange();
             } else {
                 videoBackground.receiver.stop();
             }
-        }
-    }
-
-    Component.onCompleted: {
-        if(videoBackground.runVideo && videoBackground.receiver) {
-            videoBackground.receiver.start();
         }
     }
 }
