@@ -42,7 +42,6 @@ APMAutoPilotPlugin::~APMAutoPilotPlugin()
 
 }
 
-<<<<<<< HEAD
 Fact *APMAutoPilotPlugin::getRCMode()
 {
     static Fact fact(-1, "COM_RC_IN_MODE", FactMetaData::valueTypeInt32);
@@ -50,13 +49,6 @@ Fact *APMAutoPilotPlugin::getRCMode()
     return &fact;
 }
 
-void APMAutoPilotPlugin::clearStaticData(void)
-{
-    APMParameterLoader::clearStaticData();
-}
-
-=======
->>>>>>> origin/master
 const QVariantList& APMAutoPilotPlugin::vehicleComponents(void)
 {
     if (_components.count() == 0 && !_incorrectParameterVersion) {
