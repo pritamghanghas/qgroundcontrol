@@ -2,7 +2,7 @@
 
 QGroundControl Open Source Ground Control Station
 
-(c) 2009 - 2013 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+(c) 2009 - 2015 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
 
 This file is part of the QGROUNDCONTROL project
 
@@ -55,6 +55,7 @@ This file is part of the QGROUNDCONTROL project
 #include "pidiscoverer.h"
 #include "LogCompressor.h"
 #include "UAS.h"
+#include "QGCImageProvider.h"
 
 #ifndef __mobile__
 #include "QGCDataPlot2D.h"
@@ -76,18 +77,13 @@ This file is part of the QGROUNDCONTROL project
 #include "QmlControls/QmlTestWidget.h"
 #endif
 
-#ifdef QGC_OSG_ENABLED
-#include "Q3DWidgetFactory.h"
-#endif
-
-
 /// The key under which the Main Window settings are saved
 const char* MAIN_SETTINGS_GROUP = "QGC_MAINWINDOW";
 
 #ifndef __mobile__
-enum DockWidgetTypes { 
-    MAVLINK_INSPECTOR, 
-    CUSTOM_COMMAND, 
+enum DockWidgetTypes {
+    MAVLINK_INSPECTOR,
+    CUSTOM_COMMAND,
     ONBOARD_FILES,
     STATUS_DETAILS,
     INFO_VIEW,
@@ -167,6 +163,10 @@ MainWindow::MainWindow()
 
     _mainQmlWidgetHolder->setContextPropertyObject("controller", this);
     _mainQmlWidgetHolder->setSource(QUrl::fromUserInput("qrc:qml/MainWindow.qml"));
+
+    // Image provider
+    QQuickImageProvider* pImgProvider = dynamic_cast<QQuickImageProvider*>(qgcApp()->toolbox()->imageProvider());
+    _mainQmlWidgetHolder->getEngine()->addImageProvider(QLatin1String("QGCImages"), pImgProvider);
 
     // Set dock options
     setDockOptions(0);
@@ -262,7 +262,7 @@ MainWindow::MainWindow()
     connect(_ui.actionStatusBar,  &QAction::triggered, this, &MainWindow::showStatusBarCallback);
 
     // Set OS dependent keyboard shortcuts for the main window, non OS dependent shortcuts are set in MainWindow.ui
-#ifdef Q_OS_MACX
+#ifdef __macos__
     _ui.actionSetup->setShortcut(QApplication::translate("MainWindow", "Meta+1", 0));
     _ui.actionPlan->setShortcut(QApplication::translate("MainWindow", "Meta+2", 0));
     _ui.actionFlight->setShortcut(QApplication::translate("MainWindow", "Meta+3", 0));
@@ -287,7 +287,7 @@ MainWindow::MainWindow()
         menuBar()->hide();
 #endif
         show();
-#ifdef Q_OS_MAC
+#ifdef __macos__
         // TODO HACK
         // This is a really ugly hack. For whatever reason, by having a QQuickWidget inside a
         // QDockWidget (MainToolBar above), the main menu is not shown when the app first
@@ -372,7 +372,7 @@ void MainWindow::_createInnerDockWidget(const QString& widgetName)
 {
     QGCDockWidget* widget = NULL;
     QAction *action = _mapName2Action[widgetName];
-    
+
     switch(action->data().toInt()) {
         case MAVLINK_INSPECTOR:
             widget = new QGCMAVLinkInspector(widgetName, action, qgcApp()->toolbox()->mavlinkProtocol(),this);
@@ -447,7 +447,7 @@ void MainWindow::showStatusBarCallback(bool checked)
 void MainWindow::closeEvent(QCloseEvent *event)
 {
     // Disallow window close if there are active connections
-    if (qgcApp()->toolbox()->linkManager()->anyConnectedLinks()) {
+    if (qgcApp()->toolbox()->multiVehicleManager()->vehicles()->count()) {
         QGCMessageBox::StandardButton button =
             QGCMessageBox::warning(
                 tr("QGroundControl close"),
@@ -475,16 +475,27 @@ void MainWindow::closeEvent(QCloseEvent *event)
     // We have to pull out the QmlWidget from the main window and delete it here, before
     // the MainWindow ends up getting deleted. Otherwise the Qml has a reference to MainWindow
     // inside it which in turn causes a shutdown crash.
-    _centralLayout->removeWidget(_mainQmlWidgetHolder);
-    delete _mainQmlWidgetHolder;
-    _mainQmlWidgetHolder = NULL;
+
+    //-- Unit test gets here with _mainQmlWidgetHolder being NULL
+
+    if(_mainQmlWidgetHolder)
+    {
+        // Remove image provider
+        _mainQmlWidgetHolder->getEngine()->removeImageProvider(QLatin1String("QGCImages"));
+        _centralLayout->removeWidget(_mainQmlWidgetHolder);
+        delete _mainQmlWidgetHolder;
+        _mainQmlWidgetHolder = NULL;
+    }
 
     _storeCurrentViewState();
     storeSettings();
 
     event->accept();
 
+    //-- TODO: This effectively causes the QGCApplication destructor to not being able
+    //   to access the pointer it is trying to delete.
     _instance = NULL;
+
     emit mainWindowClosed();
 }
 

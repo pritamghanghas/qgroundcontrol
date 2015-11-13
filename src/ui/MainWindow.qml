@@ -21,11 +21,12 @@ along with QGROUNDCONTROL. If not, see <http://www.gnu.org/licenses/>.
 
 ======================================================================*/
 
-import QtQuick          2.3
+import QtQuick          2.5
 import QtQuick.Controls 1.2
 import QtPositioning    5.2
 
 import QGroundControl               1.0
+import QGroundControl.Palette       1.0
 import QGroundControl.Controls      1.0
 import QGroundControl.FlightDisplay 1.0
 import QGroundControl.ScreenTools   1.0
@@ -34,10 +35,17 @@ import QGroundControl.ScreenTools   1.0
 Item {
     id: mainWindow
 
-    property var _toolbar: toolbarLoader.item
-
     readonly property string _planViewSource:   "MissionEditor.qml"
     readonly property string _setupViewSource:  "SetupView.qml"
+
+    QGCPalette { id: __qgcPal; colorGroupEnabled: true }
+
+    property real tbHeight:         ScreenTools.isMobile ? (ScreenTools.isTinyScreen ? (mainWindow.width * 0.0666) : (mainWindow.width * 0.05)) : ScreenTools.defaultFontPixelSize * 4
+    property int  tbCellHeight:     tbHeight * 0.75
+    property real tbSpacing:        ScreenTools.isMobile ? width * 0.00824 : 9.54
+    property real tbButtonWidth:    tbCellHeight * 1.3
+    property real avaiableHeight:   height - tbHeight
+    property real menuButtonWidth:  (tbButtonWidth * 2) + (tbSpacing * 4) + 1
 
     Connections {
 
@@ -67,7 +75,7 @@ Item {
             planViewLoader.visible      = false
         }
 
-        onShowToolbarMessage: _toolbar.showToolbarMessage(message)
+        onShowToolbarMessage: toolBar.showToolbarMessage(message)
 
         // The following are use for unit testing only
 
@@ -77,61 +85,81 @@ Item {
         onShowSetupVehicleComponent:    setupViewLoader.item.showVehicleComponentPanel(vehicleComponent)
     }
 
-    // We delay load the following control to improve boot time
-    Component.onCompleted: {
-        toolbarLoader.source = "MainToolBar.qml"
-    }
-
-    // Detect tablet position
+    //-- Detect tablet position
     property var tabletPosition: QtPositioning.coordinate(37.803784, -122.462276)
     PositionSource {
         id:             positionSource
         updateInterval: 1000
-        active:         ScreenTools.isMobile
+        active:         true // ScreenTools.isMobile
 
         onPositionChanged: {
-            tabletPosition = positionSource.position.coordinate
-            flightView.latitude = tabletPosition.latitude
-            flightView.longitude = tabletPosition.longitude
-            positionSource.active = false
+            tabletPosition          = positionSource.position.coordinate
+            flightView.latitude     = tabletPosition.latitude
+            flightView.longitude    = tabletPosition.longitude
+            positionSource.active   = false
         }
     }
 
+    function showLeftMenu() {
+        if(!leftPanel.visible && !leftPanel.item.animateShowDialog.running) {
+            leftPanel.visible = true
+            leftPanel.item.animateShowDialog.start()
+        } else if(leftPanel.visible && !leftPanel.item.animateShowDialog.running) {
+            //-- If open, toggle it closed
+            hideLeftMenu()
+        }
+    }
+
+    function hideLeftMenu() {
+        if(leftPanel.visible && !leftPanel.item.animateHideDialog.running) {
+            leftPanel.item.animateHideDialog.start()
+        }
+    }
+
+    //-- Left Settings Menu
     Loader {
-        id:                 toolbarLoader
-        width:              parent.width
-        height:             item ? item.height : 0
+        id:                 leftPanel
+        anchors.fill:       mainWindow
+        visible:            false
+        z:                  QGroundControl.zOrderTopMost + 100
+    }
+
+    //-- Main UI
+
+    MainToolBar {
+        id:                 toolBar
+        height:             tbHeight
+        anchors.left:       parent.left
+        anchors.right:      parent.right
+        anchors.top:        parent.top
+        mainWindow:         mainWindow
+        opaqueBackground:   leftPanel.visible
+        isBackgroundDark:   flightView.isBackgroundDark
         z:                  QGroundControl.zOrderTopMost
+        Component.onCompleted: {
+            leftPanel.source = "MainWindowLeftPanel.qml"
+        }
     }
 
     FlightDisplayView {
         id:                 flightView
-        anchors.left:       parent.left
-        anchors.right:      parent.right
-        anchors.top:        toolbarLoader.bottom
-        anchors.bottom:     parent.bottom
+        anchors.fill:       parent
+        avaiableHeight:     mainWindow.avaiableHeight
         visible:            true
     }
 
     Loader {
         id:                 planViewLoader
-        anchors.left:       parent.left
-        anchors.right:      parent.right
-        anchors.top:        toolbarLoader.bottom
-        anchors.bottom:     parent.bottom
+        anchors.fill:       parent
         visible:            false
-
         property var tabletPosition:    mainWindow.tabletPosition
     }
 
     Loader {
         id:                 setupViewLoader
-        anchors.left:       parent.left
-        anchors.right:      parent.right
-        anchors.top:        toolbarLoader.bottom
-        anchors.bottom:     parent.bottom
+        anchors.fill:       parent
         visible:            false
-
         property var tabletPosition:    mainWindow.tabletPosition
     }
+
 }

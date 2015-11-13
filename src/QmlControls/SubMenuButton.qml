@@ -39,19 +39,18 @@ Button {
                 verticalAlignment:      TextEdit.AlignVCenter
                 horizontalAlignment:    TextEdit.AlignHCenter
                 color:                  showHighlight ? qgcPal.buttonHighlightText : qgcPal.buttonText
+                font.pixelSize:         ScreenTools.isMobile ? ScreenTools.defaultFontPixelSize * 0.75 : ScreenTools.defaultFontPixelSize
                 text:                   control.text
 
                 Rectangle {
                     anchors.rightMargin:    ScreenTools.defaultFontPixelWidth / 3
                     anchors.right:          parent.right
                     anchors.verticalCenter: parent.verticalCenter
-                    width:                  radius * 2
+                    width:                  ScreenTools.defaultFontPixelWidth
                     height:                 width
-                    radius:                 indicatorRadius
+                    radius:                 width / 2
                     color:                  control.setupComplete ? "#00d932" : "red"
                     visible:                control.setupIndicator
-
-                    readonly property real indicatorRadius: (ScreenTools.defaultFontPixelHeight * .75) / 2
                 }
             }
 
