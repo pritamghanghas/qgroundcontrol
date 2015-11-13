@@ -90,7 +90,7 @@ PX4AutoPilotPlugin::~PX4AutoPilotPlugin()
 
 Fact *PX4AutoPilotPlugin::getRCMode()
 {
-    return _firmwarePlugin->getParameterLoader(this, _vehicle)->getFact(-1, "COM_RC_IN_MODE");
+    return getFact(FactSystem::ParameterProvider, -1, "COM_RC_IN_MODE");
 }
 
 const QVariantList& PX4AutoPilotPlugin::vehicleComponents(void)
