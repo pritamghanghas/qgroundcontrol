@@ -26,7 +26,6 @@
 
 #include <QObject>
 #include <QMap>
-#include <QPointer>
 #include <QXmlStreamReader>
 #include <QLoggingCategory>
 
@@ -68,13 +67,9 @@ private:
 
     static void _loadParameterFactMetaData(void);
     static QVariant _stringToTypedVariant(const QString& string, FactMetaData::ValueType_t type, bool* convertOk);
-    static bool skipParameterXMLBlock(QXmlStreamReader& xml, const QString& blockName);
-    static bool parseParameterAttributes(QXmlStreamReader& xml, FactMetaData* metaData);
-    static QString mavTypeToString(MAV_TYPE vehicleTypeEnum);
 
     static bool _parameterMetaDataLoaded;   ///< true: parameter meta data already loaded
     static QMap<QString, FactMetaData*> _mapParameterName2FactMetaData; ///< Maps from a parameter name to FactMetaData
-//    static QPointer<Vehicle> _vehicle;
 };
 
 #endif
