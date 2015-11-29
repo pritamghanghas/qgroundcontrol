@@ -53,71 +53,67 @@ public:
     Q_INVOKABLE void    onSetupView();
     Q_INVOKABLE void    onPlanView();
     Q_INVOKABLE void    onFlyView();
-    Q_INVOKABLE void    onConnect(QString conf);
-    Q_INVOKABLE void    onDisconnect(QString conf);
-    Q_INVOKABLE void    onEnterMessageArea(int x, int y);
     Q_INVOKABLE void    onToolBarMessageClosed(void);
     Q_INVOKABLE void    showSettings(void);
+    Q_INVOKABLE void    manageLinks(void);
 
     Q_PROPERTY(double       height              MEMBER _toolbarHeight           NOTIFY heightChanged)
-    Q_PROPERTY(QStringList  configList          MEMBER _linkConfigurations      NOTIFY configListChanged)
-    Q_PROPERTY(int          connectionCount     READ connectionCount            NOTIFY connectionCountChanged)
-    Q_PROPERTY(QStringList  connectedList       MEMBER _connectedList           NOTIFY connectedListChanged)
     Q_PROPERTY(float        progressBarValue    MEMBER _progressBarValue        NOTIFY progressBarValueChanged)
-    Q_PROPERTY(int          remoteRSSI          READ remoteRSSI                 NOTIFY remoteRSSIChanged)
     Q_PROPERTY(int          telemetryRRSSI      READ telemetryRRSSI             NOTIFY telemetryRRSSIChanged)
     Q_PROPERTY(int          telemetryLRSSI      READ telemetryLRSSI             NOTIFY telemetryLRSSIChanged)
+    Q_PROPERTY(unsigned int telemetryRXErrors   READ telemetryRXErrors          NOTIFY telemetryRXErrorsChanged)
+    Q_PROPERTY(unsigned int telemetryFixed      READ telemetryFixed             NOTIFY telemetryFixedChanged)
+    Q_PROPERTY(unsigned int telemetryTXBuffer   READ telemetryTXBuffer          NOTIFY telemetryTXBufferChanged)
+    Q_PROPERTY(unsigned int telemetryLNoise     READ telemetryLNoise            NOTIFY telemetryLNoiseChanged)
+    Q_PROPERTY(unsigned int telemetryRNoise     READ telemetryRNoise            NOTIFY telemetryRNoiseChanged)
 
     void        viewStateChanged        (const QString& key, bool value);
-    int         remoteRSSI              () { return _remoteRSSI; }
+
     int         telemetryRRSSI          () { return _telemetryRRSSI; }
     int         telemetryLRSSI          () { return _telemetryLRSSI; }
-    int         connectionCount         () { return _connectionCount; }
-    
+    unsigned int telemetryRXErrors      () { return _telemetryRXErrors; }
+    unsigned int telemetryFixed         () { return _telemetryFixed; }
+    unsigned int telemetryTXBuffer      () { return _telemetryTXBuffer; }
+    unsigned int telemetryLNoise        () { return _telemetryLNoise; }
+    unsigned int telemetryRNoise        () { return _telemetryRNoise; }
+
     void showToolBarMessage(const QString& message);
-    
+
 signals:
-    void connectionCountChanged         (int count);
-    void configListChanged              ();
-    void connectedListChanged           (QStringList connectedList);
     void progressBarValueChanged        (float value);
-    void remoteRSSIChanged              (int value);
     void telemetryRRSSIChanged          (int value);
     void telemetryLRSSIChanged          (int value);
     void heightChanged                  (double height);
-    
+    void telemetryRXErrorsChanged       (unsigned int value);
+    void telemetryFixedChanged          (unsigned int value);
+    void telemetryTXBufferChanged       (unsigned int value);
+    void telemetryLNoiseChanged         (unsigned int value);
+    void telemetryRNoiseChanged         (unsigned int value);
+
     /// Shows a non-modal message below the toolbar
     void showMessage(const QString& message);
 
 private slots:
     void _activeVehicleChanged          (Vehicle* vehicle);
-    void _updateConfigurations          ();
-    void _linkConnected                 (LinkInterface* link);
-    void _linkDisconnected              (LinkInterface* link);
-    void _leaveMessageView              ();
     void _setProgressBarValue           (float value);
-    void _remoteControlRSSIChanged      (uint8_t rssi);
-    void _telemetryChanged              (LinkInterface* link, unsigned rxerrors, unsigned fixed, unsigned rssi, unsigned remrssi, unsigned txbuf, unsigned noise, unsigned remnoise);
+    void _telemetryChanged              (LinkInterface* link, unsigned rxerrors, unsigned fixed, int rssi, int remrssi, unsigned txbuf, unsigned noise, unsigned remnoise);
     void _delayedShowToolBarMessage     (void);
-
-private:
-    void _updateConnection              (LinkInterface *disconnectedLink = NULL);
 
 private:
     Vehicle*        _vehicle;
     UASInterface*   _mav;
-    QStringList     _linkConfigurations;
-    int             _connectionCount;
-    QStringList     _connectedList;
     float           _progressBarValue;
-    int             _remoteRSSI;
     double          _remoteRSSIstore;
     int             _telemetryRRSSI;
     int             _telemetryLRSSI;
+    uint32_t        _telemetryRXErrors;
+    uint32_t        _telemetryFixed;
+    uint32_t        _telemetryTXBuffer;
+    uint32_t        _telemetryLNoise;
+    uint32_t        _telemetryRNoise;
+
     double          _toolbarHeight;
 
-    UASMessageViewRollDown* _rollDownMessages;
-    
     bool            _toolbarMessageVisible;
     QStringList     _toolbarMessageQueue;
     QMutex          _toolbarMessageQueueMutex;

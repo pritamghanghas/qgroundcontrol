@@ -269,7 +269,7 @@ VideoItem {
         width: parent.width*0.4
         anchors.right: parent.right
         x: parent.width - width;
-        y: parent.height * 0.01;
+        y: parent.height * 0.08;
         visible: true;
 
         Row {

@@ -37,7 +37,6 @@ MissionController::MissionController(QObject *parent)
     : QObject(parent)
     , _editMode(false)
     , _missionItems(NULL)
-    , _canEdit(true)
     , _activeVehicle(NULL)
     , _liveHomePositionAvailable(false)
     , _autoSync(false)
@@ -51,7 +50,6 @@ MissionController::MissionController(QObject *parent)
 MissionController::~MissionController()
 {
     // Start with empty list
-    _canEdit = true;
     _missionItems = new QmlObjectListModel(this);
     _initAllMissionItems();
 }
@@ -129,11 +127,9 @@ void MissionController::_setupMissionItems(bool loadFromVehicle, bool forceLoad)
     }
 
     if (!missionManager || !loadFromVehicle || missionManager->inProgress()) {
-        _canEdit = true;
         _missionItems = new QmlObjectListModel(this);
         qCDebug(MissionControllerLog) << "creating empty set";
     } else {
-        _canEdit = missionManager->canEdit();
         _missionItems = missionManager->copyMissionItems();
         qCDebug(MissionControllerLog) << "loading from vehicle count"<< _missionItems->count();
     }
@@ -163,17 +159,17 @@ void MissionController::sendMissionItems(void)
 
 int MissionController::addMissionItem(QGeoCoordinate coordinate)
 {
-    if (!_canEdit) {
-        qWarning() << "addMissionItem called with _canEdit == false";
-    }
-
-    // Coordinate will come through without altitude
-    coordinate.setAltitude(MissionItem::defaultAltitude);
-
-    MissionItem * newItem = new MissionItem(this, _missionItems->count(), coordinate, MAV_CMD_NAV_WAYPOINT);
+    MissionItem * newItem = new MissionItem(this);
+    newItem->setSequenceNumber(_missionItems->count());
+    newItem->setCoordinate(coordinate);
+    newItem->setCommand(MAV_CMD_NAV_WAYPOINT);
     _initMissionItem(newItem);
     if (_missionItems->count() == 1) {
         newItem->setCommand(MavlinkQmlSingleton::MAV_CMD_NAV_TAKEOFF);
+    }
+    newItem->setDefaultsForCommand();
+    if ((MAV_CMD)newItem->command() == MAV_CMD_NAV_WAYPOINT) {
+        newItem->setParam7(_findLastAltitude());
     }
     _missionItems->append(newItem);
 
@@ -184,11 +180,6 @@ int MissionController::addMissionItem(QGeoCoordinate coordinate)
 
 void MissionController::removeMissionItem(int index)
 {
-    if (!_canEdit) {
-        qWarning() << "addMissionItem called with _canEdit == false";
-        return;
-    }
-
     MissionItem* item = qobject_cast<MissionItem*>(_missionItems->removeAt(index));
 
     _deinitMissionItem(item);
@@ -221,8 +212,6 @@ void MissionController::loadMissionFromFile(void)
     }
     _missionItems = new QmlObjectListModel(this);
 
-    _canEdit = true;
-
     // FIXME: This needs to handle APM files which have WP 0 in them
 
     QFile file(filename);
@@ -242,10 +231,6 @@ void MissionController::loadMissionFromFile(void)
 
                 if (item->load(in)) {
                     _missionItems->append(item);
-
-                    if (!item->canEdit()) {
-                        _canEdit = false;
-                    }
                 } else {
                     errorString = "The mission file is corrupted.";
                     break;
@@ -422,7 +407,9 @@ void MissionController::_initAllMissionItems(void)
         // Add the home position item to the front
         homeItem = new MissionItem(this);
         homeItem->setHomePositionSpecialCase(true);
-        homeItem->setCommand(MavlinkQmlSingleton::MAV_CMD_NAV_WAYPOINT);
+        homeItem->setCommand(MavlinkQmlSingleton::MAV_CMD_NAV_LAST);
+        homeItem->setFrame(MAV_FRAME_GLOBAL_RELATIVE_ALT);
+        homeItem->setSequenceNumber(0);
         _missionItems->insert(0, homeItem);
     }
     homeItem->setHomePositionValid(false);
@@ -434,7 +421,6 @@ void MissionController::_initAllMissionItems(void)
     _recalcAll();
 
     emit missionItemsChanged();
-    emit canEditChanged(_canEdit);
 
     _missionItems->setDirty(false);
 
@@ -608,4 +594,19 @@ void MissionController::_inProgressChanged(bool inProgress)
 QmlObjectListModel* MissionController::missionItems(void)
 {
     return _missionItems;
+}
+
+double MissionController::_findLastAltitude(void)
+{
+    double lastAltitude = MissionItem::defaultAltitude;
+
+    for (int i=0; i<_missionItems->count(); i++) {
+        MissionItem* item = qobject_cast<MissionItem*>(_missionItems->get(i));
+
+        if (item->specifiesCoordinate()) {
+            lastAltitude = item->param7();
+        }
+    }
+
+    return lastAltitude;
 }

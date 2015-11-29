@@ -57,8 +57,7 @@ AirframeComponentController::AirframeComponentController(void) :
     // Load up member variables
     
     bool autostartFound = false;
-    _autostartId = getParameterFact(FactSystem::defaultComponentId, "SYS_AUTOSTART")->value().toInt();
-
+    _autostartId = getParameterFact(FactSystem::defaultComponentId, "SYS_AUTOSTART")->rawValue().toInt();
 
     
     for (int tindex = 0; tindex < AirframeComponentAirframes::get().count(); tindex++) {
@@ -114,8 +113,8 @@ void AirframeComponentController::changeAutostart(void)
     connect(sysAutoConfigFact, &Fact::vehicleUpdated, this, &AirframeComponentController::_waitParamWriteSignal);
     
     // We use forceSetValue to params are sent even if the previous value is that same as the new value
-    sysAutoStartFact->forceSetValue(_autostartId);
-    sysAutoConfigFact->forceSetValue(1);
+    sysAutoStartFact->forceSetRawValue(_autostartId);
+    sysAutoConfigFact->forceSetRawValue(1);
 }
 
 void AirframeComponentController::_waitParamWriteSignal(QVariant value)
@@ -139,7 +138,7 @@ void AirframeComponentController::_rebootAfterStackUnwind(void)
         QGC::SLEEP::usleep(500);
         qgcApp()->processEvents(QEventLoop::ExcludeUserInputEvents);
     }
-    qgcApp()->toolbox()->linkManager()->disconnectAll();
+    qgcApp()->toolbox()->linkManager()->disconnectAll(false /* disconnectAutoconnectLink */);
     qgcApp()->restoreOverrideCursor();
 }
 

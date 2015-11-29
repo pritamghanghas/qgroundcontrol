@@ -59,7 +59,8 @@ QGCViewDialog {
             validationError.text = fact.validate(validateValue, false /* convertOnly */)
             forceSave.visible = true
         }
-        valueField.forceActiveFocus();
+        // This was causing problems where it would never give up focus even when hidden!
+        //valueField.forceActiveFocus()
     }
 
     Column {
@@ -83,6 +84,7 @@ QGCViewDialog {
         QGCTextField {
             id:     valueField
             text:   validate ? validateValue : fact.valueString
+            focus:  true
 
             // At this point all Facts are numeric
             inputMethodHints:   Qt.ImhFormattedNumbersOnly
@@ -110,7 +112,7 @@ QGCViewDialog {
             visible: !fact.minIsDefaultForType
 
             QGCLabel { text: "Minimum value:" }
-            QGCLabel { text: fact.min }
+            QGCLabel { text: fact.minString }
         }
 
         Row {
@@ -118,14 +120,14 @@ QGCViewDialog {
             visible: !fact.maxIsDefaultForType
 
             QGCLabel { text: "Maximum value:" }
-            QGCLabel { text: fact.max }
+            QGCLabel { text: fact.maxString }
         }
 
         Row {
             spacing: defaultTextWidth
 
             QGCLabel { text: "Default value:" }
-            QGCLabel { text: fact.defaultValueAvailable ? fact.defaultValue : "none" }
+            QGCLabel { text: fact.defaultValueAvailable ? fact.defaultValueString : "none" }
         }
 
         QGCLabel {

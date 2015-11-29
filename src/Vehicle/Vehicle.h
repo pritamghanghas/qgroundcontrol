@@ -35,6 +35,7 @@
 #include "MissionItem.h"
 #include "QmlObjectListModel.h"
 #include "MAVLinkProtocol.h"
+#include "UASMessageHandler.h"
 
 class UAS;
 class UASInterface;
@@ -45,6 +46,7 @@ class AutoPilotPluginManager;
 class MissionManager;
 class ParameterLoader;
 class JoystickManager;
+class UASMessage;
 
 Q_DECLARE_LOGGING_CATEGORY(VehicleLog)
 
@@ -101,12 +103,15 @@ public:
     Q_PROPERTY(bool                 messageTypeError        READ messageTypeError                       NOTIFY messageTypeChanged)
     Q_PROPERTY(int                  newMessageCount         READ newMessageCount                        NOTIFY newMessageCountChanged)
     Q_PROPERTY(int                  messageCount            READ messageCount                           NOTIFY messageCountChanged)
+    Q_PROPERTY(QString              formatedMessages        READ formatedMessages                       NOTIFY formatedMessagesChanged)
+    Q_PROPERTY(QString              formatedMessage         READ formatedMessage                        NOTIFY formatedMessageChanged)
     Q_PROPERTY(QString              latestError             READ latestError                            NOTIFY latestErrorChanged)
     Q_PROPERTY(int                  joystickMode            READ joystickMode       WRITE setJoystickMode NOTIFY joystickModeChanged)
     Q_PROPERTY(QStringList          joystickModes           READ joystickModes                          CONSTANT)
     Q_PROPERTY(bool                 joystickEnabled         READ joystickEnabled    WRITE setJoystickEnabled NOTIFY joystickEnabledChanged)
     Q_PROPERTY(bool                 active                  READ active             WRITE setActive     NOTIFY activeChanged)
     Q_PROPERTY(int                  flowImageIndex          READ flowImageIndex                         NOTIFY flowImageIndexChanged)
+    Q_PROPERTY(int                  rcRSSI                  READ rcRSSI                                 NOTIFY rcRSSIChanged)
 
     /// Returns the number of buttons which are reserved for firmware use in the MANUAL_CONTROL mavlink
     /// message. For example PX4 Flight Stack reserves the first 8 buttons to simulate rc switches.
@@ -115,6 +120,9 @@ public:
     Q_PROPERTY(int manualControlReservedButtonCount READ manualControlReservedButtonCount CONSTANT)
 
     Q_INVOKABLE QString     getMavIconColor();
+
+    // Called when the message drop-down is invoked to clear current count
+    Q_INVOKABLE void        resetMessages();
 
     // Property accessors
 
@@ -166,8 +174,6 @@ public:
     /// Provides access to the Firmware Plugin for this Vehicle
     FirmwarePlugin* firmwarePlugin(void) { return _firmwarePlugin; }
 
-    QList<LinkInterface*> links(void);
-
     int manualControlReservedButtonCount(void);
 
     MissionManager* missionManager(void) { return _missionManager; }
@@ -216,15 +222,14 @@ public:
         ALTITUDEAMSL_CHANGED
     };
 
-    // Called when the message drop-down is invoked to clear current count
-    void resetMessages();
-
     bool            messageTypeNone     () { return _currentMessageType == MessageNone; }
     bool            messageTypeNormal   () { return _currentMessageType == MessageNormal; }
     bool            messageTypeWarning  () { return _currentMessageType == MessageWarning; }
     bool            messageTypeError    () { return _currentMessageType == MessageError; }
     int             newMessageCount     () { return _currentMessageCount; }
     int             messageCount        () { return _messageCount; }
+    QString         formatedMessages    ();
+    QString         formatedMessage     () { return _formatedMessage; }
     QString         latestError         () { return _latestError; }
     float           roll                () { return _roll; }
     float           pitch               () { return _pitch; }
@@ -245,6 +250,7 @@ public:
     QString         currentState        () { return _currentState; }
     int             satelliteLock       () { return _satelliteLock; }
     unsigned int    heartbeatTimeout    () { return _currentHeartbeatTimeout; }
+    int             rcRSSI              () { return _rcRSSI; }
 
     ParameterLoader* getParameterLoader(void);
 
@@ -253,7 +259,7 @@ public slots:
     void setLongitude(double longitude);
 
 signals:
-    void allLinksDisconnected(Vehicle* vehicle);
+    void allLinksInactive(Vehicle* vehicle);
     void coordinateChanged(QGeoCoordinate coordinate);
     void coordinateValidChanged(bool coordinateValid);
     void joystickModeChanged(int mode);
@@ -273,6 +279,8 @@ signals:
     void messageTypeChanged     ();
     void newMessageCountChanged ();
     void messageCountChanged    ();
+    void formatedMessagesChanged();
+    void formatedMessageChanged ();
     void latestErrorChanged     ();
     void rollChanged            ();
     void pitchChanged           ();
@@ -293,17 +301,20 @@ signals:
     void currentStateChanged    ();
     void satelliteLockChanged   ();
     void flowImageIndexChanged  ();
+    void rcRSSIChanged          (int rcRSSI);
 
 private slots:
     void _mavlinkMessageReceived(LinkInterface* link, mavlink_message_t message);
-    void _linkDisconnected(LinkInterface* link);
+    void _linkInactiveOrDeleted(LinkInterface* link);
     void _sendMessage(mavlink_message_t message);
     void _sendMessageMultipleNext(void);
     void _addNewMapTrajectoryPoint(void);
     void _parametersReady(bool parametersReady);
     void _communicationInactivityTimedOut(void);
+    void _remoteControlRSSIChanged(uint8_t rssi);
 
     void _handleTextMessage                 (int newCount);
+    void _handletextMessageReceived         (UASMessage* message);
     /** @brief Attitude from main autopilot / system state */
     void _updateAttitude                    (UASInterface* uas, double roll, double pitch, double yaw, quint64 timestamp);
     /** @brief Attitude from one specific component / redundant autopilot */
@@ -347,10 +358,7 @@ private:
     AutoPilotPlugin*    _autopilotPlugin;
     MAVLinkProtocol*    _mavlink;
 
-    /// List of all links associated with this vehicle. We keep SharedLinkInterface objects
-    /// which are QSharedPointer's in order to maintain reference counts across threads.
-    /// This way Link deletion works correctly.
-    QList<SharedLinkInterface> _links;
+    QList<LinkInterface*> _links;
 
     JoystickMode_t  _joystickMode;
     bool            _joystickEnabled;
@@ -394,6 +402,9 @@ private:
     int             _satelliteCount;
     int             _satelliteLock;
     int             _updateCount;
+    QString         _formatedMessage;
+    int             _rcRSSI;
+    double          _rcRSSIstore;
 
     MissionManager*     _missionManager;
     bool                _missionManagerInitialRequestComplete;
@@ -433,6 +444,8 @@ private:
     JoystickManager*            _joystickManager;
 
     int                         _flowImageIndex;
+
+    bool _allLinksInactiveSent; ///< true: allLinkInactive signal already sent one time
 
     // Settings keys
     static const char* _settingsGroup;

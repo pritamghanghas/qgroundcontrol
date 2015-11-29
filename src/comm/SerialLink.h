@@ -59,6 +59,8 @@ Q_DECLARE_LOGGING_CATEGORY(SerialLinkLog)
 
 class SerialConfiguration : public LinkConfiguration
 {
+    Q_OBJECT
+
 public:
 
     SerialConfiguration(const QString& name);
@@ -119,7 +121,8 @@ public:
     void    requestReset();
     bool    isConnected() const;
     qint64  getConnectionSpeed() const;
-    
+    bool    requiresUSBMavlinkStart(void) const;
+
     // These are left unimplemented in order to cause linker errors which indicate incorrect usage of
     // connect/disconnect on link directly. All connect/disconnect calls should be made through LinkManager.
     bool    connect(void);
@@ -157,7 +160,7 @@ private:
     
     // From LinkInterface
     virtual bool _connect(void);
-    virtual bool _disconnect(void);
+    virtual void _disconnect(void);
 
     // Internal methods
     void _emitLinkError(const QString& errorMsg);

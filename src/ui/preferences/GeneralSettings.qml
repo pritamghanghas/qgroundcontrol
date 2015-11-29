@@ -54,17 +54,19 @@ Rectangle {
         Column {
             id:                 settingsColumn
             width:              _generalRoot.width
-            spacing:            ScreenTools.defaultFontPixelHeight
             anchors.margins:    ScreenTools.defaultFontPixelWidth
+            spacing:            ScreenTools.defaultFontPixelHeight / 2
+
             QGCLabel {
                 text:   "General Settings"
                 font.pixelSize: ScreenTools.mediumFontPixelSize
             }
-            Rectangle {
-                height: 1
+
+            Item {
+                height: ScreenTools.defaultFontPixelHeight / 2
                 width:  parent.width
-                color:  qgcPal.button
             }
+
             //-----------------------------------------------------------------
             //-- Audio preferences
             QGCCheckBox {
@@ -86,11 +88,23 @@ Rectangle {
             //-----------------------------------------------------------------
             //-- Prompt Save Log
             QGCCheckBox {
+                id:         promptSaveLog
                 text:       "Prompt to save Flight Data Log after each flight"
                 checked:    QGroundControl.isSaveLogPrompt
                 visible:    !ScreenTools.isMobile
                 onClicked: {
                     QGroundControl.isSaveLogPrompt = checked
+                }
+            }
+            //-----------------------------------------------------------------
+            //-- Prompt Save even if not armed
+            QGCCheckBox {
+                text:       "Prompt to save Flight Data Log even if vehicle was not armed"
+                checked:    QGroundControl.isSaveLogPromptNotArmed
+                visible:    !ScreenTools.isMobile
+                enabled:    promptSaveLog.checked
+                onClicked: {
+                    QGroundControl.isSaveLogPromptNotArmed = checked
                 }
             }
             //-----------------------------------------------------------------
@@ -119,6 +133,12 @@ Rectangle {
                     }
                 }
             }
+
+            Item {
+                height: ScreenTools.defaultFontPixelHeight / 2
+                width:  parent.width
+            }
+
             //-----------------------------------------------------------------
             //-- Map Providers
             Row {
@@ -168,6 +188,56 @@ Rectangle {
                         }
                     }
                 }
+            }
+
+            Item {
+                height: ScreenTools.defaultFontPixelHeight / 2
+                width:  parent.width
+            }
+
+            //-----------------------------------------------------------------
+            //-- Autoconnect settings
+            QGCLabel { text: "Autoconnect to the following devices:" }
+
+            QGCCheckBox {
+                text:       "Pixhawk"
+                visible:    !ScreenTools.isiOS
+                checked:    QGroundControl.linkManager.autoconnectPixhawk
+                onClicked:  QGroundControl.linkManager.autoconnectPixhawk = checked
+            }
+
+            QGCCheckBox {
+                text:       "3DR Radio"
+                visible:    !ScreenTools.isiOS
+                checked:    QGroundControl.linkManager.autoconnect3DRRadio
+                onClicked:  QGroundControl.linkManager.autoconnect3DRRadio = checked
+            }
+
+            QGCCheckBox {
+                text:       "PX4 Flow"
+                visible:    !ScreenTools.isiOS
+                checked:    QGroundControl.linkManager.autoconnectPX4Flow
+                onClicked:  QGroundControl.linkManager.autoconnectPX4Flow = checked
+            }
+
+            QGCCheckBox {
+                text:       "UDP"
+                checked:    QGroundControl.linkManager.autoconnectUDP
+                onClicked:  QGroundControl.linkManager.autoconnectUDP = checked
+            }
+
+            Item {
+                height: ScreenTools.defaultFontPixelHeight / 2
+                width:  parent.width
+            }
+
+            //-----------------------------------------------------------------
+            //-- Virtual joystick settings
+            QGCCheckBox {
+                text:       "Thumb Joystick (WIP - be careful!)"
+                checked:    QGroundControl.virtualTabletJoystick
+                onClicked:  QGroundControl.virtualTabletJoystick = checked
+                visible:    ScreenTools.isMobile
             }
         }
     }

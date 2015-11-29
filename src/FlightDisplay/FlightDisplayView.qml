@@ -43,13 +43,14 @@ Item {
 
     QGCPalette { id: qgcPal; colorGroupEnabled: enabled }
 
-    property real avaiableHeight: parent.height
+    property real availableHeight: parent.height
+    property bool interactive:    true
 
     readonly property bool isBackgroundDark: _mainIsMap ? (_flightMap ? _flightMap.isSatelliteMap : true) : true
 
     property var _activeVehicle:  multiVehicleManager.activeVehicle
 
-    readonly property var  _defaultVehicleCoordinate:   QtPositioning.coordinate(37.803784, -122.462276)
+    readonly property var  _defaultVehicleCoordinate:   mainWindow.tabletPosition
     readonly property real _defaultRoll:                0
     readonly property real _defaultPitch:               0
     readonly property real _defaultHeading:             0
@@ -84,6 +85,11 @@ Item {
     property real _pipSize:             mainWindow.width * 0.2
 
     FlightDisplayViewController { id: _controller }
+
+    onInteractiveChanged: {
+        if(_flightMap)
+            _flightMap.interactive = interactive
+    }
 
     function reloadContents() {
         if(_flightVideo) {
@@ -207,7 +213,7 @@ Item {
         anchors.right:      parent.right
         anchors.left:       parent.left
         anchors.bottom:     parent.bottom
-        height:             avaiableHeight
+        height:             availableHeight
     }
 
 }

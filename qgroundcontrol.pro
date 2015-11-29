@@ -54,10 +54,10 @@ CONFIG += qt \
     thread
 
 QT += \
-    network \
     concurrent \
     gui \
     location \
+    network \
     opengl \
     positioning \
     qml \
@@ -247,8 +247,9 @@ HEADERS += \
     src/Joystick/JoystickManager.h \
     src/LogCompressor.h \
     src/MG.h \
-    src/MissionManager/MissionManager.h \
     src/MissionManager/MissionController.h \
+    src/MissionManager/MissionItem.h \
+    src/MissionManager/MissionManager.h \
     src/QGC.h \
     src/QGCApplication.h \
     src/QGCComboBox.h \
@@ -270,7 +271,6 @@ HEADERS += \
     src/QmlControls/QGCQGeoCoordinate.h \
     src/QmlControls/QGroundControlQmlGlobal.h \
     src/QmlControls/QmlObjectListModel.h \
-    src/SerialPortIds.h \
     src/uas/FileManager.h \
     src/uas/UAS.h \
     src/uas/UASInterface.h \
@@ -291,7 +291,6 @@ HEADERS += \
     src/ui/toolbar/MainToolBarController.h \
     src/ui/uas/QGCUnconnectedInfoWidget.h \
     src/ui/uas/UASMessageView.h \
-    src/MissionItem.h \
     src/AutoPilotPlugins/PX4/PX4AirframeLoader.h \
     src/QmlControls/QGCImageProvider.h \
 
@@ -302,6 +301,7 @@ WindowsBuild {
 
 !iOSBuild {
 HEADERS += \
+    src/comm/QGCSerialPortInfo.h \
     src/comm/SerialLink.h \
     src/ui/SerialConfigurationWindow.h \
 }
@@ -362,8 +362,9 @@ SOURCES += \
     src/Joystick/JoystickManager.cc \
     src/LogCompressor.cc \
     src/main.cc \
-    src/MissionManager/MissionManager.cc \
     src/MissionManager/MissionController.cc \
+    src/MissionManager/MissionItem.cc \
+    src/MissionManager/MissionManager.cc \
     src/QGC.cc \
     src/QGCApplication.cc \
     src/QGCComboBox.cc \
@@ -401,12 +402,12 @@ SOURCES += \
     src/ui/toolbar/MainToolBarController.cc \
     src/ui/uas/QGCUnconnectedInfoWidget.cc \
     src/ui/uas/UASMessageView.cc \
-    src/MissionItem.cc \
     src/AutoPilotPlugins/PX4/PX4AirframeLoader.cc \
     src/QmlControls/QGCImageProvider.cc \
 
 !iOSBuild {
 SOURCES += \
+    src/comm/QGCSerialPortInfo.cc \
     src/comm/SerialLink.cc \
     src/ui/SerialConfigurationWindow.cc \
 }
@@ -469,9 +470,9 @@ HEADERS += \
     src/FactSystem/FactSystemTestBase.h \
     src/FactSystem/FactSystemTestGeneric.h \
     src/FactSystem/FactSystemTestPX4.h \
-    src/MissionItemTest.h \
     src/MissionManager/MissionControllerTest.h \
     src/MissionManager/MissionControllerManagerTest.h \
+    src/MissionManager/MissionItemTest.h \
     src/MissionManager/MissionManagerTest.h \
     src/qgcunittest/GeoTest.h \
     src/qgcunittest/FileDialogTest.h \
@@ -492,9 +493,9 @@ SOURCES += \
     src/FactSystem/FactSystemTestBase.cc \
     src/FactSystem/FactSystemTestGeneric.cc \
     src/FactSystem/FactSystemTestPX4.cc \
-    src/MissionItemTest.cc \
     src/MissionManager/MissionControllerTest.cc \
     src/MissionManager/MissionControllerManagerTest.cc \
+    src/MissionManager/MissionItemTest.cc \
     src/MissionManager/MissionManagerTest.cc \
     src/qgcunittest/GeoTest.cc \
     src/qgcunittest/FileDialogTest.cc \

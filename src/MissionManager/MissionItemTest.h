@@ -47,16 +47,8 @@ private slots:
     
 private:
     typedef struct {
-        int            sequenceNumber;
-        QGeoCoordinate coordinate;
-        int            command;
-        double         param1;
-        double         param2;
-        double         param3;
-        double         param4;
-        bool           autocontinue;
-        bool           isCurrentItem;
-        int            frame;
+        MAV_CMD        command;
+        MAV_FRAME      frame;
     } ItemInfo_t;
     
     typedef struct {
@@ -65,7 +57,6 @@ private:
     } FactValue_t;
     
     typedef struct {
-        const char*         streamString;
         size_t              cFactValues;
         const FactValue_t*  rgFactValues;
     } ItemExpected_t;

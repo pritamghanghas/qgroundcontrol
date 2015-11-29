@@ -15,10 +15,8 @@
 
 #ifdef __android__
 #include "qserialport.h"
-#include "qserialportinfo.h"
 #else
 #include <QSerialPort>
-#include <QSerialPortInfo>
 #endif
 
 #include "SerialLink.h"
@@ -26,6 +24,7 @@
 #include "MG.h"
 #include "QGCLoggingCategory.h"
 #include "QGCApplication.h"
+#include "QGCSerialPortInfo.h"
 
 QGC_LOGGING_CATEGORY(SerialLinkLog, "SerialLinkLog")
 
@@ -125,7 +124,7 @@ void SerialLink::readBytes()
  *
  * @return True if connection has been disconnected, false if connection couldn't be disconnected.
  **/
-bool SerialLink::_disconnect(void)
+void SerialLink::_disconnect(void)
 {
     if (_port) {
         _port->close();
@@ -136,7 +135,6 @@ bool SerialLink::_disconnect(void)
 #ifdef __android__
     qgcApp()->toolbox()->linkManager()->suspendConfigurationUpdates(false);
 #endif
-    return true;
 }
 
 /**
@@ -378,6 +376,15 @@ void SerialLink::_emitLinkError(const QString& errorMsg)
 LinkConfiguration* SerialLink::getLinkConfiguration()
 {
     return _config;
+}
+
+bool SerialLink::requiresUSBMavlinkStart(void) const
+{
+    if (_port) {
+        return QGCSerialPortInfo(*_port).boardTypePixhawk();
+    } else {
+        return false;
+    }
 }
 
 //--------------------------------------------------------------------------

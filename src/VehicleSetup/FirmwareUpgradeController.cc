@@ -68,13 +68,17 @@ FirmwareUpgradeController::FirmwareUpgradeController(void) :
     connect(_threadController, &PX4FirmwareUpgradeThreadController::flashComplete,          this, &FirmwareUpgradeController::_flashComplete);
     connect(_threadController, &PX4FirmwareUpgradeThreadController::updateProgress,         this, &FirmwareUpgradeController::_updateProgress);
     
-    connect(qgcApp()->toolbox()->linkManager(), &LinkManager::linkDisconnected, this, &FirmwareUpgradeController::_linkDisconnected);
-
     connect(&_eraseTimer, &QTimer::timeout, this, &FirmwareUpgradeController::_eraseProgressTick);
+}
+
+FirmwareUpgradeController::~FirmwareUpgradeController()
+{
+    qgcApp()->toolbox()->linkManager()->setConnectionsAllowed();
 }
 
 void FirmwareUpgradeController::startBoardSearch(void)
 {
+    qgcApp()->toolbox()->linkManager()->setConnectionsSuspended(tr("Connect not allowed during Firmware Upgrade."));
     _bootloaderFound = false;
     _startFlashWhenBootloaderFound = false;
     _threadController->startFindBoardLoop();
@@ -109,23 +113,23 @@ void FirmwareUpgradeController::_foundBoard(bool firstAttempt, const QSerialPort
 {
     _foundBoardInfo = info;
     switch (type) {
-        case FoundBoardPX4FMUV1:
+        case QGCSerialPortInfo::BoardTypePX4FMUV1:
             _foundBoardType = "PX4 FMU V1";
             _startFlashWhenBootloaderFound = false;
             break;
-        case FoundBoardPX4FMUV2:
+        case QGCSerialPortInfo::BoardTypePX4FMUV2:
             _foundBoardType = "Pixhawk";
             _startFlashWhenBootloaderFound = false;
             break;
-        case FoundBoardAeroCore:
+        case QGCSerialPortInfo::BoardTypeAeroCore:
             _foundBoardType = "AeroCore";
             _startFlashWhenBootloaderFound = false;
             break;
-        case FoundBoardPX4Flow:
+        case QGCSerialPortInfo::BoardTypePX4Flow:
             _foundBoardType = "PX4 Flow";
             _startFlashWhenBootloaderFound = false;
             break;
-        case FoundBoard3drRadio:
+        case QGCSerialPortInfo::BoardType3drRadio:
             _foundBoardType = "3DR Radio";
             if (!firstAttempt) {
                 // Radio always flashes latest firmware, so we can start right away without
@@ -505,6 +509,7 @@ void FirmwareUpgradeController::_flashComplete(void)
     _appendStatusLog("Upgrade complete", true);
     _appendStatusLog("------------------------------------------", false);
     emit flashComplete();
+    qgcApp()->toolbox()->linkManager()->setConnectionsAllowed();
 }
 
 void FirmwareUpgradeController::_error(const QString& errorString)
@@ -556,17 +561,6 @@ void FirmwareUpgradeController::_appendStatusLog(const QString& text, bool criti
                               Q_ARG(QVariant, varText));
 }
 
-bool FirmwareUpgradeController::qgcConnections(void)
-{
-    return qgcApp()->toolbox()->linkManager()->anyConnectedLinks();
-}
-
-void FirmwareUpgradeController::_linkDisconnected(LinkInterface* link)
-{
-    Q_UNUSED(link);
-    emit qgcConnectionsChanged(qgcConnections());
-}
-
 void FirmwareUpgradeController::_errorCancel(const QString& msg)
 {
     _appendStatusLog(msg, false);
@@ -574,6 +568,7 @@ void FirmwareUpgradeController::_errorCancel(const QString& msg)
     _appendStatusLog("------------------------------------------", false);
     emit error();
     cancel();
+    qgcApp()->toolbox()->linkManager()->setConnectionsAllowed();
 }
 
 void FirmwareUpgradeController::_eraseStarted(void)
