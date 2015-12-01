@@ -152,10 +152,6 @@ Rectangle {
         toolBarMessageArea.visible = true
     }
 
-    function showMavStatus() {
-         return (multiVehicleManager.activeVehicleAvailable && activeVehicle.heartbeatTimeout === 0);
-    }
-
     function getBatteryColor() {
         if(activeVehicle) {
             if(activeVehicle.batteryPercent > 75) {
@@ -228,6 +224,7 @@ Rectangle {
                     id:         gpsLabel
                     text:       (activeVehicle && (activeVehicle.satelliteCount > 0)) ? "GPS Status" : "GPS Data Unavailable"
                     font.weight:Font.DemiBold
+                    color:      colorWhite
                     anchors.horizontalCenter: parent.horizontalCenter
                 }
                 GridLayout {
@@ -239,15 +236,19 @@ Rectangle {
                     columns: 2
                     QGCLabel {
                         text:   "GPS Count:"
+                        color:  colorWhite
                     }
                     QGCLabel {
                         text:   activeVehicle ? (activeVehicle.satelliteCount) : "N/A"
+                        color:  colorWhite
                     }
                     QGCLabel {
                         text:   "GPS Lock:"
+                        color:  colorWhite
                     }
                     QGCLabel {
                         text:   getGpsLockStatus()
+                        color:  colorWhite
                     }
                 }
             }
@@ -277,6 +278,7 @@ Rectangle {
                 QGCLabel {
                     id:         battLabel
                     text:       (activeVehicle && (activeVehicle.batteryVoltage > 0)) ? "Battery Status" : "Battery Data Unavailable"
+                    color:      colorWhite
                     font.weight:Font.DemiBold
                     anchors.horizontalCenter: parent.horizontalCenter
                 }
@@ -289,6 +291,7 @@ Rectangle {
                     columns: 2
                     QGCLabel {
                         text:   "Voltage:"
+                        color:  colorWhite
                     }
                     QGCLabel {
                         text:   activeVehicle ? (activeVehicle.batteryVoltage.toFixed(1) + " V") : "N/A"
@@ -306,6 +309,7 @@ Rectangle {
                     */
                     QGCLabel {
                         text:   "Accumulated Consumption:"
+                        color:  colorWhite
                     }
                     QGCLabel {
                         text:   activeVehicle ? (activeVehicle.batteryConsumed + " mA") : "N/A"
@@ -339,6 +343,7 @@ Rectangle {
                 QGCLabel {
                     id:         rssiLabel
                     text:       activeVehicle ? (activeVehicle.rcRSSI > 0 ? "RC RSSI Status" : "RC RSSI Data Unavailable") : "N/A"
+                    color:      colorWhite
                     font.weight:Font.DemiBold
                     anchors.horizontalCenter: parent.horizontalCenter
                 }
@@ -351,9 +356,11 @@ Rectangle {
                     columns: 2
                     QGCLabel {
                         text:   "RSSI:"
+                        color:  colorWhite
                     }
                     QGCLabel {
                         text:   activeVehicle ? (activeVehicle.rcRSSI + "%") : 0
+                        color:  colorWhite
                     }
                 }
             }
@@ -383,6 +390,7 @@ Rectangle {
                 QGCLabel {
                     id:         telemLabel
                     text:       "Telemetry RSSI Status"
+                    color:      colorWhite
                     font.weight:Font.DemiBold
                     anchors.horizontalCenter: parent.horizontalCenter
                 }
@@ -394,45 +402,59 @@ Rectangle {
                     columns: 2
                     QGCLabel {
                         text:   "Local RSSI:"
+                        color:  colorWhite
                     }
                     QGCLabel {
                         text:   _controller.telemetryLRSSI + " dBm"
+                        color:  colorWhite
                     }
                     QGCLabel {
                         text:   "Remote RSSI:"
+                        color:  colorWhite
                     }
                     QGCLabel {
                         text:   _controller.telemetryRRSSI + " dBm"
+                        color:  colorWhite
                     }
                     QGCLabel {
                         text:   "RX Errors:"
+                        color:  colorWhite
                     }
                     QGCLabel {
                         text:   _controller.telemetryRXErrors
+                        color:  colorWhite
                     }
                     QGCLabel {
                         text:   "Errors Fixed:"
+                        color:  colorWhite
                     }
                     QGCLabel {
                         text:   _controller.telemetryFixed
+                        color:  colorWhite
                     }
                     QGCLabel {
                         text:   "TX Buffer:"
+                        color:  colorWhite
                     }
                     QGCLabel {
                         text:   _controller.telemetryTXBuffer
+                        color:  colorWhite
                     }
                     QGCLabel {
                         text:   "Local Noise:"
+                        color:  colorWhite
                     }
                     QGCLabel {
                         text:   _controller.telemetryLNoise
+                        color:  colorWhite
                     }
                     QGCLabel {
                         text:   "Remote Noise:"
+                        color:  colorWhite
                     }
                     QGCLabel {
                         text:   _controller.telemetryRNoise
+                        color:  colorWhite
                     }
                 }
             }
@@ -528,29 +550,40 @@ Rectangle {
 
     Item {
         id:                     vehicleIndicators
-        visible:                showMavStatus() && !connectionStatus.visible
         height:                 mainWindow.tbCellHeight
-        width:                  (toolBar.width - viewRow.width)
-        anchors.left:           viewRow.right
         anchors.leftMargin:     mainWindow.tbSpacing * 2
+        anchors.left:           viewRow.right
+        anchors.right:          parent.right
         anchors.verticalCenter: parent.verticalCenter
-        Loader {
-            source:             multiVehicleManager.activeVehicleAvailable ? "MainToolBarIndicators.qml" : ""
-            anchors.left:       parent.left
-            anchors.verticalCenter:   parent.verticalCenter
-        }
-    }
 
-    QGCLabel {
-        id:             connectionStatus
-        visible:        (_controller.connectionCount > 0 && multiVehicleManager.activeVehicleAvailable && activeVehicle.heartbeatTimeout != 0)
-        text:           "CONNECTION LOST"
-        font.pixelSize: tbFontLarge
-        font.weight:    Font.DemiBold
-        color:          colorRed
-        anchors.left:           viewRow.right
-        anchors.leftMargin:     mainWindow.tbSpacing * 2
-        anchors.verticalCenter: parent.verticalCenter
+        property bool vehicleInactive: activeVehicle ? activeVehicle.heartbeatTimeout != 0 : false
+
+        Loader {
+            source:                 activeVehicle && !parent.vehicleInactive ? "MainToolBarIndicators.qml" : ""
+            anchors.left:           parent.left
+            anchors.verticalCenter: parent.verticalCenter
+        }
+
+        QGCLabel {
+            id:                     connectionLost
+            text:                   "CONNECTION LOST"
+            font.pixelSize:         tbFontLarge
+            font.weight:            Font.DemiBold
+            color:                  colorRed
+            anchors.left:           parent.left
+            anchors.verticalCenter: parent.verticalCenter
+            visible:                parent.vehicleInactive
+
+        }
+
+        QGCButton {
+            anchors.rightMargin:     mainWindow.tbSpacing * 2
+            anchors.right:          parent.right
+            anchors.verticalCenter: parent.verticalCenter
+            text:                   "Disconnect"
+            visible:                parent.vehicleInactive
+            onClicked:              activeVehicle.disconnectInactiveVehicle()
+        }
     }
 
     // Progress bar

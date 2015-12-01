@@ -28,6 +28,8 @@
 
 QGC_LOGGING_CATEGORY(SerialLinkLog, "SerialLinkLog")
 
+static QStringList kSupportedBaudRates;
+
 SerialLink::SerialLink(SerialConfiguration* config)
 {
     _bytesRead = 0;
@@ -110,7 +112,7 @@ void SerialLink::readBytes()
             if(maxLength < numBytes) numBytes = maxLength;
 
             _logInputDataRate(numBytes, QDateTime::currentMSecsSinceEpoch());
-            
+
             _port->read(data, numBytes);
             QByteArray b(data, numBytes);
             emit bytesReceived(this, b);
@@ -131,7 +133,7 @@ void SerialLink::_disconnect(void)
         delete _port;
         _port = NULL;
     }
-    
+
 #ifdef __android__
     qgcApp()->toolbox()->linkManager()->suspendConfigurationUpdates(false);
 #endif
@@ -147,11 +149,11 @@ bool SerialLink::_connect(void)
     qCDebug(SerialLinkLog) << "CONNECT CALLED";
 
     _disconnect();
-    
+
 #ifdef __android__
     qgcApp()->toolbox()->linkManager()->suspendConfigurationUpdates(true);
 #endif
-    
+
     // Initialize the connection
     if (!_hardwareConnect(_type)) {
         // Need to error out here.
@@ -211,9 +213,6 @@ bool SerialLink::_hardwareConnect(QString &type)
         return false; // couldn't create serial port.
     }
 
-    // We need to catch this signal and then emit disconnected. You can't connect
-    // signal to signal otherwise disonnected will have the wrong QObject::Sender
-    QObject::connect(_port, SIGNAL(aboutToClose()), this, SLOT(_rerouteDisconnected()));
     QObject::connect(_port, SIGNAL(error(QSerialPort::SerialPortError)), this, SLOT(linkError(QSerialPort::SerialPortError)));
     QObject::connect(_port, &QIODevice::readyRead, this, &SerialLink::_readBytes);
 
@@ -294,7 +293,7 @@ bool SerialLink::isConnected() const
     if (_port) {
         isConnected = _port->isOpen();
     }
-    
+
     return isConnected;
 }
 
@@ -359,11 +358,6 @@ void SerialLink::_resetConfiguration()
         _port->setStopBits      (static_cast<QSerialPort::StopBits>    (_config->stopBits()));
         _port->setParity        (static_cast<QSerialPort::Parity>      (_config->parity()));
     }
-}
-
-void SerialLink::_rerouteDisconnected(void)
-{
-    emit disconnected();
 }
 
 void SerialLink::_emitLinkError(const QString& errorMsg)
@@ -489,3 +483,60 @@ void SerialConfiguration::loadSettings(QSettings& settings, const QString& root)
     if(settings.contains("portName"))    _portName     = settings.value("portName").toString();
     settings.endGroup();
 }
+
+QStringList SerialConfiguration::supportedBaudRates()
+{
+    if(!kSupportedBaudRates.size())
+        _initBaudRates();
+    return kSupportedBaudRates;
+}
+
+void SerialConfiguration::_initBaudRates()
+{
+    kSupportedBaudRates.clear();
+#if USE_ANCIENT_RATES
+#if defined(Q_OS_UNIX) || defined(Q_OS_LINUX) || defined(Q_OS_DARWIN)
+    kSupportedBaudRates << "50";
+    kSupportedBaudRates << "75";
+#endif
+    kSupportedBaudRates << "110";
+#if defined(Q_OS_UNIX) || defined(Q_OS_LINUX) || defined(Q_OS_DARWIN)
+    kSupportedBaudRates << "134";
+    kSupportedBaudRates << "150";
+    kSupportedBaudRates << "200";
+#endif
+    kSupportedBaudRates << "300";
+    kSupportedBaudRates << "600";
+    kSupportedBaudRates << "1200";
+#if defined(Q_OS_UNIX) || defined(Q_OS_LINUX) || defined(Q_OS_DARWIN)
+    kSupportedBaudRates << "1800";
+#endif
+#endif
+    kSupportedBaudRates << "2400";
+    kSupportedBaudRates << "4800";
+    kSupportedBaudRates << "9600";
+#if defined(Q_OS_WIN)
+    kSupportedBaudRates << "14400";
+#endif
+    kSupportedBaudRates << "19200";
+    kSupportedBaudRates << "38400";
+#if defined(Q_OS_WIN)
+    kSupportedBaudRates << "56000";
+#endif
+    kSupportedBaudRates << "57600";
+    kSupportedBaudRates << "115200";
+#if defined(Q_OS_WIN)
+    kSupportedBaudRates << "128000";
+#endif
+    kSupportedBaudRates << "230400";
+#if defined(Q_OS_WIN)
+    kSupportedBaudRates << "256000";
+#endif
+    kSupportedBaudRates << "460800";
+#if defined(Q_OS_LINUX)
+    kSupportedBaudRates << "500000";
+    kSupportedBaudRates << "576000";
+#endif
+    kSupportedBaudRates << "921600";
+}
+

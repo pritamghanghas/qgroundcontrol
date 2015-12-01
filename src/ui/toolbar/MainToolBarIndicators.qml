@@ -306,8 +306,7 @@ Row {
     //-- Vehicle Selector
     QGCButton {
         id:                     vehicleSelectorButton
-        width:                  ScreenTools.defaultFontPixelSize * 12
-        height:                 mainWindow.tbButtonWidth
+        width:                  ScreenTools.defaultFontPixelSize * 8
         text:                   "Vehicle " + (activeVehicle ? activeVehicle.id : "None")
         visible:                QGroundControl.multiVehicleManager.vehicles.count > 1
         anchors.verticalCenter: parent.verticalCenter
@@ -323,7 +322,7 @@ Row {
 
             MenuItem {
                 checkable:      true
-                checked:        vehicle.active
+                checked:        vehicle ? vehicle.active : false
                 onTriggered:    multiVehicleManager.activeVehicle = vehicle
 
                 property int vehicleId: Number(text.split(" ")[1])
@@ -361,6 +360,7 @@ Row {
     //-- Mode Selector
 
     Item {
+        id:     flightModeSelector
         width:  selectorRow.width * 1.1
         height: mainWindow.tbCellHeight
         anchors.verticalCenter: parent.verticalCenter
@@ -426,7 +426,7 @@ Row {
 
         Connections {
             target:                 multiVehicleManager
-            onActiveVehicleChanged: parent.updateFlightModesMenu
+            onActiveVehicleChanged: flightModeSelector.updateFlightModesMenu
         }
 
         MouseArea {

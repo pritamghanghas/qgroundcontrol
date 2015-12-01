@@ -73,35 +73,42 @@ public:
     ~LinkManager();
 
     Q_PROPERTY(bool anyActiveLinks                      READ anyActiveLinks                                                     NOTIFY anyActiveLinksChanged)
-    Q_PROPERTY(bool anyNonAutoconnectActiveLinks        READ anyNonAutoconnectActiveLinks                                       NOTIFY anyNonAutoconnectActiveLinksChanged)
     Q_PROPERTY(bool anyConnectedLinks                   READ anyConnectedLinks                                                  NOTIFY anyConnectedLinksChanged)
-    Q_PROPERTY(bool anyNonAutoconnectConnectedLinks     READ anyNonAutoconnectConnectedLinks                                    NOTIFY anyNonAutoconnectConnectedLinksChanged)
     Q_PROPERTY(bool autoconnectUDP                      READ autoconnectUDP                     WRITE setAutoconnectUDP         NOTIFY autoconnectUDPChanged)
     Q_PROPERTY(bool autoconnectPixhawk                  READ autoconnectPixhawk                 WRITE setAutoconnectPixhawk     NOTIFY autoconnectPixhawkChanged)
     Q_PROPERTY(bool autoconnect3DRRadio                 READ autoconnect3DRRadio                WRITE setAutoconnect3DRRadio    NOTIFY autoconnect3DRRadioChanged)
     Q_PROPERTY(bool autoconnectPX4Flow                  READ autoconnectPX4Flow                 WRITE setAutoconnectPX4Flow     NOTIFY autoconnectPX4FlowChanged)
-    Q_PROPERTY(QmlObjectListModel* links                READ links                                                              CONSTANT)
-    Q_PROPERTY(QmlObjectListModel* linkConfigurations   READ linkConfigurations                                                 CONSTANT)
+
+    /// LinkInterface Accessor
+    Q_PROPERTY(QmlObjectListModel* links                READ links                              CONSTANT)
+    /// LinkConfiguration Accessor
+    Q_PROPERTY(QmlObjectListModel* linkConfigurations   READ linkConfigurations                 CONSTANT)
+    /// List of comm type strings
+    Q_PROPERTY(QStringList         linkTypeStrings      READ linkTypeStrings                    CONSTANT)
+    /// List of supported baud rates for serial links
+    Q_PROPERTY(QStringList         serialBaudRates      READ serialBaudRates                    CONSTANT)
+    /// List of comm ports
+    Q_PROPERTY(QStringList         serialPortStrings    READ serialPortStrings                                                    NOTIFY commPortStringsChanged)
 
     // Property accessors
 
     bool anyConnectedLinks(void);
-    bool anyNonAutoconnectConnectedLinks(void);
     bool anyActiveLinks(void);
-    bool anyNonAutoconnectActiveLinks(void);
     bool autoconnectUDP(void)       { return _autoconnectUDP; }
     bool autoconnectPixhawk(void)   { return _autoconnectPixhawk; }
     bool autoconnect3DRRadio(void)  { return _autoconnect3DRRadio; }
     bool autoconnectPX4Flow(void)   { return _autoconnectPX4Flow; }
 
-    QmlObjectListModel* links(void)                 { return &_links; }
-    QmlObjectListModel* linkConfigurations(void)    { return &_linkConfigurations; }
+    QmlObjectListModel* links               (void) { return &_links; }
+    QmlObjectListModel* linkConfigurations  (void) { return &_linkConfigurations; }
+    QStringList         linkTypeStrings     (void) const;
+    QStringList         serialBaudRates     (void);
+    QStringList         serialPortStrings   (void);
 
-    void setAutoconnectUDP(bool autoconnect);
-    void setAutoconnectPixhawk(bool autoconnect);
-    void setAutoconnect3DRRadio(bool autoconnect);
-    void setAutoconnectPX4Flow(bool autoconnect);
-
+    void setAutoconnectUDP      (bool autoconnect);
+    void setAutoconnectPixhawk  (bool autoconnect);
+    void setAutoconnect3DRRadio (bool autoconnect);
+    void setAutoconnectPX4Flow  (bool autoconnect);
 
     /// Load list of link configurations from disk
     void loadLinkConfigurationList();
@@ -121,24 +128,19 @@ public:
 
     /// Creates, connects (and adds) a link  based on the given configuration instance.
     /// Link takes ownership of config.
-    Q_INVOKABLE LinkInterface* createConnectedLink(LinkConfiguration* config, bool persistenLink = false);
+    Q_INVOKABLE LinkInterface* createConnectedLink(LinkConfiguration* config);
 
     /// Creates, connects (and adds) a link  based on the given configuration name.
-    LinkInterface* createConnectedLink(const QString& name, bool persistenLink = false);
+    LinkInterface* createConnectedLink(const QString& name);
 
-    /// Disconnects all existing links, including persistent links.
-    ///     @param disconnectAutoconnectLink See disconnectLink
-    void disconnectAll(bool disconnectAutoconnectLink);
+    /// Disconnects all existing links
+    void disconnectAll(void);
 
     /// Connect the specified link
     bool connectLink(LinkInterface* link);
 
-    /// Disconnect the specified link.
-    ///     @param disconnectAutoconnectLink
-    ///                 true: link is disconnected no matter what type
-    ///                 false: if autoconnect link, link is marked as inactive and linkInactive is signalled
-    ///                 false: if not autoconnect link, link is disconnected
-    Q_INVOKABLE bool disconnectLink(LinkInterface* link, bool disconnectAutoconnectLink);
+    /// Disconnect the specified link
+    Q_INVOKABLE void disconnectLink(LinkInterface* link);
 
     /// Called to notify that a heartbeat was received with the specified information. Will transition
     /// a link to active as needed.
@@ -161,9 +163,7 @@ public:
 
 signals:
     void anyActiveLinksChanged(bool anyActiveLinks);
-    void anyNonAutoconnectActiveLinksChanged(bool anyNonAutoconnectActiveLinks);
     void anyConnectedLinksChanged(bool anyConnectedLinks);
-    void anyNonAutoconnectConnectedLinksChanged(bool anyNoAutoconnectConnectedLinks);
     void autoconnectUDPChanged(bool autoconnect);
     void autoconnectPixhawkChanged(bool autoconnect);
     void autoconnect3DRRadioChanged(bool autoconnect);
@@ -187,6 +187,7 @@ signals:
     void linkInactive(LinkInterface* link);
 
     void linkConfigurationChanged();
+    void commPortStringsChanged();
 
 private slots:
     void _linkConnected(void);
@@ -214,7 +215,9 @@ private:
     QmlObjectListModel  _links;
     QmlObjectListModel  _linkConfigurations;
     QmlObjectListModel  _autoconnectConfigurations;
-    UDPConfiguration*   _autoconnectUDPConfig;
+
+    QStringList _autoconnectWaitList;
+    QStringList _commPortList;
 
     bool _autoconnectUDP;
     bool _autoconnectPixhawk;
@@ -226,6 +229,7 @@ private:
     static const char* _autoconnectPixhawkKey;
     static const char* _autoconnect3DRRadioKey;
     static const char* _autoconnectPX4FlowKey;
+    static const char* _defaultUPDLinkName;
 };
 
 #endif

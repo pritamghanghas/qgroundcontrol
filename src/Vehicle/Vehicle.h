@@ -124,12 +124,14 @@ public:
     // Called when the message drop-down is invoked to clear current count
     Q_INVOKABLE void        resetMessages();
 
+    Q_INVOKABLE void virtualTabletJoystickValue(double roll, double pitch, double yaw, double thrust);
+    Q_INVOKABLE void disconnectInactiveVehicle(void);
+
     // Property accessors
 
     QGeoCoordinate coordinate(void) { return _coordinate; }
     bool coordinateValid(void)      { return _coordinateValid; }
     QmlObjectListModel* missionItemsModel(void);
-
 
     typedef enum {
         JoystickModeRC,         ///< Joystick emulates an RC Transmitter
@@ -310,7 +312,6 @@ private slots:
     void _sendMessageMultipleNext(void);
     void _addNewMapTrajectoryPoint(void);
     void _parametersReady(bool parametersReady);
-    void _communicationInactivityTimedOut(void);
     void _remoteControlRSSIChanged(uint8_t rssi);
 
     void _handleTextMessage                 (int newCount);
@@ -435,10 +436,6 @@ private:
     bool                _mapTrajectoryHaveFirstCoordinate;
     static const int    _mapTrajectoryMsecsBetweenPoints = 1000;
 
-    QTimer              _communicationInactivityTimer;
-    int                 _communicationInactivityTimeoutMSecs;
-    static const int    _communicationInactivityTimeoutMSecsDefault = 30 * 1000;
-
     FirmwarePluginManager*      _firmwarePluginManager;
     AutoPilotPluginManager*     _autopilotPluginManager;
     JoystickManager*            _joystickManager;
@@ -451,6 +448,5 @@ private:
     static const char* _settingsGroup;
     static const char* _joystickModeSettingsKey;
     static const char* _joystickEnabledSettingsKey;
-    static const char* _communicationInactivityKey;
 };
 #endif
