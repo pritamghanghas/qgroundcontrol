@@ -100,6 +100,7 @@
         <file alias="SetupView.qml">src/VehicleSetup/SetupView.qml</file>
         <file alias="test.qml">src/test.qml</file>
         <file alias="VehicleSummary.qml">src/VehicleSetup/VehicleSummary.qml</file>
+        <file alias="LinuxControl.qml">src/ui/preferences/LinuxControl.qml</file>
     </qresource>
     <qresource prefix="/json">
         <file alias="MavCmdInfo.json">src/MissionManager/MavCmdInfo.json</file>

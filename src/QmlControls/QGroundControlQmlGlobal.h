@@ -34,6 +34,7 @@
 #include "LinkManager.h"
 #include "HomePositionManager.h"
 #include "FlightMapSettings.h"
+#include "nodeselector.h"
 
 #ifdef QT_DEBUG
 #include "MockLink.h"
@@ -52,6 +53,7 @@ public:
     Q_PROPERTY(MultiVehicleManager* multiVehicleManager READ multiVehicleManager    CONSTANT)
     Q_PROPERTY(HomePositionManager* homePositionManager READ homePositionManager    CONSTANT)
     Q_PROPERTY(FlightMapSettings*   flightMapSettings   READ flightMapSettings      CONSTANT)
+    Q_PROPERTY(NodeSelector*        nodeSelector        READ nodeSelector           CONSTANT)
 
     Q_PROPERTY(qreal                zOrderTopMost       READ zOrderTopMost          CONSTANT) ///< z order for top most items, toolbar, main window sub view
     Q_PROPERTY(qreal                zOrderWidgets       READ zOrderWidgets          CONSTANT) ///< z order value to widgets, for example: zoom controls, hud widgetss
@@ -89,6 +91,7 @@ public:
     MultiVehicleManager*    multiVehicleManager ()      { return _multiVehicleManager; }
     HomePositionManager*    homePositionManager ()      { return _homePositionManager; }
     FlightMapSettings*      flightMapSettings   ()      { return _flightMapSettings; }
+    NodeSelector*           nodeSelector ()             { return NodeSelector::instance(); }
 
     qreal                   zOrderTopMost       ()      { return 1000; }
     qreal                   zOrderWidgets       ()      { return 100; }

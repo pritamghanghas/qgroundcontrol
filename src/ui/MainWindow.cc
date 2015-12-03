@@ -409,7 +409,7 @@ void MainWindow::_showDockWidgetAction(bool show)
 
 NodeSelector* MainWindow::piNodeSelector()
 {
-    static NodeSelector* nodeSelector = new NodeSelector(new QNetworkAccessManager());
+    static NodeSelector* nodeSelector = NodeSelector::instance(new QNetworkAccessManager());
     return nodeSelector;
 }
 

@@ -270,7 +270,7 @@ VideoItem {
         anchors.right: parent.right
         x: parent.width - width;
         y: parent.height * 0.08;
-        visible: true;
+        visible: !_mainIsMap;
 
         Row {
             spacing: 10

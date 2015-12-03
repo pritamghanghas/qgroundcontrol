@@ -12,8 +12,7 @@ class NodeSelector : public QObject
 {
     Q_OBJECT
 public:
-    explicit NodeSelector(QNetworkAccessManager *nam, QObject *parent = 0);
-    virtual ~NodeSelector();
+    static NodeSelector* instance(QNetworkAccessManager *nam = 0);
     QString deviceAddress() const;
     PiDiscoverer* discoverer() const { return m_discoverer; }
     QString videoUriForCurrentNode();
@@ -44,6 +43,8 @@ private Q_SLOTS:
     void replyFinished();
 
 private:
+    explicit NodeSelector(QNetworkAccessManager *nam = 0, QObject *parent = 0);
+    virtual ~NodeSelector();
     void sendRequest(const QUrl &url, const QVariantMap &properties = QVariantMap());
     void terminateMavProxy(const PiNode& node);
 

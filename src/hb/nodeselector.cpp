@@ -8,12 +8,29 @@ static const QString PICAM_REMOTE_CMD("raspivid -t 0 -vf -hf $OPT_STRING -o - | 
 //static const QString MAVPROXY_REMOTE_CMD("screen -S MAVPROXY /usr/local/bin/mavproxy.py --master=127.0.0.1:1440 --baudrate 57600 --out $CLIENT_IP:14550 --aircraft MyCopter");
 static const QString MAVPROXY_REMOTE_CMD("/home/pi/ardupilot/ArduCopter/ArduCopter.elf -A udp:$CLIENT_IP:14550 -B /dev/ttyAMA0 > /home/pi/arducopter.log");
 
+NodeSelector* NodeSelector::instance(QNetworkAccessManager *nam)
+{
+    static NodeSelector nodeSelector(nam);
+    return &nodeSelector;
+}
 
 NodeSelector::NodeSelector(QNetworkAccessManager *nam, QObject *parent) :
     QObject(parent),
-    m_nam(nam),
     m_currentIndex(0)
 {
+    // use supplied QNAM, otherwise create your own
+    if (nam) {
+        if(m_nam) {
+           m_nam->deleteLater();
+        }
+        m_nam = nam;
+    } else {
+        if(!m_nam) {
+            m_nam = new QNetworkAccessManager(this);
+        }
+    }
+    Q_ASSERT(m_nam);
+
     m_discoverer = new PiDiscoverer(this);
     connect(m_discoverer, &PiDiscoverer::nodeDiscovered,
             this, &NodeSelector::onNewNodeDiscovered);

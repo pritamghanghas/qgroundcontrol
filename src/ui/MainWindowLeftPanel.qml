@@ -215,6 +215,20 @@ Item {
                     checked = true
                 }
             }
+            QGCButton {
+                width: parent.width * 0.8
+                height: ScreenTools.defaultFontPixelHeight * 2.5
+                text: "UAS Control"
+                visible: true
+                exclusiveGroup: panelActionGroup
+                anchors.horizontalCenter: parent.horizontalCenter
+                onClicked: {
+                    if(__rightPanel.source != "LinuxControl.qml") {
+                        __rightPanel.source = "LinuxControl.qml"
+                    }
+                    checked = true
+                }
+            }
         }
     }
 
