@@ -154,28 +154,30 @@ bool SerialLink::_connect(void)
     qgcApp()->toolbox()->linkManager()->suspendConfigurationUpdates(true);
 #endif
 
+    QSerialPort::SerialPortError    error;
+    QString                         errorString;
+
     // Initialize the connection
-    if (!_hardwareConnect(_type)) {
-        // Need to error out here.
-        QString err("Could not create port.");
-        if (_port) {
-            err = _port->errorString();
+    if (!_hardwareConnect(error, errorString)) {
+        if (qgcApp()->toolbox()->linkManager()->isAutoconnectLink(this)) {
+            // Be careful with spitting out open error related to trying to open a busy port using autoconnect
+            if (error == QSerialPort::PermissionError) {
+                // Device already open, ignore and fail connect
+                return false;
+            }
         }
-        _emitLinkError("Error connecting: " + err);
+
+        _emitLinkError(QString("Error connecting: Could not create port. %1").arg(errorString));
         return false;
     }
     return true;
 }
 
-/**
- * @brief This function is called indirectly by the _connect() call.
- *
- * The _connect() function starts the thread and indirectly calls this method.
- *
- * @return True if the connection could be established, false otherwise
- * @see _connect() For the right function to establish the connection.
- **/
-bool SerialLink::_hardwareConnect(QString &type)
+/// Performs the actual hardware port connection.
+///     @param[out] error if failed
+///     @param[out] error string if failed
+/// @return success/fail
+bool SerialLink::_hardwareConnect(QSerialPort::SerialPortError& error, QString& errorString)
 {
     if (_port) {
         qCDebug(SerialLinkLog) << "SerialLink:" << QString::number((long)this, 16) << "closing port";
@@ -235,6 +237,9 @@ bool SerialLink::_hardwareConnect(QString &type)
     }
 #endif
     if (!_port->isOpen() ) {
+        qDebug() << "open failed" << _port->errorString() << _port->error() << getName() << qgcApp()->toolbox()->linkManager()->isAutoconnectLink(this);
+        error = _port->error();
+        errorString = _port->errorString();
         emit communicationUpdate(getName(),"Error opening port: " + _port->errorString());
         _port->close();
         delete _port;
@@ -252,7 +257,7 @@ bool SerialLink::_hardwareConnect(QString &type)
     emit communicationUpdate(getName(), "Opened port!");
     emit connected();
 
-    qCDebug(SerialLinkLog) << "CONNECTING LINK: " << __FILE__ << __LINE__ << "type:" << type << "with settings" << _config->portName()
+    qCDebug(SerialLinkLog) << "Connection SeriaLink: " << "with settings" << _config->portName()
              << _config->baud() << _config->dataBits() << _config->parity() << _config->stopBits();
 
     return true; // successful connection
@@ -395,12 +400,13 @@ SerialConfiguration::SerialConfiguration(const QString& name) : LinkConfiguratio
 
 SerialConfiguration::SerialConfiguration(SerialConfiguration* copy) : LinkConfiguration(copy)
 {
-    _baud       = copy->baud();
-    _flowControl= copy->flowControl();
-    _parity     = copy->parity();
-    _dataBits   = copy->dataBits();
-    _stopBits   = copy->stopBits();
-    _portName   = copy->portName();
+    _baud               = copy->baud();
+    _flowControl        = copy->flowControl();
+    _parity             = copy->parity();
+    _dataBits           = copy->dataBits();
+    _stopBits           = copy->stopBits();
+    _portName           = copy->portName();
+    _portDisplayName    = copy->portDisplayName();
 }
 
 void SerialConfiguration::copyFrom(LinkConfiguration *source)
@@ -408,12 +414,13 @@ void SerialConfiguration::copyFrom(LinkConfiguration *source)
     LinkConfiguration::copyFrom(source);
     SerialConfiguration* ssource = dynamic_cast<SerialConfiguration*>(source);
     Q_ASSERT(ssource != NULL);
-    _baud       = ssource->baud();
-    _flowControl= ssource->flowControl();
-    _parity     = ssource->parity();
-    _dataBits   = ssource->dataBits();
-    _stopBits   = ssource->stopBits();
-    _portName   = ssource->portName();
+    _baud               = ssource->baud();
+    _flowControl        = ssource->flowControl();
+    _parity             = ssource->parity();
+    _dataBits           = ssource->dataBits();
+    _stopBits           = ssource->stopBits();
+    _portName           = ssource->portName();
+    _portDisplayName    = ssource->portDisplayName();
 }
 
 void SerialConfiguration::updateSettings()
@@ -457,30 +464,45 @@ void SerialConfiguration::setPortName(const QString& portName)
     QString pname = portName.trimmed();
     if (!pname.isEmpty() && pname != _portName) {
         _portName = pname;
+        _portDisplayName = cleanPortDisplayname(pname);
     }
+}
+
+QString SerialConfiguration::cleanPortDisplayname(const QString name)
+{
+    QString pname = name.trimmed();
+#ifdef Q_OS_WIN32
+    pname.replace("\\\\.\\", "");
+#else
+    pname.replace("/dev/cu.", "");
+    pname.replace("/dev/", "");
+#endif
+    return pname;
 }
 
 void SerialConfiguration::saveSettings(QSettings& settings, const QString& root)
 {
     settings.beginGroup(root);
-    settings.setValue("baud",        _baud);
-    settings.setValue("dataBits",    _dataBits);
-    settings.setValue("flowControl", _flowControl);
-    settings.setValue("stopBits",    _stopBits);
-    settings.setValue("parity",      _parity);
-    settings.setValue("portName",    _portName);
+    settings.setValue("baud",           _baud);
+    settings.setValue("dataBits",       _dataBits);
+    settings.setValue("flowControl",    _flowControl);
+    settings.setValue("stopBits",       _stopBits);
+    settings.setValue("parity",         _parity);
+    settings.setValue("portName",       _portName);
+    settings.setValue("portDisplayName",_portDisplayName);
     settings.endGroup();
 }
 
 void SerialConfiguration::loadSettings(QSettings& settings, const QString& root)
 {
     settings.beginGroup(root);
-    if(settings.contains("baud"))        _baud         = settings.value("baud").toInt();
-    if(settings.contains("dataBits"))    _dataBits     = settings.value("dataBits").toInt();
-    if(settings.contains("flowControl")) _flowControl  = settings.value("flowControl").toInt();
-    if(settings.contains("stopBits"))    _stopBits     = settings.value("stopBits").toInt();
-    if(settings.contains("parity"))      _parity       = settings.value("parity").toInt();
-    if(settings.contains("portName"))    _portName     = settings.value("portName").toString();
+    if(settings.contains("baud"))           _baud           = settings.value("baud").toInt();
+    if(settings.contains("dataBits"))       _dataBits       = settings.value("dataBits").toInt();
+    if(settings.contains("flowControl"))    _flowControl    = settings.value("flowControl").toInt();
+    if(settings.contains("stopBits"))       _stopBits       = settings.value("stopBits").toInt();
+    if(settings.contains("parity"))         _parity         = settings.value("parity").toInt();
+    if(settings.contains("portName"))       _portName       = settings.value("portName").toString();
+    if(settings.contains("portDisplayName"))_portDisplayName= settings.value("portDisplayName").toString();
     settings.endGroup();
 }
 

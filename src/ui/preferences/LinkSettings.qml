@@ -23,6 +23,7 @@
 
 import QtQuick          2.5
 import QtQuick.Controls 1.4
+import QtQuick.Dialogs  1.1
 
 import QGroundControl                       1.0
 import QGroundControl.Controls              1.0
@@ -92,7 +93,7 @@ Rectangle {
                     text:   object.name
                     width:  _linkRoot.width * 0.5
                     exclusiveGroup: linkGroup
-                    anchors.horizontalCenter: parent.horizontalCenter
+                    anchors.horizontalCenter: settingsColumn.horizontalCenter
                     onClicked: {
                         checked = true
                         _currentSelection = object
@@ -111,8 +112,26 @@ Rectangle {
         QGCButton {
             width:      ScreenTools.defaultFontPixelWidth * 10
             text:       "Delete"
-            enabled:    _currentSelection && !_currentSelection.link
+            enabled:    _currentSelection && !_currentSelection.dynamic
             onClicked: {
+                if(_currentSelection)
+                    deleteDialog.visible = true
+            }
+            MessageDialog {
+                id:         deleteDialog
+                visible:    false
+                icon:       StandardIcon.Warning
+                standardButtons: StandardButton.Yes | StandardButton.No
+                title:      "Remove Link Configuration"
+                text:       _currentSelection ? "Remove " + _currentSelection.name + ". Is this really what you want?" : ""
+                onYes: {
+                    if(_currentSelection)
+                        QGroundControl.linkManager.removeConfiguration(_currentSelection)
+                    deleteDialog.visible = false
+                }
+                onNo: {
+                    deleteDialog.visible = false
+                }
             }
         }
         QGCButton {
@@ -154,6 +173,7 @@ Rectangle {
         anchors.fill:   parent
         visible:        false
         property var linkConfig: null
+        property var editConfig: null
     }
 
     //---------------------------------------------
@@ -163,6 +183,24 @@ Rectangle {
         Rectangle {
             color:          __qgcPal.window
             anchors.fill:   parent
+            Component.onCompleted: {
+                // If editing, create copy for editing
+                if(linkConfig) {
+                    editConfig = QGroundControl.linkManager.startConfigurationEditing(linkConfig)
+                } else {
+                    // Create new link configuration
+                    if(ScreenTools.isiOS)
+                        editConfig = QGroundControl.linkManager.createConfiguration(LinkConfiguration.TypeUdp, "Unnamed")
+                    else
+                        editConfig = QGroundControl.linkManager.createConfiguration(LinkConfiguration.TypeSerial, "Unnamed")
+                }
+            }
+            Component.onDestruction: {
+                if(editConfig) {
+                    QGroundControl.linkManager.cancelConfigurationEditing(editConfig)
+                    editConfig = null
+                }
+            }
             Flickable {
                 clip:               true
                 anchors.top:        parent.top
@@ -199,7 +237,8 @@ Rectangle {
                             anchors.verticalCenter: parent.verticalCenter
                         }
                         QGCTextField {
-                            text:   linkConfig ? linkConfig.name : "Untitled"
+                            id:     nameField
+                            text:   editConfig ? editConfig.name : ""
                             width:  _secondColumn
                             anchors.verticalCenter: parent.verticalCenter
                         }
@@ -220,8 +259,7 @@ Rectangle {
                             anchors.verticalCenter: parent.verticalCenter
                             Component.onCompleted: {
                                 if(linkConfig != null) {
-                                    if(linkConfig.linkType === LinkConfiguration.TypeSerial)
-                                        linkSettingLoader.sourceComponent = serialLinkSettings
+                                    linkSettingLoader.source  = linkConfig.settingsURL
                                     linkSettingLoader.visible = true
                                 }
                             }
@@ -235,27 +273,47 @@ Rectangle {
                             model:          QGroundControl.linkManager.linkTypeStrings
                             anchors.verticalCenter: parent.verticalCenter
                             onActivated: {
-                                if (index != -1) {
-                                    linkSettingLoader.sourceComponent = null
-                                    if(index === LinkConfiguration.TypeSerial)
-                                        linkSettingLoader.sourceComponent = serialLinkSettings
-                                    if(index === LinkConfiguration.TypeUdp)
-                                        linkSettingLoader.sourceComponent = udpLinkSettings
-                                    if(index === LinkConfiguration.TypeTcp)
-                                        linkSettingLoader.sourceComponent = tcpLinkSettings
-                                    if(index === LinkConfiguration.TypeMock)
-                                        linkSettingLoader.sourceComponent = mockLinkSettings
-                                    if(index === LinkConfiguration.TypeLogReplay)
-                                        linkSettingLoader.sourceComponent = logLinkSettings
+                                if (index != -1 && index !== editConfig.linkType) {
+                                    // Destroy current panel
+                                    linkSettingLoader.source = ""
+                                    linkSettingLoader.visible = false
+                                    // Save current name
+                                    var name = editConfig.name
+                                    // Discard link configuration (old type)
+                                    QGroundControl.linkManager.cancelConfigurationEditing(editConfig)
+                                    // Create new link configuration
+                                    editConfig = QGroundControl.linkManager.createConfiguration(index, name)
+                                    // Load appropriate configuration panel
+                                    linkSettingLoader.source  = editConfig.settingsURL
+                                    linkSettingLoader.visible = true
                                 }
                             }
                             Component.onCompleted: {
                                 if(linkConfig == null) {
                                     linkTypeCombo.currentIndex = 0
-                                    linkSettingLoader.sourceComponent = serialLinkSettings
-                                    linkSettingLoader.visible = true
+                                    linkSettingLoader.source   = editConfig.settingsURL
+                                    linkSettingLoader.visible  = true
                                 }
                             }
+                        }
+                    }
+                    Item {
+                        height: ScreenTools.defaultFontPixelHeight * 0.5
+                        width:  parent.width
+                    }
+                    //-- Auto Connect
+                    QGCCheckBox {
+                        text:       "Automatically Connect on Start"
+                        checked:    false
+                        enabled:    editConfig ? editConfig.autoConnectAllowed : false
+                        onCheckedChanged: {
+                            if(editConfig) {
+                                editConfig.autoConnect = checked
+                            }
+                        }
+                        Component.onCompleted: {
+                            if(editConfig)
+                                checked = editConfig.autoConnect
                         }
                     }
                     Item {
@@ -266,7 +324,7 @@ Rectangle {
                         id:             linkSettingLoader
                         width:          parent.width
                         visible:        false
-                        property var config: linkConfig
+                        property var subEditConfig: editConfig
                     }
                 }
             }
@@ -279,7 +337,20 @@ Rectangle {
                 QGCButton {
                     width:      ScreenTools.defaultFontPixelWidth * 10
                     text:       "OK"
+                    enabled:    nameField.text !== ""
                     onClicked: {
+                        // Save editting
+                        linkSettingLoader.item.saveSettings()
+                        editConfig.name = nameField.text
+                        if(linkConfig) {
+                            QGroundControl.linkManager.endConfigurationEditing(linkConfig, editConfig)
+                        } else {
+                            // If it was edited, it's no longer "dynamic"
+                            editConfig.dynamic = false
+                            QGroundControl.linkManager.endCreateConfiguration(editConfig)
+                        }
+                        linkSettingLoader.source = ""
+                        editConfig = null
                         _linkRoot.closeCommSettings()
                     }
                 }
@@ -287,198 +358,11 @@ Rectangle {
                     width:      ScreenTools.defaultFontPixelWidth * 10
                     text:       "Cancel"
                     onClicked: {
+                        QGroundControl.linkManager.cancelConfigurationEditing(editConfig)
+                        editConfig = null
                         _linkRoot.closeCommSettings()
                     }
                 }
-            }
-        }
-    }
-    //---------------------------------------------
-    // Serial Link Settings
-    Component {
-        id: serialLinkSettings
-        Column {
-            width:              parent.width
-            spacing:            ScreenTools.defaultFontPixelHeight / 2
-            QGCLabel {
-                id:     serialLabel
-                text:   "Serial Link Settings"
-            }
-            Rectangle {
-                height: 1
-                width:  serialLabel.width
-                color:  qgcPal.button
-            }
-            Item {
-                height: ScreenTools.defaultFontPixelHeight / 2
-                width:  parent.width
-            }
-            Row {
-                spacing:    ScreenTools.defaultFontPixelWidth
-                QGCLabel {
-                    text:   "Serial Port:"
-                    width:  _firstColumn
-                    anchors.verticalCenter: parent.verticalCenter
-                }
-                QGCComboBox {
-                    id:             commPortCombo
-                    width:          _secondColumn
-                    model:          QGroundControl.linkManager.serialPortStrings
-                    anchors.verticalCenter: parent.verticalCenter
-                    onActivated: {
-                        if (index != -1) {
-                        }
-                    }
-                    Component.onCompleted: {
-                        if(config != null) {
-                        }
-                    }
-                }
-            }
-            Row {
-                spacing:    ScreenTools.defaultFontPixelWidth
-                QGCLabel {
-                    text:   "Baud Rate:"
-                    width:  _firstColumn
-                    anchors.verticalCenter: parent.verticalCenter
-                }
-                QGCComboBox {
-                    id:             baudCombo
-                    width:          _secondColumn
-                    model:          QGroundControl.linkManager.serialBaudRates
-                    anchors.verticalCenter: parent.verticalCenter
-                    onActivated: {
-                        if (index != -1) {
-                        }
-                    }
-                    Component.onCompleted: {
-                        var baud = "57600"
-                        if(config != null) {
-                            // Get baud from config
-                        }
-                        var index = baudCombo.find(baud)
-                        if (index == -1) {
-                            console.warn("Baud rate name not in combo box", baud)
-                        } else {
-                            baudCombo.currentIndex = index
-                        }
-                    }
-                }
-            }
-        }
-    }
-    //---------------------------------------------
-    // UDP Link Settings
-    Component {
-        id: udpLinkSettings
-        Column {
-            width:              parent.width
-            spacing:            ScreenTools.defaultFontPixelHeight / 2
-            QGCLabel {
-                id:     udpLabel
-                text:   "UDP Link Settings"
-            }
-            Rectangle {
-                height: 1
-                width:  udpLabel.width
-                color:  qgcPal.button
-            }
-            Item {
-                height: ScreenTools.defaultFontPixelHeight / 2
-                width:  parent.width
-            }
-            Row {
-                spacing:    ScreenTools.defaultFontPixelWidth
-                QGCLabel {
-                    text:   "Listening Port:"
-                    width:  _firstColumn
-                }
-                QGCLabel {
-                    text:   "14550"
-                    width:  _secondColumn
-                }
-            }
-            QGCLabel {
-                text:   "Target Hosts:"
-            }
-        }
-    }
-    //---------------------------------------------
-    // TCP Link Settings
-    Component {
-        id: tcpLinkSettings
-        Column {
-            width:              parent.width
-            spacing:            ScreenTools.defaultFontPixelHeight / 2
-            QGCLabel {
-                id:     tcpLabel
-                text:   "TCP Link Settings"
-            }
-            Rectangle {
-                height: 1
-                width:  tcpLabel.width
-                color:  qgcPal.button
-            }
-            Item {
-                height: ScreenTools.defaultFontPixelHeight / 2
-                width:  parent.width
-            }
-            Row {
-                spacing:    ScreenTools.defaultFontPixelWidth
-                QGCLabel {
-                    text:   "TCP Port:"
-                    width:  _firstColumn
-                }
-                QGCLabel {
-                    text:   "5760"
-                    width:  _secondColumn
-                }
-            }
-            Row {
-                spacing:    ScreenTools.defaultFontPixelWidth
-                QGCLabel {
-                    text:   "Host Address:"
-                    width:  _firstColumn
-                }
-                QGCLabel {
-                    text:   "0.0.0.0"
-                    width:  _secondColumn
-                }
-            }
-        }
-    }
-    //---------------------------------------------
-    // Log Replay Settings
-    Component {
-        id: logLinkSettings
-        Column {
-            width:              parent.width
-            spacing:            ScreenTools.defaultFontPixelHeight / 2
-            QGCLabel {
-                text:   "Log Replay Link Settings"
-            }
-            Item {
-                height: ScreenTools.defaultFontPixelHeight / 2
-                width:  parent.width
-            }
-            QGCButton {
-                text:   "Select Log File"
-            }
-        }
-    }
-    //---------------------------------------------
-    // Mock Link Settings
-    Component {
-        id: mockLinkSettings
-        Column {
-            width:              parent.width
-            spacing:            ScreenTools.defaultFontPixelHeight / 2
-            QGCLabel {
-                text:   "Mock Link Settings"
-            }
-            Item {
-                height: ScreenTools.defaultFontPixelHeight / 2
-                width:  parent.width
             }
         }
     }
