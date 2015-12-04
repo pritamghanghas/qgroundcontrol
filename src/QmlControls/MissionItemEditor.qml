@@ -1,6 +1,7 @@
 import QtQuick                  2.2
 import QtQuick.Controls         1.2
 import QtQuick.Controls.Styles  1.2
+import QtQuick.Dialogs          1.2
 
 import QGroundControl.ScreenTools   1.0
 import QGroundControl.Vehicle       1.0
@@ -15,6 +16,7 @@ Rectangle {
 
     property var    missionItem ///< MissionItem associated with this editor
     property bool   readOnly    ///< true: read only view, false: full editing view
+    property var    qgcView     ///< QGCView control used for showing dialogs
 
     signal clicked
     signal remove
@@ -47,17 +49,17 @@ Rectangle {
             onClicked: _root.clicked()
         }
 
-        MissionItemIndexLabel {
+        QGCLabel {
             id:                     label
             anchors.verticalCenter: commandPicker.verticalCenter
-            isCurrentItem:          missionItem.isCurrentItem
-            label:                  missionItem.sequenceNumber == 0 ? "H" : missionItem.sequenceNumber
+            color:                  missionItem.isCurrentItem ? qgcPal.buttonHighlightText : qgcPal.buttonText
+            text:                   missionItem.sequenceNumber == 0 ? "H" : missionItem.sequenceNumber
         }
 
         Image {
             id:                     rawEdit
-            anchors.leftMargin:     ScreenTools.defaultFontPixelWidth * 8
-            anchors.left:           label.right
+            anchors.rightMargin:    ScreenTools.defaultFontPixelWidth
+            anchors.right:          parent.right
             anchors.verticalCenter: commandPicker.verticalCenter
             width:                  commandPicker.height
             height:                 commandPicker.height
@@ -70,30 +72,32 @@ Rectangle {
             }
         }
 
-        FactComboBox {
-            id:                 commandPicker
-            anchors.leftMargin: ScreenTools.defaultFontPixelWidth
-            anchors.left:       rawEdit.right
-            anchors.right:      parent.right
-            indexModel:         false
-            fact:               missionItem.supportedCommand
-            visible:            missionItem.sequenceNumber != 0 && missionItem.isCurrentItem && !missionItem.rawEdit
+        QGCButton {
+            id:                     commandPicker
+            anchors.leftMargin:     ScreenTools.defaultFontPixelWidth * 2
+            anchors.rightMargin:    ScreenTools.defaultFontPixelWidth
+            anchors.left:           label.right
+            anchors.right:          rawEdit.left
+            visible:                missionItem.sequenceNumber != 0 && missionItem.isCurrentItem && !missionItem.rawEdit
+            text:                   missionItem.commandName
 
-            onActivated: missionItem.commandByIndex = index
+            Component {
+                id: commandDialog
+
+                MissionCommandDialog {
+                    missionItem: _root.missionItem
+                }
+            }
+
+            onClicked:              qgcView.showDialog(commandDialog, "Select Mission Command", 40, StandardButton.Cancel)
         }
 
-        Rectangle {
-            anchors.fill:   commandPicker
-            color:          qgcPal.button
-            visible:        missionItem.sequenceNumber == 0 || !missionItem.isCurrentItem
-
-            QGCLabel {
-                anchors.leftMargin: ScreenTools.defaultFontPixelWidth
-                anchors.fill:       parent
-                verticalAlignment:  Text.AlignVCenter
-                text:               missionItem.sequenceNumber == 0 ? "Home" : missionItem.commandName
-                color:              qgcPal.buttonText
-            }
+        QGCLabel {
+            anchors.fill:       commandPicker
+            visible:            missionItem.sequenceNumber == 0 || !missionItem.isCurrentItem
+            verticalAlignment:  Text.AlignVCenter
+            text:               missionItem.sequenceNumber == 0 ? "Home" : missionItem.commandName
+            color:              qgcPal.buttonText
         }
 
         Rectangle {

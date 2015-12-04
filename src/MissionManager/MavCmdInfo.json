@@ -19,11 +19,18 @@
             "description":          "Travel to a position in 3D space.",
             "specifiesCoordinate":  true,
             "friendlyEdit":         true,
+            "category":             "Basic",
             "param1": {
                 "label":            "Hold:",
                 "units":            "seconds",
                 "default":          0,
                 "decimalPlaces":    0
+            },
+            "param2": {
+                "label":            "Accept radius:",
+                "units":            "meters",
+                "default":          3.0,
+                "decimalPlaces":    2
             }
         },
         {
@@ -33,6 +40,7 @@
             "description":          "Travel to a position and Loiter around the specified radius indefinitely.",
             "specifiesCoordinate":  true,
             "friendlyEdit":         true,
+            "category":             "Basic",
             "param3": {
                 "label":            "Radius:",
                 "units":            "meters",
@@ -47,6 +55,7 @@
             "description":          "Travel to a position and Loiter around the specified radius for a number of turns.",
             "specifiesCoordinate":  true,
             "friendlyEdit":         true,
+            "category":             "Basic",
             "param1": {
                 "label":            "Turns:",
                 "default":          1,
@@ -66,6 +75,7 @@
             "description":          "Travel to a position and Loiter around the specified radius for an amount of time.",
             "specifiesCoordinate":  true,
             "friendlyEdit":         true,
+            "category":             "Basic",
             "param1": {
                 "label":            "Hold:",
                 "units":            "seconds",
@@ -84,7 +94,8 @@
             "rawName":      "MAV_CMD_NAV_RETURN_TO_LAUNCH",
             "friendlyName": "Return Home",
             "description":  "Send the vehicle back to the home position.",
-            "friendlyEdit": true
+            "friendlyEdit": true,
+            "category":     "Basic"
         },
         {
             "id":                   21,
@@ -93,6 +104,7 @@
             "description":          "Land vehicle at the specified location.",
             "specifiesCoordinate":  true,
             "friendlyEdit":         true,
+            "category":             "Basic",
             "param1": {
                 "label":            "Abort Alt:",
                 "units":            "meters",
@@ -113,6 +125,7 @@
             "description":          "Take off from the ground and travel towards the specified position.",
             "specifiesCoordinate":  true,
             "friendlyEdit":         true,
+            "category":             "Basic",
             "param1": {
                 "label":            "Pitch:",
                 "units":            "degreesConvert",
@@ -137,7 +150,9 @@
             "friendlyName":         "Region of interest (nav)",
             "description":          "Sets the region of interest for cameras.",
             "specifiesCoordinate":  true,
+            "standaloneCoordinate": true,
             "friendlyEdit":         true,
+            "category":             "Camera",
             "param1": {
                 "label":            "Mode:",
                 "enumStrings":      "None,Next waypoint,Mission item,Location,ROI item",
@@ -176,6 +191,7 @@
             "friendlyName": "Delay",
             "description":  "Delay the mission for the number of seconds.",
             "friendlyEdit": true,
+            "category":     "Basic",
             "param1": {
                 "label":            "Hold:",
                 "units":            "seconds",
@@ -188,6 +204,7 @@
             "rawName":      "MAV_CMD_CONDITION_CHANGE_ALT",
             "description":  "Delay the mission until the specified altitide is reached.",
             "friendlyName": "Wait for altitude",
+            "category":     "Conditionals",
             "param1": {
                 "label":            "Rate:",
                 "units":            "m/s",
@@ -206,6 +223,7 @@
             "rawName":      "MAV_CMD_CONDITION_DISTANCE",
             "description":  "Delay the mission until within the specified distance of the next waypoint.",
             "friendlyName": "Wait for distance",
+            "category":     "Conditionals",
             "param1": {
                 "label":            "Distance:",
                 "units":            "meters",
@@ -218,6 +236,7 @@
             "rawName":      "MAV_CMD_CONDITION_YAW",
             "friendlyName": "Wait for Heading",
             "description":  "Delay the mission until the specified heading is reached.",
+            "category":     "Conditionals",
             "param1": {
                 "label":            "Heading:",
                 "units":            "degrees",
@@ -250,6 +269,7 @@
             "friendlyName": "Jump to item",
             "description":  "Mission will continue at the specified item.",
             "friendlyEdit": true,
+            "category":     "Basic",
             "param1": {
                 "label":            "Item #:",
                 "default":          1,
@@ -374,12 +394,14 @@
         { "id": 191, "rawName": "MAV_CMD_DO_GO_AROUND", "friendlyName": "MAV_CMD_DO_GO_AROUND" },
         { "id": 200, "rawName": "MAV_CMD_DO_CONTROL_VIDEO", "friendlyName": "MAV_CMD_DO_CONTROL_VIDEO" },
         {
-            "id":           201,
-            "rawName":      "MAV_CMD_DO_SET_ROI",
-            "friendlyName": "Region of interest (cmd)" ,
-            "description":  "Sets the region of interest for cameras.",
+            "id":                   201,
+            "rawName":              "MAV_CMD_DO_SET_ROI",
+            "friendlyName":         "Region of interest (cmd)" ,
+            "description":          "Sets the region of interest for cameras.",
             "specifiesCoordinate":  true,
+            "standaloneCoordinate": true,
             "friendlyEdit":         true,
+            "category":             "Camera",
             "param1": {
                 "label":            "Mode:",
                 "enumStrings":      "None,Next waypoint,Mission item,Location,ROI item",
@@ -403,6 +425,7 @@
             "rawName":      "MAV_CMD_DO_DIGICAM_CONFIGURE",
             "friendlyName": "Camera config",
             "description":  "Configure onboard camera controller.",
+            "category":     "Camera",
             "param1": {
                 "label":            "Mode:",
                 "default":          0,
@@ -446,6 +469,7 @@
             "friendlyName": "Camera control",
             "rawName":      "MAV_CMD_DO_DIGICAM_CONTROL",
             "description":  "Control onboard camera.",
+            "category":     "Camera",
             "param1": {
                 "label":            "Session:",
                 "default":          0,
@@ -483,6 +507,7 @@
             "rawName":      "MAV_CMD_DO_MOUNT_CONTROL",
             "friendlyName": "Mount config",
             "description":  "Control antenna mount or camera.",
+            "category":     "Camera",
             "param1": {
                 "label":            "Lat/Pitch:",
                 "default":          0,
@@ -511,6 +536,7 @@
             "rawName":      "MAV_CMD_DO_SET_CAM_TRIGG_DIST",
             "friendlyName": "Camera trigger distance",
             "description":  "Set camera trigger distance.",
+            "category":     "Camera",
             "param1": {
                 "label":            "Distance:",
                 "default":          25,
