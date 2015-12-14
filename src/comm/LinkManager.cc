@@ -38,12 +38,12 @@ This file is part of the QGROUNDCONTROL project
 #endif
 
 #include "LinkManager.h"
-#include "MainWindow.h"
-#include "QGCMessageBox.h"
-#include "QGCApplication.h"
 #include "QGCApplication.h"
 #include "UDPLink.h"
 #include "TCPLink.h"
+#ifdef QGC_ENABLE_BLUETOOTH
+#include "BluetoothLink.h"
+#endif
 
 QGC_LOGGING_CATEGORY(LinkManagerLog, "LinkManagerLog")
 QGC_LOGGING_CATEGORY(LinkManagerVerboseLog, "LinkManagerVerboseLog")
@@ -124,6 +124,11 @@ LinkInterface* LinkManager::createConnectedLink(LinkConfiguration* config)
         case LinkConfiguration::TypeTcp:
             pLink = new TCPLink(dynamic_cast<TCPConfiguration*>(config));
             break;
+#ifdef QGC_ENABLE_BLUETOOTH
+        case LinkConfiguration::TypeBluetooth:
+            pLink = new BluetoothLink(dynamic_cast<BluetoothConfiguration*>(config));
+            break;
+#endif
 #ifndef __mobile__
         case LinkConfiguration::TypeLogReplay:
             pLink = new LogReplayLink(dynamic_cast<LogReplayLinkConfiguration*>(config));
@@ -182,14 +187,11 @@ void LinkManager::_addLink(LinkInterface* link)
         emit newLink(link);
     }
 
-    // MainWindow may be around when doing things like running unit tests
-    if (MainWindow::instance()) {
-        connect(link, &LinkInterface::communicationError, _app, &QGCApplication::criticalMessageBoxOnMainThread);
-    }
+    connect(link, &LinkInterface::communicationError,   _app,               &QGCApplication::criticalMessageBoxOnMainThread);
+    connect(link, &LinkInterface::bytesReceived,        _mavlinkProtocol,   &MAVLinkProtocol::receiveBytes);
+    connect(link, &LinkInterface::connected,            _mavlinkProtocol,   &MAVLinkProtocol::linkConnected);
+    connect(link, &LinkInterface::disconnected,         _mavlinkProtocol,   &MAVLinkProtocol::linkDisconnected);
 
-    connect(link, &LinkInterface::bytesReceived,    _mavlinkProtocol, &MAVLinkProtocol::receiveBytes);
-    connect(link, &LinkInterface::connected,        _mavlinkProtocol, &MAVLinkProtocol::linkConnected);
-    connect(link, &LinkInterface::disconnected,     _mavlinkProtocol, &MAVLinkProtocol::linkDisconnected);
     _mavlinkProtocol->resetMetadataForLink(link);
 
     connect(link, &LinkInterface::connected,    this, &LinkManager::_linkConnected);
@@ -268,8 +270,7 @@ void LinkManager::_deleteLink(LinkInterface* link)
 bool LinkManager::_connectionsSuspendedMsg(void)
 {
     if (_connectionsSuspended) {
-        QGCMessageBox::information(tr("Connect not allowed"),
-                                   tr("Connect not allowed: %1").arg(_connectionsSuspendedReason));
+        qgcApp()->showMessage(QString("Connect not allowed: %1").arg(_connectionsSuspendedReason));
         return true;
     } else {
         return false;
@@ -359,6 +360,11 @@ void LinkManager::loadLinkConfigurationList()
                                 case LinkConfiguration::TypeTcp:
                                     pLink = (LinkConfiguration*)new TCPConfiguration(name);
                                     break;
+#ifdef QGC_ENABLE_BLUETOOTH
+                                case LinkConfiguration::TypeBluetooth:
+                                    pLink = (LinkConfiguration*)new BluetoothConfiguration(name);
+                                    break;
+#endif
 #ifndef __mobile__
                                 case LinkConfiguration::TypeLogReplay:
                                     pLink = (LinkConfiguration*)new LogReplayLinkConfiguration(name);
@@ -605,14 +611,14 @@ void LinkManager::_vehicleHeartbeatInfo(LinkInterface* link, int vehicleId, int 
                                 << vehicleType;
 
         if (vehicleId == _mavlinkProtocol->getSystemId()) {
-            _app->showToolBarMessage(QString("Warning: A vehicle is using the same system id as QGroundControl: %1").arg(vehicleId));
+            _app->showMessage(QString("Warning: A vehicle is using the same system id as QGroundControl: %1").arg(vehicleId));
         }
 
         QSettings settings;
         bool mavlinkVersionCheck = settings.value("VERSION_CHECK_ENABLED", true).toBool();
         if (mavlinkVersionCheck && vehicleMavlinkVersion != MAVLINK_VERSION) {
             _ignoreVehicleIds += vehicleId;
-            _app->showToolBarMessage(QString("The MAVLink protocol version on vehicle #%1 and QGroundControl differ! "
+            _app->showMessage(QString("The MAVLink protocol version on vehicle #%1 and QGroundControl differ! "
                                                  "It is unsafe to use different MAVLink versions. "
                                                  "QGroundControl therefore refuses to connect to vehicle #%1, which sends MAVLink version %2 (QGroundControl uses version %3).").arg(vehicleId).arg(vehicleMavlinkVersion).arg(MAVLINK_VERSION));
             return;
@@ -701,12 +707,16 @@ QStringList LinkManager::linkTypeStrings(void) const
 #endif
         list += "UDP";
         list += "TCP";
+#ifdef QGC_ENABLE_BLUETOOTH
+        list += "Bluetooth";
+#endif
 #ifdef QT_DEBUG
         list += "Mock Link";
 #endif
 #ifndef __mobile__
         list += "Log Replay";
 #endif
+        Q_ASSERT(list.size() == (int)LinkConfiguration::TypeLast);
     }
     return list;
 }
@@ -806,7 +816,7 @@ void LinkManager::_fixUnnamed(LinkConfiguration* config)
 #ifndef __ios__
             case LinkConfiguration::TypeSerial: {
                 QString tname = dynamic_cast<SerialConfiguration*>(config)->portName();
-#ifdef Q_OS_WIN32
+#ifdef Q_OS_WIN
                 tname.replace("\\\\.\\", "");
 #else
                 tname.replace("/dev/cu.", "");
@@ -828,6 +838,15 @@ void LinkManager::_fixUnnamed(LinkConfiguration* config)
                     }
                 }
                 break;
+#ifdef QGC_ENABLE_BLUETOOTH
+            case LinkConfiguration::TypeBluetooth: {
+                    BluetoothConfiguration* tconfig = dynamic_cast<BluetoothConfiguration*>(config);
+                    if(tconfig) {
+                        config->setName(QString("%1 (Bluetooth Device)").arg(tconfig->device().name));
+                    }
+                }
+                break;
+#endif
 #ifndef __mobile__
             case LinkConfiguration::TypeLogReplay: {
                     LogReplayLinkConfiguration* tconfig = dynamic_cast<LogReplayLinkConfiguration*>(config);
@@ -867,4 +886,9 @@ void LinkManager::removeConfiguration(LinkConfiguration* config)
 bool LinkManager::isAutoconnectLink(LinkInterface* link)
 {
     return _autoconnectConfigurations.contains(link->getLinkConfiguration());
+}
+
+bool LinkManager::isBluetoothAvailable(void)
+{
+    return qgcApp()->isBluetoothAvailable();
 }

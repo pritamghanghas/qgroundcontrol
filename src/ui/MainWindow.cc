@@ -46,11 +46,8 @@ This file is part of the QGROUNDCONTROL project
 #ifndef __mobile__
 #include "QGCMAVLinkLogPlayer.h"
 #endif
-#include "SettingsDialog.h"
 #include "MAVLinkDecoder.h"
 #include "QGCApplication.h"
-#include "QGCFileDialog.h"
-#include "QGCMessageBox.h"
 #include "MultiVehicleManager.h"
 #include "HomePositionManager.h"
 #include "nodeselector.h"
@@ -60,6 +57,7 @@ This file is part of the QGROUNDCONTROL project
 #include "QGCImageProvider.h"
 
 #ifndef __mobile__
+#include "SettingsDialog.h"
 #include "QGCDataPlot2D.h"
 #include "Linecharts.h"
 #include "QGCUASFileViewMulti.h"
@@ -163,7 +161,7 @@ MainWindow::MainWindow()
     _mainQmlWidgetHolder->setVisible(true);
 
     _mainQmlWidgetHolder->setContextPropertyObject("controller", this);
-    _mainQmlWidgetHolder->setSource(QUrl::fromUserInput("qrc:qml/MainWindow.qml"));
+    _mainQmlWidgetHolder->setSource(QUrl::fromUserInput("qrc:qml/MainWindowHybrid.qml"));
 
     // Image provider
     QQuickImageProvider* pImgProvider = dynamic_cast<QQuickImageProvider*>(qgcApp()->toolbox()->imageProvider());
@@ -435,24 +433,20 @@ void MainWindow::showStatusBarCallback(bool checked)
     checked ? statusBar()->show() : statusBar()->hide();
 }
 
+void MainWindow::acceptWindowClose(void)
+{
+    qgcApp()->toolbox()->linkManager()->shutdown();
+    // The above shutdown causes a flurry of activity as the vehicle components are removed. This in turn
+    // causes the Windows Version of Qt to crash if you allow the close event to be accepted. In order to prevent
+    // the crash, we ignore the close event and setup a delayed timer to close the window after things settle down.
+    QTimer::singleShot(1500, this, &MainWindow::_closeWindow);
+}
+
 void MainWindow::closeEvent(QCloseEvent *event)
 {
     // Disallow window close if there are active connections
     if (qgcApp()->toolbox()->multiVehicleManager()->vehicles()->count()) {
-        QGCMessageBox::StandardButton button =
-            QGCMessageBox::warning(
-                tr("QGroundControl close"),
-                tr("There are still active connections to vehicles. Do you want to disconnect these before closing?"),
-                QMessageBox::Yes | QMessageBox::Cancel,
-                QMessageBox::Cancel);
-        if (button == QMessageBox::Yes) {
-            qgcApp()->toolbox()->linkManager()->shutdown();
-            // The above disconnect causes a flurry of activity as the vehicle components are removed. This in turn
-            // causes the Windows Version of Qt to crash if you allow the close event to be accepted. In order to prevent
-            // the crash, we ignore the close event and setup a delayed timer to close the window after things settle down.
-            QTimer::singleShot(1500, this, &MainWindow::_closeWindow);
-        }
-
+        qgcApp()->showWindowCloseMessage();
         event->ignore();
         return;
     }
@@ -552,9 +546,6 @@ void MainWindow::configureWindowName()
 **/
 void MainWindow::connectCommonActions()
 {
-    // Connect actions from ui
-    connect(_ui.actionAdd_Link, SIGNAL(triggered()), this, SLOT(manageLinks()));
-
     // Audio output
     _ui.actionMuteAudioOutput->setChecked(qgcApp()->toolbox()->audioOutput()->isMuted());
     connect(qgcApp()->toolbox()->audioOutput(), SIGNAL(mutedChanged(bool)), _ui.actionMuteAudioOutput, SLOT(setChecked(bool)));
@@ -563,18 +554,17 @@ void MainWindow::connectCommonActions()
     // Application Settings
     connect(_ui.actionSettings, SIGNAL(triggered()), this, SLOT(showSettings()));
 
-    // Views actions
-    connect(_ui.actionFlight,   &QAction::triggered,    this, &MainWindow::showFlyView);
-    connect(_ui.actionPlan,     &QAction::triggered,    this, &MainWindow::showPlanView);
-    connect(_ui.actionSetup,    &QAction::triggered,    this, &MainWindow::showSetupView);
-
     // pi related
     connect(_ui.actionShutdown_UAV, &QAction::triggered, piNodeSelector(), &NodeSelector::shutdownAll);
     connect(_ui.action_Restart_UAV, &QAction::triggered, piNodeSelector(), &NodeSelector::restartAll);
 
-    connect(_ui.actionFlight,   &QAction::triggered,    this, &MainWindow::handleActiveViewActionState);
-    connect(_ui.actionPlan,     &QAction::triggered,    this, &MainWindow::handleActiveViewActionState);
-    connect(_ui.actionSetup,    &QAction::triggered,    this, &MainWindow::handleActiveViewActionState);
+    // Views actions
+    connect(_ui.actionFlight,   &QAction::triggered,    qgcApp(),   &QGCApplication::showFlyView);
+    connect(_ui.actionPlan,     &QAction::triggered,    qgcApp(),   &QGCApplication::showPlanView);
+    connect(_ui.actionSetup,    &QAction::triggered,    qgcApp(),   &QGCApplication::showSetupView);
+    connect(_ui.actionFlight,   &QAction::triggered,    this,       &MainWindow::handleActiveViewActionState);
+    connect(_ui.actionPlan,     &QAction::triggered,    this,       &MainWindow::handleActiveViewActionState);
+    connect(_ui.actionSetup,    &QAction::triggered,    this,       &MainWindow::handleActiveViewActionState);
 
     // Connect internal actions
     connect(qgcApp()->toolbox()->multiVehicleManager(), &MultiVehicleManager::vehicleAdded, this, &MainWindow::_vehicleAdded);
@@ -592,18 +582,17 @@ void MainWindow::handleActiveViewActionState(bool triggered)
 void MainWindow::_openUrl(const QString& url, const QString& errorMessage)
 {
     if(!QDesktopServices::openUrl(QUrl(url))) {
-        QMessageBox::critical(
-            this,
-            tr("Could not open information in browser"),
-            errorMessage);
+        qgcApp()->showMessage(QString("Could not open information in browser: %1").arg(errorMessage));
     }
 }
 
+#ifndef __mobile__
 void MainWindow::showSettings()
 {
     SettingsDialog settings(this);
     settings.exec();
 }
+#endif
 
 void MainWindow::_vehicleAdded(Vehicle* vehicle)
 {
@@ -620,12 +609,6 @@ void MainWindow::_storeCurrentViewState(void)
 #endif
 
     settings.setValue(_getWindowGeometryKey(), saveGeometry());
-}
-
-void MainWindow::manageLinks()
-{
-    SettingsDialog settings(this, SettingsDialog::ShowCommLinks);
-    settings.exec();
 }
 
 /// @brief Saves the last used connection
@@ -690,3 +673,8 @@ void MainWindow::_storeVisibleWidgetsSettings(void)
     settings.setValue(_visibleWidgetsKey, widgetNames);
 }
 #endif
+
+QObject* MainWindow::rootQmlObject(void)
+{
+    return _mainQmlWidgetHolder->getRootObject();
+}

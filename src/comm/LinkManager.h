@@ -80,6 +80,7 @@ public:
     Q_PROPERTY(bool autoconnectPixhawk                  READ autoconnectPixhawk                 WRITE setAutoconnectPixhawk     NOTIFY autoconnectPixhawkChanged)
     Q_PROPERTY(bool autoconnect3DRRadio                 READ autoconnect3DRRadio                WRITE setAutoconnect3DRRadio    NOTIFY autoconnect3DRRadioChanged)
     Q_PROPERTY(bool autoconnectPX4Flow                  READ autoconnectPX4Flow                 WRITE setAutoconnectPX4Flow     NOTIFY autoconnectPX4FlowChanged)
+    Q_PROPERTY(bool isBluetoothAvailable                READ isBluetoothAvailable               CONSTANT)
 
     /// LinkInterface Accessor
     Q_PROPERTY(QmlObjectListModel*  links               READ links                              CONSTANT)
@@ -104,12 +105,13 @@ public:
 
     // Property accessors
 
-    bool anyConnectedLinks(void);
-    bool anyActiveLinks(void);
-    bool autoconnectUDP(void)       { return _autoconnectUDP; }
-    bool autoconnectPixhawk(void)   { return _autoconnectPixhawk; }
-    bool autoconnect3DRRadio(void)  { return _autoconnect3DRRadio; }
-    bool autoconnectPX4Flow(void)   { return _autoconnectPX4Flow; }
+    bool anyConnectedLinks          (void);
+    bool anyActiveLinks             (void);
+    bool autoconnectUDP             (void)  { return _autoconnectUDP; }
+    bool autoconnectPixhawk         (void)  { return _autoconnectPixhawk; }
+    bool autoconnect3DRRadio        (void)  { return _autoconnect3DRRadio; }
+    bool autoconnectPX4Flow         (void)  { return _autoconnectPX4Flow; }
+    bool isBluetoothAvailable       (void);
 
     QmlObjectListModel* links               (void) { return &_links; }
     QmlObjectListModel* linkConfigurations  (void) { return &_linkConfigurations; }
@@ -169,7 +171,12 @@ public:
     void _addLink(LinkInterface* link);
 
     // Called to signal app shutdown. Disconnects all links while turning off auto-connect.
-    void shutdown(void);
+    Q_INVOKABLE void shutdown(void);
+
+#ifdef QT_DEBUG
+    // Only used by unit test tp restart after a shutdown
+    void restart(void) { setConnectionsAllowed(); }
+#endif
 
     /// @return true: specified link is an autoconnect link
     bool isAutoconnectLink(LinkInterface* link);

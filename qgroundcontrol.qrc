@@ -15,7 +15,10 @@
         <file alias="FlightDisplayView.qml">src/FlightDisplay/FlightDisplayView.qml</file>
         <file alias="FlightModesComponent.qml">src/AutoPilotPlugins/PX4/FlightModesComponent.qml</file>
         <file alias="FlightModesComponentSummary.qml">src/AutoPilotPlugins/PX4/FlightModesComponentSummary.qml</file>
+        <file alias="APMFlightModesComponent.qml">src/AutoPilotPlugins/APM/APMFlightModesComponent.qml</file>
+        <file alias="APMFlightModesComponentSummary.qml">src/AutoPilotPlugins/APM/APMFlightModesComponentSummary.qml</file>
 
+        <file alias="BluetoothSettings.qml">src/ui/preferences/BluetoothSettings.qml</file>
         <file alias="DebugWindow.qml">src/ui/preferences/DebugWindow.qml</file>
         <file alias="GeneralSettings.qml">src/ui/preferences/GeneralSettings.qml</file>
         <file alias="LinkSettings.qml">src/ui/preferences/LinkSettings.qml</file>
@@ -29,7 +32,9 @@
 
         <file alias="JoystickConfig.qml">src/VehicleSetup/JoystickConfig.qml</file>
         <file alias="MainToolBar.qml">src/ui/toolbar/MainToolBar.qml</file>
-        <file alias="MainWindow.qml">src/ui/MainWindow.qml</file>
+        <file alias="MainWindowHybrid.qml">src/ui/MainWindowHybrid.qml</file>
+        <file alias="MainWindowInner.qml">src/ui/MainWindowInner.qml</file>
+        <file alias="MainWindowNative.qml">src/ui/MainWindowNative.qml</file>
         <file alias="MainWindowLeftPanel.qml">src/ui/MainWindowLeftPanel.qml</file>
         <file alias="MissionEditor.qml">src/MissionEditor/MissionEditor.qml</file>
         <file alias="MissionEditorHelp.qml">src/MissionEditor/MissionEditorHelp.qml</file>
@@ -45,6 +50,7 @@
         <file alias="QGroundControl/Controls/MainToolBarIndicators.qml">src/ui/toolbar/MainToolBarIndicators.qml</file>
         <file alias="QGroundControl/Controls/MissionItemEditor.qml">src/QmlControls/MissionItemEditor.qml</file>
         <file alias="QGroundControl/Controls/MissionItemIndexLabel.qml">src/QmlControls/MissionItemIndexLabel.qml</file>
+        <file alias="QGroundControl/Controls/MissionItemStatus.qml">src/MissionEditor/MissionItemStatus.qml</file>
         <file alias="QGroundControl/Controls/MissionCommandDialog.qml">src/QmlControls/MissionCommandDialog.qml</file>
         <file alias="QGroundControl/Controls/ModeSwitchDisplay.qml">src/QmlControls/ModeSwitchDisplay.qml</file>
         <file alias="QGroundControl/Controls/ParameterEditor.qml">src/QmlControls/ParameterEditor.qml</file>
@@ -97,13 +103,23 @@
         <file alias="QGroundControl/ScreenTools/qmldir">src/QmlControls/QGroundControl.ScreenTools.qmldir</file>
         <file alias="QGroundControl/ScreenTools/ScreenTools.qml">src/QmlControls/ScreenTools.qml</file>
         <file alias="QmlTest.qml">src/QmlControls/QmlTest.qml</file>
-        <file alias="RadioComponent.qml">src/AutoPilotPlugins/PX4/RadioComponent.qml</file>
-        <file alias="RadioComponentSummary.qml">src/AutoPilotPlugins/PX4/RadioComponentSummary.qml</file>
+        <file alias="RadioComponent.qml">src/AutoPilotPlugins/Common/RadioComponent.qml</file>
+        <file alias="PX4RadioComponentSummary.qml">src/AutoPilotPlugins/PX4/PX4RadioComponentSummary.qml</file>
+        <file alias="APMNotSupported.qml">src/AutoPilotPlugins/APM/APMNotSupported.qml</file>
+        <file alias="APMRadioComponentSummary.qml">src/AutoPilotPlugins/APM/APMRadioComponentSummary.qml</file>
+        <file alias="APMSafetyComponentCopter.qml">src/AutoPilotPlugins/APM/APMSafetyComponentCopter.qml</file>
+        <file alias="APMSafetyComponentPlane.qml">src/AutoPilotPlugins/APM/APMSafetyComponentPlane.qml</file>
+        <file alias="APMSafetyComponentRover.qml">src/AutoPilotPlugins/APM/APMSafetyComponentRover.qml</file>
+        <file alias="APMSafetyComponentSummaryCopter.qml">src/AutoPilotPlugins/APM/APMSafetyComponentSummaryCopter.qml</file>
+        <file alias="APMSafetyComponentSummaryPlane.qml">src/AutoPilotPlugins/APM/APMSafetyComponentSummaryPlane.qml</file>
+        <file alias="APMSafetyComponentSummaryRover.qml">src/AutoPilotPlugins/APM/APMSafetyComponentSummaryRover.qml</file>
         <file alias="SafetyComponent.qml">src/AutoPilotPlugins/PX4/SafetyComponent.qml</file>
         <file alias="SafetyComponentSummary.qml">src/AutoPilotPlugins/PX4/SafetyComponentSummary.qml</file>
         <file alias="SensorsComponent.qml">src/AutoPilotPlugins/PX4/SensorsComponent.qml</file>
         <file alias="SensorsComponentSummary.qml">src/AutoPilotPlugins/PX4/SensorsComponentSummary.qml</file>
         <file alias="SensorsComponentSummaryFixedWing.qml">src/AutoPilotPlugins/PX4/SensorsComponentSummaryFixedWing.qml</file>
+        <file alias="APMSensorsComponent.qml">src/AutoPilotPlugins/APM/APMSensorsComponent.qml</file>
+        <file alias="APMSensorsComponentSummary.qml">src/AutoPilotPlugins/APM/APMSensorsComponentSummary.qml</file>
         <file alias="SetupParameterEditor.qml">src/VehicleSetup/SetupParameterEditor.qml</file>
         <file alias="SetupView.qml">src/VehicleSetup/SetupView.qml</file>
         <file alias="test.qml">src/test.qml</file>

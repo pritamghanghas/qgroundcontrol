@@ -31,6 +31,10 @@ This file is part of the QGROUNDCONTROL project
 #ifndef _MAINWINDOW_H_
 #define _MAINWINDOW_H_
 
+#ifdef __mobile__
+#error Should not be include in mobile build
+#endif
+
 #include <QMainWindow>
 #include <QStatusBar>
 #include <QStackedWidget>
@@ -95,11 +99,16 @@ public:
 
     NodeSelector* piNodeSelector();
 
-public slots:
-    /** @brief Show the application settings */
-    void showSettings();
+    // Called from MainWindow.qml when the user accepts the window close dialog
+    Q_INVOKABLE void acceptWindowClose(void);
 
-    void manageLinks();
+    /// @return Root qml object of main window QML
+    QObject* rootQmlObject(void);
+
+public slots:
+#ifndef __mobile__
+    void showSettings();
+#endif
 
     /** @brief Save power by reducing update rates */
     void enableLowPowerMode(bool enabled) { _lowPowerMode = enabled; }
@@ -136,20 +145,8 @@ protected slots:
      * this incoherent.
      */
     void handleActiveViewActionState(bool triggered);
+
 signals:
-    // Signals the Qml to show the specified view
-    void showFlyView(void);
-    void showPlanView(void);
-    void showSetupView(void);
-
-    void showToolbarMessage(const QString& message);
-
-    // These are used for unit testing
-    void showSetupFirmware(void);
-    void showSetupParameters(void);
-    void showSetupSummary(void);
-    void showSetupVehicleComponent(VehicleComponent* vehicleComponent);
-
     void initStatusChanged(const QString& message, int alignment, const QColor &color);
     /** Emitted when any value changes from any source */
     void valueChanged(const int uasId, const QString& name, const QString& unit, const QVariant& value, const quint64 msec);
@@ -169,6 +166,7 @@ public:
         return logPlayer;
     }
 #endif
+
 protected:
     void connectCommonActions();
 

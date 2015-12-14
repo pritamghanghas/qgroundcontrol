@@ -195,83 +195,34 @@ QGCView {
                     id:             itemDragger
                     x:              missionItemIndicator ? (missionItemIndicator.x + missionItemIndicator.anchorPoint.x - (itemDragger.width / 2)) : 100
                     y:              missionItemIndicator ? (missionItemIndicator.y + missionItemIndicator.anchorPoint.y - (itemDragger.height / 2)) : 100
-                    width:          _radius * 2
-                    height:         _radius * 2
-                    //radius:         _radius
-                    //border.width:   2
-                    //border.color:   "white"
+                    width:          ScreenTools.defaultFontPixelHeight * 2
+                    height:         ScreenTools.defaultFontPixelHeight * 2
                     color:          "transparent"
                     visible:        false
                     z:              QGroundControl.zOrderMapItems + 1    // Above item icons
 
                     property var    missionItem
                     property var    missionItemIndicator
+                    property bool   preventCoordinateBindingLoop: false
 
-                    readonly property real _radius:         ScreenTools.defaultFontPixelHeight * 4
-                    readonly property real _arrowHeight:    ScreenTools.defaultFontPixelHeight
+                    onXChanged: liveDrag()
+                    onYChanged: liveDrag()
+
+                    function liveDrag() {
+                        if (!itemDragger.preventCoordinateBindingLoop && Drag.active) {
+                            var point = Qt.point(itemDragger.x + (itemDragger.width  / 2), itemDragger.y + (itemDragger.height / 2))
+                            var coordinate = editorMap.toCoordinate(point)
+                            coordinate.altitude = itemDragger.missionItem.coordinate.altitude
+                            itemDragger.preventCoordinateBindingLoop = true
+                            itemDragger.missionItem.coordinate = coordinate
+                            itemDragger.preventCoordinateBindingLoop = false
+                        }
+                    }
 
                     function clearItem() {
                         itemDragger.visible = false
                         itemDragger.missionItem = undefined
                         itemDragger.missionItemIndicator = undefined
-                    }
-
-                    Image {
-                        anchors.horizontalCenter:   parent.horizontalCenter
-                        anchors.top:                parent.top
-                        height:                     parent._arrowHeight
-                        fillMode:                   Image.PreserveAspectFit
-                        mipmap:                     true
-                        smooth:                     true
-                        source:                     "/qmlimages/ArrowHead.svg"
-                    }
-
-                    Image {
-                        id:                     arrowUp
-                        anchors.verticalCenter: parent.verticalCenter
-                        anchors.right:          parent.right
-                        height:                 parent._arrowHeight
-                        fillMode:               Image.PreserveAspectFit
-                        mipmap:                 true
-                        smooth:                 true
-                        source:                 "/qmlimages/ArrowHead.svg"
-                        transform:              Rotation { origin.x: arrowUp.width / 2; origin.y: arrowUp.height / 2; angle: 90}
-                    }
-
-                    Image {
-                        id:                         arrowDown
-                        anchors.horizontalCenter:   parent.horizontalCenter
-                        anchors.bottom:             parent.bottom
-                        height:                     parent._arrowHeight
-                        fillMode:                   Image.PreserveAspectFit
-                        mipmap:                     true
-                        smooth:                     true
-                        source:                     "/qmlimages/ArrowHead.svg"
-                        transform:                  Rotation { origin.x: arrowDown.width / 2; origin.y: arrowDown.height / 2; angle: 180}
-                    }
-
-                    Image {
-                        id:                     arrowLeft
-                        anchors.verticalCenter: parent.verticalCenter
-                        anchors.left:           parent.left
-                        height:                 parent._arrowHeight
-                        fillMode:               Image.PreserveAspectFit
-                        mipmap:                 true
-                        smooth:                 true
-                        source:                 "/qmlimages/ArrowHead.svg"
-                        transform:              Rotation { origin.x: arrowLeft.width / 2; origin.y: arrowLeft.height / 2; angle: -90}
-                    }
-
-                    Rectangle {
-                        width:                      _radius * 2
-                        height:                     _radius * 2
-                        radius:                     _radius
-                        anchors.verticalCenter:     parent.verticalCenter
-                        anchors.horizontalCenter:   parent.horizontalCenter
-                        border.width:               1
-                        border.color:               "white"
-
-                        readonly property real _radius: ScreenTools.defaultFontPixelWidth / 4
                     }
 
                     Drag.active:    itemDrag.drag.active
@@ -286,19 +237,6 @@ QGCView {
                         drag.minimumY:  0
                         drag.maximumX:  itemDragger.parent.width - parent.width
                         drag.maximumY:  itemDragger.parent.height - parent.height
-
-                        property bool dragActive: drag.active
-
-                        onDragActiveChanged: {
-                            if (!drag.active) {
-                                var point = Qt.point(itemDragger.x + (itemDragger.width  / 2), itemDragger.y + (itemDragger.height / 2))
-                                var coordinate = editorMap.toCoordinate(point)
-                                coordinate.altitude = itemDragger.missionItem.coordinate.altitude
-                                itemDragger.missionItem.coordinate = coordinate
-                                editorMap.latitude = itemDragger.missionItem.coordinate.latitude
-                                editorMap.longitude = itemDragger.missionItem.coordinate.longitude
-                            }
-                        }
                     }
                 }
 
@@ -322,7 +260,7 @@ QGCView {
 
                         function updateItemIndicator()
                         {
-                            if (object.isCurrentItem) {
+                            if (object.isCurrentItem && itemIndicator.visible) {
                                 if (object.specifiesCoordinate) {
                                     // Setup our drag item
                                     if (object.sequenceNumber != 0) {
@@ -347,9 +285,6 @@ QGCView {
                             onCommandChanged:       updateItemIndicator()
                         }
 
-                        /*
-                          Disabled for now: Not sure if they will come back
-
                         // These are the non-coordinate child mission items attached to this item
                         Row {
                             anchors.top:    parent.top
@@ -367,7 +302,6 @@ QGCView {
                                 }
                             }
                         }
-                        */
                     }
                 }
 
@@ -485,16 +419,6 @@ QGCView {
                             checked = false
                         }
                     }
-
-                    /*
-                      Home Position manager temporarily disable
-                    RoundButton {
-                        id:                 homePositionManagerButton
-                        buttonImage:        "/qmlimages/MapHome.svg"
-                        //exclusiveGroup:     _dropButtonsExclusiveGroup
-                        z:                  QGroundControl.zOrderWidgets
-                    }
-                    */
 
                     DropButton {
                         id:                 syncButton
@@ -620,48 +544,16 @@ QGCView {
                     }
                 }
 
-                Rectangle {
+                MissionItemStatus {
                     id:                 waypointValuesDisplay
-                    anchors.margins:    margins
+                    anchors.margins:    ScreenTools.defaultFontPixelWidth
                     anchors.left:       parent.left
                     anchors.bottom:     parent.bottom
-                    width:              distanceLabel.width + (margins * 2)
-                    height:             valuesColumn.height + (margins * 2)
-                    radius:             ScreenTools.defaultFontPixelWidth
-                    color:              qgcPal.window
-                    opacity:            0.80
-                    visible:            _currentMissionItem ? _currentMissionItem.distance != -1 : false
-
-                    readonly property real margins: ScreenTools.defaultFontPixelWidth
-
-                    property real _altDifference:   _currentMissionItem ? _currentMissionItem.altDifference : 0
-                    property real _azimuth:         _currentMissionItem ? _currentMissionItem.azimuth : 0
-                    property real _distance:        _currentMissionItem ? _currentMissionItem.distance : 0
-
-                    Column {
-                        id:                 valuesColumn
-                        anchors.leftMargin: parent.margins
-                        anchors.topMargin:  parent.margins
-                        anchors.left:       parent.left
-                        anchors.top:        parent.top
-
-                        QGCLabel {
-                            id:     distanceLabel
-                            color:  qgcPal.text
-                            text:   "Distance: " + Math.round(waypointValuesDisplay._distance) + " meters"
-                        }
-
-                        QGCLabel {
-                            color:  qgcPal.text
-                            text:   "Alt diff: " + Math.round(waypointValuesDisplay._altDifference) + " meters"
-                        }
-
-                        QGCLabel {
-                            color:  qgcPal.text
-                            text:   "Azimuth: " + Math.round(waypointValuesDisplay._azimuth)
-                        }
-
-                    }
+                    z:                  QGroundControl.zOrderTopMost
+                    currentMissionItem: _currentMissionItem
+                    missionItems:       controller.missionItems
+                    expandedWidth:      missionItemEditor.x - (ScreenTools.defaultFontPixelWidth * 2)
+                    homePositionValid: liveHomePositionAvailable
                 }
             } // FlightMap
         } // Item - split view container
@@ -709,6 +601,7 @@ QGCView {
 
             Row {
                 spacing: ScreenTools.defaultFontPixelWidth
+                visible: !ScreenTools.isMobile
 
                 QGCButton {
                     text:       "Save to file..."

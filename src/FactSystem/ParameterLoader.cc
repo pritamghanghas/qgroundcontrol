@@ -28,7 +28,6 @@
 #include "QGCApplication.h"
 #include "QGCLoggingCategory.h"
 #include "QGCApplication.h"
-#include "QGCMessageBox.h"
 #include "UASMessageHandler.h"
 #include "FirmwarePlugin.h"
 #include "UAS.h"
@@ -657,7 +656,6 @@ void ParameterLoader::_saveToEEPROM(void)
 QString ParameterLoader::readParametersFromStream(QTextStream& stream)
 {
     QString errors;
-    bool userWarned = false;
 
     while (!stream.atEnd()) {
         QString line = stream.readLine();
@@ -665,16 +663,8 @@ QString ParameterLoader::readParametersFromStream(QTextStream& stream)
             QStringList wpParams = line.split("\t");
             int lineMavId = wpParams.at(0).toInt();
             if (wpParams.size() == 5) {
-                if (!userWarned && (_vehicle->id() != lineMavId)) {
-                    userWarned = true;
-                    QString msg("The parameters in the stream have been saved from System Id %1, but the current vehicle has the System Id %2.");
-                    QGCMessageBox::StandardButton button = QGCMessageBox::warning("Parameter Load",
-                                                                                  msg.arg(lineMavId).arg(_vehicle->id()),
-                                                                                  QGCMessageBox::Ok | QGCMessageBox::Cancel,
-                                                                                  QGCMessageBox::Cancel);
-                    if (button == QGCMessageBox::Cancel) {
-                        return QString();
-                    }
+                if (_vehicle->id() != lineMavId) {
+                    return QString("The parameters in the stream have been saved from System Id %1, but the current vehicle has the System Id %2.").arg(lineMavId).arg(_vehicle->id());
                 }
 
                 int     componentId = wpParams.at(1).toInt();
@@ -848,18 +838,17 @@ void ParameterLoader::_checkInitialLoadComplete(void)
 
         if (errorsFound) {
             QString errorMsg = QString("<b>Critical safety issue detected:</b><br>%1").arg(errors);
-            qgcApp()->showToolBarMessage(errorMsg);
+            qgcApp()->showMessage(errorMsg);
         }
     }
 
     // Warn of parameter load failure
 
     if (initialLoadFailures) {
-        QGCMessageBox::critical("Parameter Load Failure",
-                                "QGroundControl was unable to retrieve the full set of parameters from the vehicle. "
-                                "This will cause QGroundControl to be unable to display it's full user interface. "
-                                "If you are using modified firmware, you may need to resolve any vehicle startup errors to resolve the issue. "
-                                "If you are using standard firmware, you may need to upgrade to a newer version to resolve the issue.");
+        qgcApp()->showMessage("QGroundControl was unable to retrieve the full set of parameters from the vehicle. "
+                              "This will cause QGroundControl to be unable to display it's full user interface. "
+                              "If you are using modified firmware, you may need to resolve any vehicle startup errors to resolve the issue. "
+                              "If you are using standard firmware, you may need to upgrade to a newer version to resolve the issue.");
         qCWarning(ParameterLoaderLog) << "The following parameter indices could not be loaded after the maximum number of retries: " << indexList;
         emit parametersReady(true);
     } else {
