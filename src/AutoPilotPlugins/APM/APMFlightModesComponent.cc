@@ -23,6 +23,8 @@
 
 #include "APMFlightModesComponent.h"
 #include "APMAutoPilotPlugin.h"
+#include "APMAirframeComponent.h"
+#include "APMRadioComponent.h"
 
 APMFlightModesComponent::APMFlightModesComponent(Vehicle* vehicle, AutoPilotPlugin* autopilot, QObject* parent) :
     APMComponent(vehicle, autopilot, parent),
@@ -55,24 +57,7 @@ bool APMFlightModesComponent::setupComplete(void) const
     return true;
 }
 
-QString APMFlightModesComponent::setupStateDescription(void) const
-{
-    const char* stateDescription;
-    
-    if (requiresSetup()) {
-        stateDescription = "Requires calibration";
-    } else {
-        stateDescription = "Calibrated";
-    }
-    return QString(stateDescription);
-}
-
 QStringList APMFlightModesComponent::setupCompleteChangedTriggerList(void) const
-{
-    return QStringList();
-}
-
-QStringList APMFlightModesComponent::paramFilterList(void) const
 {
     return QStringList();
 }

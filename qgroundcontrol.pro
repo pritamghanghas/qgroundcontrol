@@ -262,6 +262,7 @@ HEADERS += \
     src/QGCComboBox.h \
     src/QGCConfig.h \
     src/QGCDockWidget.h \
+    src/QGCFileDownload.h \
     src/QGCGeo.h \
     src/QGCLoggingCategory.h \
     src/QGCMapPalette.h \
@@ -282,7 +283,9 @@ HEADERS += \
     src/uas/UASMessageHandler.h \
     src/ui/toolbar/MainToolBarController.h \
     src/AutoPilotPlugins/PX4/PX4AirframeLoader.h \
+    src/AutoPilotPlugins/APM/APMAirframeLoader.h \
     src/QmlControls/QGCImageProvider.h \
+    src/AutoPilotPlugins/APM/APMRemoteParamsDownloader.h
 
 DebugBuild {
 HEADERS += \
@@ -380,6 +383,7 @@ SOURCES += \
     src/QGCApplication.cc \
     src/QGCComboBox.cc \
     src/QGCDockWidget.cc \
+    src/QGCFileDownload.cc \
     src/QGCLoggingCategory.cc \
     src/QGCMapPalette.cc \
     src/QGCPalette.cc \
@@ -398,7 +402,9 @@ SOURCES += \
     src/uas/UASMessageHandler.cc \
     src/ui/toolbar/MainToolBarController.cc \
     src/AutoPilotPlugins/PX4/PX4AirframeLoader.cc \
+    src/AutoPilotPlugins/APM/APMAirframeLoader.cc \
     src/QmlControls/QGCImageProvider.cc \
+    src/AutoPilotPlugins/APM/APMRemoteParamsDownloader.cc
 
 DebugBuild {
 SOURCES += \
@@ -538,10 +544,12 @@ SOURCES += \
 #
 
 INCLUDEPATH += \
+    src/AutoPilotPlugins/APM \
     src/AutoPilotPlugins/Common \
     src/AutoPilotPlugins/PX4 \
-    src/AutoPilotPlugins/APM \
     src/FirmwarePlugin \
+    src/FirmwarePlugin/APM \
+    src/FirmwarePlugin/PX4 \
     src/Vehicle \
     src/VehicleSetup \
 
@@ -550,13 +558,17 @@ HEADERS+= \
     src/AutoPilotPlugins/AutoPilotPluginManager.h \
     src/AutoPilotPlugins/APM/APMAutoPilotPlugin.h \
     src/AutoPilotPlugins/APM/APMAirframeComponent.h \
+    src/AutoPilotPlugins/APM/APMAirframeComponentController.h \
+    src/AutoPilotPlugins/APM/APMAirframeComponentAirframes.h \
     src/AutoPilotPlugins/APM/APMComponent.h \
-    src/AutoPilotPlugins/APM/APMRadioComponent.h \
     src/AutoPilotPlugins/APM/APMFlightModesComponent.h \
     src/AutoPilotPlugins/APM/APMFlightModesComponentController.h \
+    src/AutoPilotPlugins/APM/APMPowerComponent.h \
+    src/AutoPilotPlugins/APM/APMRadioComponent.h \
     src/AutoPilotPlugins/APM/APMSafetyComponent.h \
     src/AutoPilotPlugins/APM/APMSensorsComponent.h \
     src/AutoPilotPlugins/APM/APMSensorsComponentController.h \
+    src/AutoPilotPlugins/APM/APMTuningComponent.h \
     src/AutoPilotPlugins/Common/RadioComponentController.h \
     src/AutoPilotPlugins/Generic/GenericAutoPilotPlugin.h \
     src/AutoPilotPlugins/PX4/AirframeComponent.h \
@@ -600,14 +612,18 @@ SOURCES += \
     src/AutoPilotPlugins/AutoPilotPluginManager.cc \
     src/AutoPilotPlugins/APM/APMAutoPilotPlugin.cc \
     src/AutoPilotPlugins/APM/APMAirframeComponent.cc \
+    src/AutoPilotPlugins/APM/APMAirframeComponentController.cc \
     src/AutoPilotPlugins/APM/APMComponent.cc \
-    src/AutoPilotPlugins/APM/APMRadioComponent.cc \
     src/AutoPilotPlugins/APM/APMFlightModesComponent.cc \
     src/AutoPilotPlugins/APM/APMFlightModesComponentController.cc \
+    src/AutoPilotPlugins/APM/APMPowerComponent.cc \
+    src/AutoPilotPlugins/APM/APMRadioComponent.cc \
     src/AutoPilotPlugins/APM/APMSafetyComponent.cc \
     src/AutoPilotPlugins/APM/APMSensorsComponent.cc \
     src/AutoPilotPlugins/APM/APMSensorsComponentController.cc \
+    src/AutoPilotPlugins/APM/APMTuningComponent.cc \
     src/AutoPilotPlugins/Common/RadioComponentController.cc \
+    src/AutoPilotPlugins/APM/APMAirframeComponentAirframes.cc \
     src/AutoPilotPlugins/Generic/GenericAutoPilotPlugin.cc \
     src/AutoPilotPlugins/PX4/AirframeComponent.cc \
     src/AutoPilotPlugins/PX4/AirframeComponentAirframes.cc \
@@ -652,19 +668,21 @@ INCLUDEPATH += \
 
 HEADERS += \
     src/FactSystem/Fact.h \
+    src/FactSystem/FactControls/FactPanelController.h \
     src/FactSystem/FactMetaData.h \
     src/FactSystem/FactSystem.h \
     src/FactSystem/FactValidator.h \
     src/FactSystem/ParameterLoader.h \
-    src/FactSystem/FactControls/FactPanelController.h \
+    src/FactSystem/SettingsFact.h \
 
 SOURCES += \
     src/FactSystem/Fact.cc \
+    src/FactSystem/FactControls/FactPanelController.cc \
     src/FactSystem/FactMetaData.cc \
     src/FactSystem/FactSystem.cc \
     src/FactSystem/FactValidator.cc \
     src/FactSystem/ParameterLoader.cc \
-    src/FactSystem/FactControls/FactPanelController.cc \
+    src/FactSystem/SettingsFact.cc \
 
 #-------------------------------------------------------------------------------------
 # Video Streaming

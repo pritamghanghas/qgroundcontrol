@@ -23,6 +23,7 @@
 
 #include "APMRadioComponent.h"
 #include "APMAutoPilotPlugin.h"
+#include "APMAirframeComponent.h"
 
 APMRadioComponent::APMRadioComponent(Vehicle* vehicle, AutoPilotPlugin* autopilot, QObject* parent) :
     APMComponent(vehicle, autopilot, parent),
@@ -67,18 +68,6 @@ bool APMRadioComponent::setupComplete(void) const
     return true;
 }
 
-QString APMRadioComponent::setupStateDescription(void) const
-{
-    const char* stateDescription;
-    
-    if (requiresSetup()) {
-        stateDescription = "Requires calibration";
-    } else {
-        stateDescription = "Calibrated";
-    }
-    return QString(stateDescription);
-}
-
 QStringList APMRadioComponent::setupCompleteChangedTriggerList(void) const
 {
     QStringList triggers;
@@ -86,15 +75,6 @@ QStringList APMRadioComponent::setupCompleteChangedTriggerList(void) const
     triggers << "RCMAP_ROLL" << "RCMAP_PITCH" << "RCMAP_YAW" << "RCMAP_THROTTLE";
     
     return triggers;
-}
-
-QStringList APMRadioComponent::paramFilterList(void) const
-{
-    QStringList list;
-    
-    list << "RC*";
-    
-    return list;
 }
 
 QUrl APMRadioComponent::setupSource(void) const

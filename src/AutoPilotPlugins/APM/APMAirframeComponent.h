@@ -42,15 +42,13 @@ public:
     virtual QString iconResource(void) const;
     virtual bool requiresSetup(void) const;
     virtual bool setupComplete(void) const;
-    virtual QString setupStateDescription(void) const;
     virtual QUrl setupSource(void) const;
-    virtual QStringList paramFilterList(void) const;
     virtual QUrl summaryQmlSource(void) const;    
     virtual QString prerequisiteSetup(void) const;
 
 private:
+    bool            _copterFirmware;
     const QString   _name;
-    QVariantList    _summaryItems;
 };
 
 #endif
