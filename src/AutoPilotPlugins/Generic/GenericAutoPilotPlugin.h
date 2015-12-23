@@ -41,7 +41,7 @@ public:
     // Overrides from AutoPilotPlugin
     virtual const QVariantList& vehicleComponents(void);
 
-    virtual Fact* getRCMode(void);
+//    virtual Fact* getRCMode(void);
     
 public slots:
     // FIXME: This is public until we restructure AutoPilotPlugin/FirmwarePlugin/Vehicle
