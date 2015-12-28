@@ -58,9 +58,6 @@ const QString MissionCommands::_specifiesCoordinateJsonKey  (QStringLiteral("spe
 const QString MissionCommands::_unitsJsonKey                (QStringLiteral("units"));
 const QString MissionCommands::_versionJsonKey              (QStringLiteral("version"));
 
-const QString MissionCommands::_degreesConvertUnits         (QStringLiteral("degreesConvert"));
-const QString MissionCommands::_degreesUnits                (QStringLiteral("degrees"));
-
 MissionCommands::MissionCommands(QGCApplication* app)
     : QGCTool(app)
 {
@@ -130,7 +127,7 @@ void MissionCommands::_loadMavCmdInfoJson(void)
         // Make sure we have the required keys
         QStringList requiredKeys;
         requiredKeys << _idJsonKey << _rawNameJsonKey;
-        foreach (QString key, requiredKeys) {
+        foreach (const QString &key, requiredKeys) {
             if (!jsonObject.contains(key)) {
                 qWarning() << "Mission required key" << key;
                 return;
@@ -211,7 +208,7 @@ void MissionCommands::_loadMavCmdInfoJson(void)
                 paramInfo->_units =         paramObject.value(_unitsJsonKey).toString();
 
                 QStringList enumValues = paramObject.value(_enumValuesJsonKey).toString().split(",", QString::SkipEmptyParts);
-                foreach (QString enumValue, enumValues) {
+                foreach (const QString &enumValue, enumValues) {
                     bool    convertOk;
                     double  value = enumValue.toDouble(&convertOk);
 
@@ -295,7 +292,7 @@ const QStringList MissionCommands::categories(Vehicle* vehicle) const
 {
     QStringList list;
 
-    foreach (QString category, _categoryToMavCmdInfoListMap[_firmwareTypeFromVehicle(vehicle)].keys()) {
+    foreach (const QString &category, _categoryToMavCmdInfoListMap[_firmwareTypeFromVehicle(vehicle)].keys()) {
         list << category;
     }
 

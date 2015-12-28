@@ -238,14 +238,6 @@ MainWindow::MainWindow()
             move((scrSize.width() - w) / 2, (scrSize.height() - h) / 2);
         }
     }
-
-    // Make sure the proper fullscreen/normal menu item is checked properly.
-    _ui.actionFullscreen->setChecked(isFullScreen());
-    _ui.actionNormal->setChecked(!isFullScreen());
-
-    // And that they will stay checked properly after user input
-    connect(_ui.actionFullscreen, &QAction::triggered, this, &MainWindow::fullScreenActionItemCallback);
-    connect(_ui.actionNormal,     &QAction::triggered, this, &MainWindow::normalActionItemCallback);
 #endif
 
     connect(_ui.actionStatusBar,  &QAction::triggered, this, &MainWindow::showStatusBarCallback);
@@ -255,12 +247,10 @@ MainWindow::MainWindow()
     _ui.actionSetup->setShortcut(QApplication::translate("MainWindow", "Meta+1", 0));
     _ui.actionPlan->setShortcut(QApplication::translate("MainWindow", "Meta+2", 0));
     _ui.actionFlight->setShortcut(QApplication::translate("MainWindow", "Meta+3", 0));
-    _ui.actionFullscreen->setShortcut(QApplication::translate("MainWindow", "Meta+Return", 0));
 #else
     _ui.actionSetup->setShortcut(QApplication::translate("MainWindow", "Ctrl+1", 0));
     _ui.actionPlan->setShortcut(QApplication::translate("MainWindow", "Ctrl+2", 0));
     _ui.actionFlight->setShortcut(QApplication::translate("MainWindow", "Ctrl+3", 0));
-    _ui.actionFullscreen->setShortcut(QApplication::translate("MainWindow", "Ctrl+Return", 0));
 #endif
 
     _ui.actionFlight->setChecked(true);
@@ -411,26 +401,6 @@ NodeSelector* MainWindow::piNodeSelector()
 {
     static NodeSelector* nodeSelector = NodeSelector::instance(new QNetworkAccessManager());
     return nodeSelector;
-}
-
-void MainWindow::fullScreenActionItemCallback(bool)
-{
-    if (!_ui.actionFullscreen->isChecked())
-        _ui.actionFullscreen->setChecked(true);
-    _ui.actionNormal->setChecked(false);
-}
-
-void MainWindow::normalActionItemCallback(bool)
-{
-    if (!_ui.actionNormal->isChecked())
-        _ui.actionNormal->setChecked(true);
-    _ui.actionFullscreen->setChecked(false);
-
-    // Qt documentation says that just call showNormal and it will return properly
-    // So calling showMaximized.
-    if (isFullScreen()) {
-        showMaximized();
-    }
 }
 
 void MainWindow::showStatusBarCallback(bool checked)

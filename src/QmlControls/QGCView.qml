@@ -146,6 +146,8 @@ FactPanel {
         viewPanel.enabled = false
         __dialogOverlay.visible = true
 
+        __dialogComponentLoader.item.forceActiveFocus()
+
         __animateShowDialog.start()
     }
 
@@ -166,10 +168,13 @@ FactPanel {
         viewPanel.enabled = false
         __dialogOverlay.visible = true
 
+        __dialogComponentLoader.item.forceActiveFocus()
+
         __animateShowDialog.start()
     }
 
     function hideDialog() {
+        __dialogComponentLoader.item.focus = false
         viewPanel.enabled = true
         __animateHideDialog.start()
     }
@@ -272,7 +277,7 @@ FactPanel {
             anchors.top:    parent.top
             anchors.bottom: parent.bottom
             anchors.left:   parent.left
-            width:          parent.width
+            anchors.right:  __dialogPanel.left
             opacity:        0.0
             color:          __qgcPal.window
         }
@@ -284,7 +289,7 @@ FactPanel {
             anchors.topMargin:  topDialogMargin
             anchors.top:        parent.top
             anchors.bottom:     parent.bottom
-            anchors.left:       __transparentSection.right
+            anchors.right:      parent.right
             color:              __qgcPal.windowShadeDark
 
             Rectangle {
@@ -336,6 +341,9 @@ FactPanel {
                 anchors.top:        __spacer.bottom
                 anchors.bottom:     parent.bottom
                 sourceComponent:    __dialogComponent
+
+                property bool acceptAllowed: __acceptButton.visible
+                property bool rejectAllowed: __rejectButton.visible
             }
         } // Rectangle - Dialog panel
     } // Item - Dialog overlay
