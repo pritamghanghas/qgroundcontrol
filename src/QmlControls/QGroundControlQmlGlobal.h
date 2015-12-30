@@ -77,6 +77,8 @@ public:
 
     Q_PROPERTY(Fact*    offlineEditingFirmwareType READ offlineEditingFirmwareType CONSTANT)
 
+    Q_PROPERTY(NodeSelector*        nodeSelector        READ nodeSelector           CONSTANT)
+
     Q_INVOKABLE void    saveGlobalSetting       (const QString& key, const QString& value);
     Q_INVOKABLE QString loadGlobalSetting       (const QString& key, const QString& defaultValue);
     Q_INVOKABLE void    saveBoolGlobalSetting   (const QString& key, bool value);
@@ -115,6 +117,8 @@ public:
     int     mavlinkSystemID         () { return _toolbox->mavlinkProtocol()->getSystemId(); }
 
     Fact*   offlineEditingFirmwareType () { return &_offlineEditingFirmwareTypeFact; }
+
+    NodeSelector*         nodeSelector () { return NodeSelector::instance(); }
 
     //-- TODO: Make this into an actual preference.
     bool    isAdvancedMode          () { return false; }

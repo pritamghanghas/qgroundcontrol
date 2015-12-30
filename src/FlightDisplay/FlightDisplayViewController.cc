@@ -29,7 +29,7 @@ This file is part of the QGROUNDCONTROL project
 
 #include "ScreenToolsController.h"
 #include "FlightDisplayViewController.h"
-#include "MainWindow.h"
+#include "nodeselector.h"
 
 const char* kMainFlightDisplayViewControllerGroup = "FlightDisplayViewController";
 
@@ -62,7 +62,7 @@ FlightDisplayViewController::FlightDisplayViewController(QObject *parent)
      * Do not change anything else unless you know what you are doing. Any other change will require a matching change on the receiving end.
      *
      */
-    _videoReceiver = new VideoReceiver(MainWindow::instance()->piNodeSelector(), this);
+    _videoReceiver = new VideoReceiver(NodeSelector::instance(), this);
     _videoSurface = new VideoSurface;
 #if defined(QGC_GST_STREAMING)
     _videoReceiver->setVideoSink(_videoSurface->videoSink());
