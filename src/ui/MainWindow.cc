@@ -50,8 +50,6 @@ This file is part of the QGROUNDCONTROL project
 #include "QGCApplication.h"
 #include "MultiVehicleManager.h"
 #include "HomePositionManager.h"
-#include "nodeselector.h"
-#include "pidiscoverer.h"
 #include "LogCompressor.h"
 #include "UAS.h"
 #include "QGCImageProvider.h"
@@ -283,8 +281,6 @@ MainWindow::MainWindow()
 #endif
     }
 
-    piNodeSelector();
-
 #ifndef __mobile__
     _loadVisibleWidgetsSettings();
 #endif
@@ -396,12 +392,6 @@ void MainWindow::_showDockWidgetAction(bool show)
     _showDockWidget(rgDockWidgetNames[action->data().toInt()], show);
 }
 #endif
-
-NodeSelector* MainWindow::piNodeSelector()
-{
-    static NodeSelector* nodeSelector = NodeSelector::instance(new QNetworkAccessManager());
-    return nodeSelector;
-}
 
 void MainWindow::showStatusBarCallback(bool checked)
 {
@@ -529,10 +519,6 @@ void MainWindow::connectCommonActions()
 
     // Application Settings
     connect(_ui.actionSettings, SIGNAL(triggered()), this, SLOT(showSettings()));
-
-    // pi related
-    connect(_ui.actionShutdown_UAV, &QAction::triggered, piNodeSelector(), &NodeSelector::shutdownAll);
-    connect(_ui.action_Restart_UAV, &QAction::triggered, piNodeSelector(), &NodeSelector::restartAll);
 
     // Views actions
     connect(_ui.actionFlight,   &QAction::triggered,    qgcApp(),   &QGCApplication::showFlyView);

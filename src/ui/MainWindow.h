@@ -60,8 +60,6 @@ This file is part of the QGROUNDCONTROL project
     #include "Mouse6dofInput.h"
 #endif // QGC_MOUSE_ENABLED_WIN
 
-class PiDiscoverer;
-class NodeSelector;
 class QGCStatusBar;
 class Linecharts;
 class QGCDataPlot2D;
@@ -96,8 +94,6 @@ public:
 
     /// @brief Saves the last used connection
     void saveLastUsedConnection(const QString connection);
-
-    NodeSelector* piNodeSelector();
 
     // Called from MainWindow.qml when the user accepts the window close dialog
     Q_INVOKABLE void acceptWindowClose(void);
