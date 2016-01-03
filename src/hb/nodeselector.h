@@ -13,7 +13,7 @@ class NodeSelector : public QObject
     Q_OBJECT
 public:
     static NodeSelector* instance(QNetworkAccessManager *nam = 0);
-    QString deviceAddress() const;
+    QString deviceAddress(const PiNode& node) const;
     PiDiscoverer* discoverer() const { return m_discoverer; }
     QString videoUriForCurrentNode();
 

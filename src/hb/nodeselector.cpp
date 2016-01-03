@@ -135,7 +135,7 @@ void NodeSelector::onNewNodeDiscovered(const PiNode &node)
         if (node.caps & PiNode::MAVProxy) { // has mav capability
             if (!(node.capsRunning & PiNode::MAVProxy)) { // mav proxy is not running
                 QString mavcmd = "http://" + node.addressString + ":8080/mavproxy/?command=" + MAVPROXY_REMOTE_CMD;
-                mavcmd.replace("$CLIENT_IP", deviceAddress());
+                mavcmd.replace("$CLIENT_IP", deviceAddress(node));
                 qDebug() << "mav command " << mavcmd;
                 QVariantMap map;
                 map.insert("requestFor", PiNode::MAVProxy);
@@ -165,7 +165,7 @@ int NodeSelector::startStreaming(const PiNode &node, const QString &optionsStrin
             if (!(node.capsRunning & PiNode::PiCam)) { //picam is not running
                 QString servercmd = "http://$SERVER_IP:8080/picam/?command=" + PICAM_REMOTE_CMD;
                 servercmd = servercmd.replace("$SERVER_IP", node.addressString);
-                servercmd = servercmd.replace("$CLIENT_IP", deviceAddress());
+                servercmd = servercmd.replace("$CLIENT_IP", deviceAddress(node));
                 servercmd = servercmd.replace("$UDP_PORT", QString::number(node.targetStreamingPort));
                 servercmd = servercmd.replace("$OPT_STRING", optionsString);
                 qDebug() << "SERVER CMD: " << servercmd;
@@ -230,7 +230,8 @@ void NodeSelector::terminateThermal(int index)
     terminateThermal(nodes.at(index));
 }
 
-QString NodeSelector::deviceAddress() const
+// get network interface address corresponding to node that we are dealing with right now.
+QString NodeSelector::deviceAddress(const PiNode& node) const
 {
     QList<QHostAddress> addresses = QNetworkInterface::allAddresses();
     QHostAddress addr;
@@ -238,12 +239,17 @@ QString NodeSelector::deviceAddress() const
         if (address.isLoopback()) {
             continue;
         }
-        addr = address;
-        break;
+
+        // netmask is always assumed to be 24 not probably right
+        if(address.isInSubnet(QHostAddress::parseSubnet(node.addressString + "/24"))) {
+            addr = address;
+            break;
+        }
+
     }
 
     QString address = addr.toString();
-    qDebug() << "got the following address for the host device" << address;
+    qDebug() << "got the following address for the host device connected to target node" << address;
     return address;
 }
 
