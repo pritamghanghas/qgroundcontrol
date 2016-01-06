@@ -112,7 +112,7 @@ void APMFirmwareVersion::_parseVersion(const QString &versionText)
     _vehicleType   = capturedTexts[1];
     _major         = capturedTexts[2].toInt();
     _minor         = capturedTexts[3].toInt();
-    _patch         = capturedTexts[4].toInt();joystick
+    _patch         = capturedTexts[4].toInt();
 }
 
 
