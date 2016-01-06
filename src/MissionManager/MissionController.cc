@@ -214,6 +214,7 @@ void MissionController::removeAllMissionItems(void)
     _missionItems = new QmlObjectListModel(this);
 
     _initAllMissionItems();
+    _missionItems->setDirty(true);
 }
 
 void MissionController::loadMissionFromFile(void)
@@ -483,18 +484,21 @@ void MissionController::_initAllMissionItems(void)
     }
     homeItem->setHomePositionSpecialCase(true);
     if (_activeVehicle) {
-        homeItem->setCoordinate(_activeVehicle->homePosition());
         homeItem->setHomePositionValid(_activeVehicle->homePositionAvailable());
+        if (homeItem->homePositionValid()) {
+            homeItem->setCoordinate(_activeVehicle->homePosition());
+        }
     } else {
         homeItem->setHomePositionValid(false);
     }
     homeItem->setCommand(MAV_CMD_NAV_WAYPOINT);
     homeItem->setFrame(MAV_FRAME_GLOBAL);
     if (!homeItem->homePositionValid()) {
-        QGeoCoordinate homeCoord = homeItem->coordinate();
-        homeCoord.setAltitude(0.0);
-        homeItem->setCoordinate(homeCoord);
+        // Set a bogus home position, the important value is 0.0 Altitude
+        homeItem->setCoordinate(QGeoCoordinate(37.803784, -122.462276, 0.0));
     }
+
+    qDebug() << "home item" << homeItem->homePositionValid() << homeItem->coordinate();
 
     for (int i=0; i<_missionItems->count(); i++) {
         _initMissionItem(qobject_cast<MissionItem*>(_missionItems->get(i)));
