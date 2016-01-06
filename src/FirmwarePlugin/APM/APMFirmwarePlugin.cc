@@ -112,7 +112,7 @@ void APMFirmwareVersion::_parseVersion(const QString &versionText)
     _vehicleType   = capturedTexts[1];
     _major         = capturedTexts[2].toInt();
     _minor         = capturedTexts[3].toInt();
-    _patch         = capturedTexts[4].toInt();
+    _patch         = capturedTexts[4].toInt();joystick
 }
 
 
@@ -209,7 +209,7 @@ int APMFirmwarePlugin::manualControlReservedButtonCount(void)
 {
     // We don't know whether the firmware is going to used any of these buttons.
     // So reserve them all.
-    return -1;
+    return 0;
 }
 
 void APMFirmwarePlugin::adjustMavlinkMessage(Vehicle* vehicle, mavlink_message_t* message)
