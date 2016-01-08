@@ -41,7 +41,7 @@ Item {
     property real size:     _defaultSize
 
     property real _defaultSize: ScreenTools.defaultFontPixelSize * (10)
-    property real _sizeRatio:   ScreenTools.isTinyScreen ? (size / _defaultSize) * 0.5 : size / _defaultSize
+    property real _sizeRatio:   size / _defaultSize
     property int  _fontSize:    ScreenTools.defaultFontPixelSize * _sizeRatio
 
     width:                  size
