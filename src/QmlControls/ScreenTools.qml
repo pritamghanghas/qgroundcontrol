@@ -9,17 +9,17 @@ import QGroundControl.ScreenToolsController 1.0
 Item {
     signal repaintRequested
 
-    readonly property real defaultFontPixelSize:    isTinyScreen ? (_textMeasure.fontHeight * ScreenToolsController.defaultFontPixelSizeRatio)*0.45 : _textMeasure.fontHeight * ScreenToolsController.defaultFontPixelSizeRatio
+    readonly property real defaultFontPixelSize:    isTinyScreen ? (_textMeasure.fontHeight * ScreenToolsController.defaultFontPixelSizeRatio)*0.6 : _textMeasure.fontHeight * ScreenToolsController.defaultFontPixelSizeRatio
     readonly property real defaultFontPixelHeight:  defaultFontPixelSize
     readonly property real defaultFontPixelWidth:   _textMeasure.fontWidth
-    readonly property real smallFontPixelSize:      isTinyScreen ? (defaultFontPixelSize * ScreenToolsController.smallFontPixelSizeRatio)*0.6 :  defaultFontPixelSize * ScreenToolsController.smallFontPixelSizeRatio
+    readonly property real smallFontPixelSize:      isTinyScreen ? (defaultFontPixelSize * ScreenToolsController.smallFontPixelSizeRatio)*0.65 :  defaultFontPixelSize * ScreenToolsController.smallFontPixelSizeRatio
     readonly property real smallFontPixelHeight:    smallFontPixelSize
     readonly property real smallFontPixelWidth:     defaultFontPixelWidth * ScreenToolsController.smallFontPixelSizeRatio
 
     // To proportionally scale fonts
 
     readonly property real  _defaultFontHeight: 16
-    readonly property real  fontHRatio:         isTinyScreen ? (_textMeasure.contentHeight / _defaultFontHeight) * 0.75 : (_textMeasure.contentHeight / _defaultFontHeight)
+    readonly property real  fontHRatio:         isTinyScreen ? (_textMeasure.contentHeight / _defaultFontHeight) * 0.8 : (_textMeasure.contentHeight / _defaultFontHeight)
     readonly property real  realFontHeight:     _textMeasure.contentHeight
     readonly property real  realFontWidth :     _textMeasure.contentWidth
 

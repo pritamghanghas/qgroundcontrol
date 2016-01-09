@@ -40,7 +40,7 @@ Rectangle {
     property real _reticleSlot:     _reticleSpacing + _reticleHeight
     property real _longDash:        size * 0.40
     property real _shortDash:       size * 0.25
-    property real _fontSize:        ScreenTools.defaultFontPixelSize * (size / _defaultSize)
+    property real _fontSize:        ScreenTools.isTinyScreen ? ScreenTools.defaultFontPixelSize * (size / _defaultSize) *1.5 : ScreenTools.defaultFontPixelSize * (size / _defaultSize)
 
     property real _defaultSize:     ScreenTools.isAndroid ? 300 : 100
 
