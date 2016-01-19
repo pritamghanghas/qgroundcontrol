@@ -34,6 +34,7 @@
 #include "ParameterLoader.h"
 #include "QGCApplication.h"
 #include "QGCImageProvider.h"
+#include "GAudioOutput.h"
 
 QGC_LOGGING_CATEGORY(VehicleLog, "VehicleLog")
 
@@ -88,7 +89,6 @@ Vehicle::Vehicle(LinkInterface*             link,
     , _batteryVoltage(-1.0f)
     , _batteryPercent(0.0)
     , _batteryConsumed(-1.0)
-    , _currentHeartbeatTimeout(0)
     , _satelliteCount(-1)
     , _satRawHDOP(1e10f)
     , _satRawVDOP(1e10f)
@@ -97,6 +97,8 @@ Vehicle::Vehicle(LinkInterface*             link,
     , _updateCount(0)
     , _rcRSSI(0)
     , _rcRSSIstore(100.0)
+    , _connectionLost(false)
+    , _connectionLostEnabled(true)
     , _missionManager(NULL)
     , _missionManagerInitialRequestComplete(false)
     , _parameterLoader(NULL)
@@ -116,6 +118,7 @@ Vehicle::Vehicle(LinkInterface*             link,
 
     connect(_mavlink, &MAVLinkProtocol::messageReceived,     this, &Vehicle::_mavlinkMessageReceived);
     connect(this, &Vehicle::_sendMessageOnThread, this, &Vehicle::_sendMessage, Qt::QueuedConnection);
+    connect(this, &Vehicle::_sendMessageOnLinkOnThread, this, &Vehicle::_sendMessageOnLink, Qt::QueuedConnection);
 
     _uas = new UAS(_mavlink, this, _firmwarePluginManager);
 
@@ -134,10 +137,15 @@ Vehicle::Vehicle(LinkInterface*             link,
     connect(_autopilotPlugin, &AutoPilotPlugin::missingParametersChanged,   this, &Vehicle::missingParametersChanged);
 
     // Refresh timer
-    connect(_refreshTimer, SIGNAL(timeout()), this, SLOT(_checkUpdate()));
+    connect(_refreshTimer, &QTimer::timeout, this, &Vehicle::_checkUpdate);
     _refreshTimer->setInterval(UPDATE_TIMER);
     _refreshTimer->start(UPDATE_TIMER);
-    emit heartbeatTimeoutChanged();
+
+    // Connection Lost time
+    _connectionLostTimer.setInterval(Vehicle::_connectionLostTimeoutMSecs);
+    _connectionLostTimer.setSingleShot(false);
+    _connectionLostTimer.start();
+    connect(&_connectionLostTimer, &QTimer::timeout, this, &Vehicle::_connectionLostTimeout);
 
     _mav = uas();
     // Reset satellite data (no GPS)
@@ -150,21 +158,18 @@ Vehicle::Vehicle(LinkInterface*             link,
     emit satRawCOGChanged();
     emit satelliteCountChanged();
 
-    // Reset connection lost (if any)
-    _currentHeartbeatTimeout = 0;
-    emit heartbeatTimeoutChanged();
     // Listen for system messages
     connect(qgcApp()->toolbox()->uasMessageHandler(), &UASMessageHandler::textMessageCountChanged,  this, &Vehicle::_handleTextMessage);
     connect(qgcApp()->toolbox()->uasMessageHandler(), &UASMessageHandler::textMessageReceived,      this, &Vehicle::_handletextMessageReceived);
     // Now connect the new UAS
     connect(_mav, SIGNAL(attitudeChanged                    (UASInterface*,double,double,double,quint64)),              this, SLOT(_updateAttitude(UASInterface*, double, double, double, quint64)));
     connect(_mav, SIGNAL(attitudeChanged                    (UASInterface*,int,double,double,double,quint64)),          this, SLOT(_updateAttitude(UASInterface*,int,double, double, double, quint64)));
-    connect(_mav, SIGNAL(speedChanged                       (UASInterface*, double, double, quint64)),                  this, SLOT(_updateSpeed(UASInterface*, double, double, quint64)));
-    connect(_mav, SIGNAL(altitudeChanged                    (UASInterface*, double, double, double, double, quint64)),  this, SLOT(_updateAltitude(UASInterface*, double, double, double, double, quint64)));
-    connect(_mav, SIGNAL(navigationControllerErrorsChanged  (UASInterface*, double, double, double)),                   this, SLOT(_updateNavigationControllerErrors(UASInterface*, double, double, double)));
     connect(_mav, SIGNAL(statusChanged                      (UASInterface*,QString,QString)),                           this, SLOT(_updateState(UASInterface*, QString,QString)));
+
+    connect(_mav, &UASInterface::speedChanged, this, &Vehicle::_updateSpeed);
+    connect(_mav, &UASInterface::altitudeChanged, this, &Vehicle::_updateAltitude);
+    connect(_mav, &UASInterface::navigationControllerErrorsChanged,this, &Vehicle::_updateNavigationControllerErrors);
     connect(_mav, &UASInterface::NavigationControllerDataChanged,   this, &Vehicle::_updateNavigationControllerData);
-    connect(_mav, &UASInterface::heartbeatTimeout,                  this, &Vehicle::_heartbeatTimeout);
     connect(_mav, &UASInterface::batteryChanged,                    this, &Vehicle::_updateBatteryRemaining);
     connect(_mav, &UASInterface::batteryConsumedChanged,            this, &Vehicle::_updateBatteryConsumedChanged);
     connect(_mav, &UASInterface::localizationChanged,               this, &Vehicle::_setSatLoc);
@@ -183,8 +188,8 @@ Vehicle::Vehicle(LinkInterface*             link,
     connect(_missionManager, &MissionManager::error, this, &Vehicle::_missionManagerError);
 
     _parameterLoader = new ParameterLoader(_autopilotPlugin, this /* Vehicle */, this /* parent */);
-    connect(_parameterLoader, SIGNAL(parametersReady(bool)),        _autopilotPlugin, SLOT(_parametersReadyPreChecks(bool)));
-    connect(_parameterLoader, SIGNAL(parameterListProgress(float)), _autopilotPlugin, SIGNAL(parameterListProgress(float)));
+    connect(_parameterLoader, &ParameterLoader::parametersReady, _autopilotPlugin, &AutoPilotPlugin::_parametersReadyPreChecks);
+    connect(_parameterLoader, &ParameterLoader::parameterListProgress, _autopilotPlugin, &AutoPilotPlugin::parameterListProgress);
 
     _firmwarePlugin->initializeVehicle(this);
 
@@ -279,6 +284,7 @@ void Vehicle::_handleHomePosition(mavlink_message_t& message)
 
     if (emitHomePositionChanged) {
         qCDebug(VehicleLog) << "New home position" << newHomePosition;
+        qgcApp()->setDefaultMapPosition(_homePosition);
         emit homePositionChanged(_homePosition);
     }
     if (emitHomePositionAvailableChanged) {
@@ -288,6 +294,8 @@ void Vehicle::_handleHomePosition(mavlink_message_t& message)
 
 void Vehicle::_handleHeartbeat(mavlink_message_t& message)
 {
+    _connectionActive();
+
     mavlink_heartbeat_t heartbeat;
 
     mavlink_msg_heartbeat_decode(&message, &heartbeat);
@@ -434,26 +442,66 @@ void Vehicle::sendMessage(mavlink_message_t message)
     emit _sendMessageOnThread(message);
 }
 
+bool Vehicle::sendMessageOnLink(LinkInterface* link, mavlink_message_t message)
+{
+    if (!link || !_links.contains(link) || !link->isConnected()) {
+        return false;
+    }
+
+    emit _sendMessageOnLinkOnThread(link, message);
+
+    return true;
+}
+
+void Vehicle::_sendMessageOnLink(LinkInterface* link, mavlink_message_t message)
+{
+    // Make sure this is still a good link
+    if (!link || !_links.contains(link) || !link->isConnected()) {
+        return;
+    }
+
+    // Give the plugin a chance to adjust
+    _firmwarePlugin->adjustMavlinkMessage(this, &message);
+
+    static const uint8_t messageKeys[256] = MAVLINK_MESSAGE_CRCS;
+    mavlink_finalize_message_chan(&message, _mavlink->getSystemId(), _mavlink->getComponentId(), link->getMavlinkChannel(), message.len, messageKeys[message.msgid]);
+
+    // Write message into buffer, prepending start sign
+    uint8_t buffer[MAVLINK_MAX_PACKET_LEN];
+    int len = mavlink_msg_to_send_buffer(buffer, &message);
+
+    link->writeBytes((const char*)buffer, len);
+}
+
 void Vehicle::_sendMessage(mavlink_message_t message)
 {
     // Emit message on all links that are currently connected
     foreach (LinkInterface* link, _links) {
         if (link->isConnected()) {
-            MAVLinkProtocol* mavlink = _mavlink;
-
-            // Give the plugin a chance to adjust
-            _firmwarePlugin->adjustMavlinkMessage(this, &message);
-
-            static const uint8_t messageKeys[256] = MAVLINK_MESSAGE_CRCS;
-            mavlink_finalize_message_chan(&message, mavlink->getSystemId(), mavlink->getComponentId(), link->getMavlinkChannel(), message.len, messageKeys[message.msgid]);
-
-            // Write message into buffer, prepending start sign
-            uint8_t buffer[MAVLINK_MAX_PACKET_LEN];
-            int len = mavlink_msg_to_send_buffer(buffer, &message);
-
-            link->writeBytes((const char*)buffer, len);
+            _sendMessageOnLink(link, message);
         }
     }
+}
+
+/// @return Direct usb connection link to board if one, NULL if none
+LinkInterface* Vehicle::priorityLink(void)
+{
+    foreach (LinkInterface* link, _links) {
+        if (link->isConnected()) {
+            SerialLink* pSerialLink = qobject_cast<SerialLink*>(link);
+            if (pSerialLink) {
+                LinkConfiguration* pLinkConfig = pSerialLink->getLinkConfiguration();
+                if (pLinkConfig) {
+                    SerialConfiguration* pSerialConfig = qobject_cast<SerialConfiguration*>(pLinkConfig);
+                    if (pSerialConfig && pSerialConfig->usbDirect()) {
+                        return link;
+                    }
+                }
+            }
+        }
+    }
+
+    return _links.count() ? _links[0] : NULL;
 }
 
 void Vehicle::setLatitude(double latitude)
@@ -740,19 +788,6 @@ void Vehicle::_updateState(UASInterface*, QString name, QString)
     if (_currentState != name) {
         _currentState = name;
         emit currentStateChanged();
-    }
-}
-
-void Vehicle::_heartbeatTimeout(bool timeout, unsigned int ms)
-{
-    unsigned int elapsed = ms;
-    if (!timeout)
-    {
-        elapsed = 0;
-    }
-    if(elapsed != _currentHeartbeatTimeout) {
-        _currentHeartbeatTimeout = elapsed;
-        emit heartbeatTimeoutChanged();
     }
 }
 
@@ -1215,5 +1250,44 @@ void Vehicle::_remoteControlRSSIChanged(uint8_t rssi)
 
 void Vehicle::virtualTabletJoystickValue(double roll, double pitch, double yaw, double thrust)
 {
-    _uas->setExternalControlSetpoint(roll, pitch, yaw, thrust, 0, JoystickModeRC);
+    // The following if statement prevents the virtualTabletJoystick from sending values if the standard joystick is enabled
+    if ( !_joystickEnabled ) {
+        _uas->setExternalControlSetpoint(roll, pitch, yaw, thrust, 0, JoystickModeRC);
+    }
+}
+
+void Vehicle::setConnectionLostEnabled(bool connectionLostEnabled)
+{
+    if (_connectionLostEnabled != connectionLostEnabled) {
+        _connectionLostEnabled = connectionLostEnabled;
+        emit connectionLostEnabledChanged(_connectionLostEnabled);
+    }
+}
+
+void Vehicle::_connectionLostTimeout(void)
+{
+    if (_connectionLostEnabled && !_connectionLost) {
+        _connectionLost = true;
+        emit connectionLostChanged(true);
+
+        _say(QString("connection lost to vehicle %1").arg(id()), GAudioOutput::AUDIO_SEVERITY_NOTICE);
+    }
+}
+
+void Vehicle::_connectionActive(void)
+{
+    _connectionLostTimer.start();
+
+    if (_connectionLost) {
+        _connectionLost = false;
+        emit connectionLostChanged(false);
+
+        _say(QString("connection regained to vehicle %1").arg(id()), GAudioOutput::AUDIO_SEVERITY_NOTICE);
+    }
+}
+
+void Vehicle::_say(const QString& text, int severity)
+{
+    if (!qgcApp()->runningUnitTests())
+        qgcApp()->toolbox()->audioOutput()->say(text.toLower(), severity);
 }

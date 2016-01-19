@@ -71,7 +71,7 @@ public:
     Q_INVOKABLE void resetAllParametersToDefaults(void);
 
     /// Re-request the full set of parameters from the autopilot
-    Q_INVOKABLE void refreshAllParameters(void);
+    Q_INVOKABLE void refreshAllParameters(unsigned char componentID = MAV_COMP_ID_ALL);
 
     /// Request a refresh on the specific parameter
     Q_INVOKABLE void refreshParameter(int componentId, const QString& name);
@@ -120,6 +120,7 @@ public:
     bool setupComplete(void);
 
     Vehicle* vehicle(void) { return _vehicle; }
+    virtual void _parametersReadyPreChecks(bool parametersReady) = 0;
 
 signals:
     void parametersReadyChanged(bool parametersReady);

@@ -190,16 +190,22 @@ Rectangle {
 
     function getGpsLockStatus() {
         if(activeVehicle) {
-            if(activeVehicle.satelliteLock == 0) {
-                return "No Satellite Link"
-            }
-            if(activeVehicle.satelliteLock == 1) {
-                return "No GPS Lock"
+            if(activeVehicle.satelliteLock < 2) {
+                return "No Satellite Lock"
             }
             if(activeVehicle.satelliteLock == 2) {
                 return "2D Lock"
             }
-            return "3D Lock"
+            if(activeVehicle.satelliteLock == 3) {
+                return "3D Lock"
+            }
+            if(activeVehicle.satelliteLock == 4) {
+                return "3D DGPS Lock"
+            }
+            if(activeVehicle.satelliteLock == 5) {
+                return "3D RTK GPS Lock"
+            }
+            return "Unkown Lock Type (" + activeVehicle.satelliteLock + ")"
         }
         return "N/A"
     }
@@ -226,14 +232,14 @@ Rectangle {
                 anchors.centerIn:   parent
                 QGCLabel {
                     id:         gpsLabel
-                    text:       (activeVehicle && (activeVehicle.satelliteCount > 0)) ? "GPS Status" : "GPS Data Unavailable"
+                    text:       (activeVehicle && activeVehicle.satelliteCount >= 0) ? "GPS Status" : "GPS Data Unavailable"
                     font.weight:Font.DemiBold
                     color:      colorWhite
                     anchors.horizontalCenter: parent.horizontalCenter
                 }
                 GridLayout {
                     id:                 gpsGrid
-                    visible:            (activeVehicle && (activeVehicle.satelliteCount > 0))
+                    visible:            (activeVehicle && activeVehicle.satelliteCount >= 0)
                     anchors.margins:    ScreenTools.defaultFontPixelHeight
                     columnSpacing:      ScreenTools.defaultFontPixelWidth
                     anchors.horizontalCenter: parent.horizontalCenter
@@ -578,10 +584,10 @@ Rectangle {
         anchors.right:          parent.right
         anchors.verticalCenter: parent.verticalCenter
 
-        property bool vehicleInactive: activeVehicle ? activeVehicle.heartbeatTimeout != 0 : false
+        property bool vehicleConnectionLost: activeVehicle ? activeVehicle.connectionLost : false
 
         Loader {
-            source:                 activeVehicle && !parent.vehicleInactive ? "MainToolBarIndicators.qml" : ""
+            source:                 activeVehicle && !parent.vehicleConnectionLost ? "MainToolBarIndicators.qml" : ""
             anchors.left:           parent.left
             anchors.verticalCenter: parent.verticalCenter
         }
@@ -594,7 +600,7 @@ Rectangle {
             color:                  colorRed
             anchors.left:           parent.left
             anchors.verticalCenter: parent.verticalCenter
-            visible:                parent.vehicleInactive
+            visible:                parent.vehicleConnectionLost
 
         }
 
@@ -603,7 +609,7 @@ Rectangle {
             anchors.right:          parent.right
             anchors.verticalCenter: parent.verticalCenter
             text:                   "Disconnect"
-            visible:                parent.vehicleInactive
+            visible:                parent.vehicleConnectionLost
             onClicked:              activeVehicle.disconnectInactiveVehicle()
         }
     }

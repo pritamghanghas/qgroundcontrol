@@ -68,6 +68,7 @@
 #include "APMSensorsComponentController.h"
 #include "PowerComponentController.h"
 #include "RadioComponentController.h"
+#include "ESP8266ComponentController.h"
 #include "ScreenToolsController.h"
 #include "AutoPilotPlugin.h"
 #include "VehicleComponent.h"
@@ -113,6 +114,12 @@
     #include "OpalLink.h"
 #endif
 
+#ifdef Q_OS_LINUX
+#ifndef __mobile__
+#include <unistd.h>
+#include <sys/types.h>
+#endif
+#endif
 
 QGCApplication* QGCApplication::_app = NULL;
 
@@ -121,6 +128,8 @@ const char* QGCApplication::_settingsVersionKey             = "SettingsVersion";
 const char* QGCApplication::_promptFlightDataSave           = "PromptFLightDataSave";
 const char* QGCApplication::_promptFlightDataSaveNotArmed   = "PromptFLightDataSaveNotArmed";
 const char* QGCApplication::_styleKey                       = "StyleIsDark";
+const char* QGCApplication::_defaultMapPositionLatKey       = "DefaultMapPositionLat";
+const char* QGCApplication::_defaultMapPositionLonKey       = "DefaultMapPositionLon";
 
 const char* QGCApplication::_darkStyleFile          = ":/res/styles/style-dark.css";
 const char* QGCApplication::_lightStyleFile         = ":/res/styles/style-light.css";
@@ -176,6 +185,7 @@ QGCApplication::QGCApplication(int &argc, char* argv[], bool unitTesting)
 #endif
     , _toolbox(NULL)
     , _bluetoothAvailable(false)
+    , _defaultMapPosition(37.803784, -122.462276)
 {
     Q_ASSERT(_app == NULL);
     _app = this;
@@ -183,6 +193,47 @@ QGCApplication::QGCApplication(int &argc, char* argv[], bool unitTesting)
     // This prevents usage of QQuickWidget to fail since it doesn't support native widget siblings
 #ifndef __android__
     setAttribute(Qt::AA_DontCreateNativeWidgetSiblings);
+#endif
+
+#ifdef Q_OS_LINUX
+#ifndef __mobile__
+    if (!_runningUnitTests) {
+        if (getuid() == 0) {
+            QMessageBox msgBox;
+            msgBox.setInformativeText("You are runnning QGroundControl as root. "
+                                      "You should not do this since it will cause other issues with QGroundControl. "
+                                      "QGroundControl will now exit. "
+                                      "If you are having serial port issues on Ubuntu, execute the following commands to fix most issues:\n"
+                                      "sudo usermod -a -G dialout $USER\n"
+                                      "sudo apt-get remove modemmanager");
+            msgBox.setStandardButtons(QMessageBox::Ok);
+            msgBox.setDefaultButton(QMessageBox::Ok);
+            msgBox.exec();
+            _exit(0);
+        }
+
+        // Determine if we have the correct permissions to access USB serial devices
+        QFile permFile("/etc/group");
+        if(permFile.open(QIODevice::ReadOnly)) {
+            while(!permFile.atEnd()) {
+                QString line = permFile.readLine();
+                if (line.contains("dialout") && !line.contains(getenv("USER"))) {
+                    QMessageBox msgBox;
+                    msgBox.setInformativeText("The current user does not have the correct permissions to access serial devices. "
+                                              "You should also remove modemmanager since it also interferes. "
+                                              "If you are using Ubuntu, execute the following commands to fix these issues:\n"
+                                              "sudo usermod -a -G dialout $USER\n"
+                                              "sudo apt-get remove modemmanager");
+                    msgBox.setStandardButtons(QMessageBox::Ok);
+                    msgBox.setDefaultButton(QMessageBox::Ok);
+                    msgBox.exec();
+                    break;
+                }
+            }
+            permFile.close();
+        }
+    }
+#endif
 #endif
 
     // Parse command line options
@@ -295,18 +346,9 @@ QGCApplication::QGCApplication(int &argc, char* argv[], bool unitTesting)
     this->setApplicationVersion(versionString);
 
     // Set settings format
-#if !defined(__mobile__) && !defined(__macos__)
     QSettings::setDefaultFormat(QSettings::IniFormat);
-#else
-    QString settingsLocation = QStandardPaths::writableLocation(QStandardPaths::ConfigLocation);
-    if(!settingsLocation.isEmpty())
-    {
-        QSettings::setPath(QSettings::NativeFormat, QSettings::UserScope, settingsLocation);
-    }
-#endif
-
     QSettings settings;
-    qDebug() << "Settings location" << settings.fileName() << settings.isWritable();
+    qDebug() << "Settings location" << settings.fileName() << "Is writable?:" << settings.isWritable();
 
 #ifdef UNITTEST_BUILD
     if (!settings.isWritable()) {
@@ -326,6 +368,9 @@ QGCApplication::QGCApplication(int &argc, char* argv[], bool unitTesting)
         settings.clear();
         settings.setValue(_settingsVersionKey, QGC_SETTINGS_VERSION);
     }
+
+    _defaultMapPosition.setLatitude(settings.value(_defaultMapPositionLatKey, 37.803784).toDouble());
+    _defaultMapPosition.setLongitude(settings.value(_defaultMapPositionLonKey, -122.462276).toDouble());
 
     // Initialize Bluetooth
 #ifdef QGC_ENABLE_BLUETOOTH
@@ -387,6 +432,7 @@ void QGCApplication::_initCommon(void)
     qmlRegisterType<SensorsComponentController>         ("QGroundControl.Controllers", 1, 0, "SensorsComponentController");
     qmlRegisterType<PowerComponentController>           ("QGroundControl.Controllers", 1, 0, "PowerComponentController");
     qmlRegisterType<RadioComponentController>           ("QGroundControl.Controllers", 1, 0, "RadioComponentController");
+    qmlRegisterType<ESP8266ComponentController>         ("QGroundControl.Controllers", 1, 0, "ESP8266ComponentController");
     qmlRegisterType<ScreenToolsController>              ("QGroundControl.Controllers", 1, 0, "ScreenToolsController");
     qmlRegisterType<MainToolBarController>              ("QGroundControl.Controllers", 1, 0, "MainToolBarController");
     qmlRegisterType<MissionController>                  ("QGroundControl.Controllers", 1, 0, "MissionController");
@@ -436,7 +482,7 @@ bool QGCApplication::_initForNormalAppBoot(void)
     _loadCurrentStyle();
 
     // Exit main application when last window is closed
-    connect(this, SIGNAL(lastWindowClosed()), this, SLOT(quit()));
+    connect(this, &QGCApplication::lastWindowClosed, this, QGCApplication::quit);
 
 #ifdef __mobile__
     _qmlAppEngine = new QQmlApplicationEngine(this);
@@ -636,7 +682,7 @@ void QGCApplication::_missingParamsDisplay(void)
     }
     _missingParams.clear();
 
-    showMessage(QString("Parameters missing from firmware: %1.\n\nYou should quit QGroundControl immediately and update your firmware.").arg(params));
+    showMessage(QString("Parameters missing from firmware: %1. You may be running an older version of firmware QGC does not work correctly with or your firmware has a bug in it.").arg(params));
 }
 
 QObject* QGCApplication::_rootQmlObject(void)
@@ -692,9 +738,9 @@ void QGCApplication::showSetupView(void)
     QMetaObject::invokeMethod(_rootQmlObject(), "showSetupView");
 }
 
-void QGCApplication::showWindowCloseMessage(void)
+void QGCApplication::qmlAttemptWindowClose(void)
 {
-    QMetaObject::invokeMethod(_rootQmlObject(), "showWindowCloseMessage");
+    QMetaObject::invokeMethod(_rootQmlObject(), "attemptWindowClose");
 }
 
 
@@ -719,4 +765,13 @@ void QGCApplication::_showSetupVehicleComponent(VehicleComponent* vehicleCompone
     QVariant varComponent = QVariant::fromValue(vehicleComponent);
 
     QMetaObject::invokeMethod(_rootQmlObject(), "showSetupVehicleComponent", Q_RETURN_ARG(QVariant, varReturn), Q_ARG(QVariant, varComponent));
+}
+
+void QGCApplication::setDefaultMapPosition(QGeoCoordinate& defaultMapPosition)
+{
+    QSettings settings;
+
+    settings.setValue(_defaultMapPositionLatKey, defaultMapPosition.latitude());
+    settings.setValue(_defaultMapPositionLonKey, defaultMapPosition.longitude());
+    _defaultMapPosition = defaultMapPosition;
 }

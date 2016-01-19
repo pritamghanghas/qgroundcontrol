@@ -135,6 +135,7 @@ MainWindow::MainWindow()
     : _lowPowerMode(false)
     , _showStatusBar(false)
     , _mainQmlWidgetHolder(NULL)
+    , _forceClose(false)
 {
     Q_ASSERT(_instance == NULL);
     _instance = this;
@@ -161,6 +162,7 @@ MainWindow::MainWindow()
     _centralLayout->addWidget(_mainQmlWidgetHolder);
     _mainQmlWidgetHolder->setVisible(true);
 
+    QQmlEngine::setObjectOwnership(this, QQmlEngine::CppOwnership);
     _mainQmlWidgetHolder->setContextPropertyObject("controller", this);
     _mainQmlWidgetHolder->setSource(QUrl::fromUserInput("qrc:qml/MainWindowHybrid.qml"));
 
@@ -207,7 +209,7 @@ MainWindow::MainWindow()
     emit initStatusChanged(tr("Initializing 3D mouse interface"), Qt::AlignLeft | Qt::AlignBottom, QColor(62, 93, 141));
 
     mouse = new Mouse6dofInput(this);
-    connect(this, SIGNAL(x11EventOccured(XEvent*)), mouse, SLOT(handleX11Event(XEvent*)));
+    connect(this, &MainWindow::x11EventOccured, mouse, &Mouse6dofInput::handleX11Event);
 #endif //QGC_MOUSE_ENABLED_LINUX
 
     // Set low power mode
@@ -256,7 +258,7 @@ MainWindow::MainWindow()
 
     _ui.actionFlight->setChecked(true);
 
-    connect(&windowNameUpdateTimer, SIGNAL(timeout()), this, SLOT(configureWindowName()));
+    connect(&windowNameUpdateTimer, &QTimer::timeout, this, &MainWindow::configureWindowName);
     windowNameUpdateTimer.start(15000);
     emit initStatusChanged(tr("Done"), Qt::AlignLeft | Qt::AlignBottom, QColor(62, 93, 141));
 
@@ -305,8 +307,7 @@ void MainWindow::_buildCommonWidgets(void)
     // Add generic MAVLink decoder
     // TODO: This is never deleted
     mavlinkDecoder = new MAVLinkDecoder(qgcApp()->toolbox()->mavlinkProtocol(), this);
-    connect(mavlinkDecoder, SIGNAL(valueChanged(int,QString,QString,QVariant,quint64)),
-                      this, SIGNAL(valueChanged(int,QString,QString,QVariant,quint64)));
+    connect(mavlinkDecoder.data(), &MAVLinkDecoder::valueChanged, this, &MainWindow::valueChanged);
 
     // Log player
     // TODO: Make this optional with a preferences setting or under a "View" menu
@@ -408,55 +409,28 @@ void MainWindow::showStatusBarCallback(bool checked)
     checked ? statusBar()->show() : statusBar()->hide();
 }
 
-void MainWindow::acceptWindowClose(void)
+void MainWindow::reallyClose(void)
 {
-    qgcApp()->toolbox()->linkManager()->shutdown();
-    // The above shutdown causes a flurry of activity as the vehicle components are removed. This in turn
-    // causes the Windows Version of Qt to crash if you allow the close event to be accepted. In order to prevent
-    // the crash, we ignore the close event and setup a delayed timer to close the window after things settle down.
-    QTimer::singleShot(1500, this, &MainWindow::_closeWindow);
+    _forceClose = true;
+    close();
 }
 
 void MainWindow::closeEvent(QCloseEvent *event)
 {
-    // Disallow window close if there are active connections
-    if (qgcApp()->toolbox()->multiVehicleManager()->vehicles()->count()) {
-        qgcApp()->showWindowCloseMessage();
+    if (!_forceClose) {
+        // Attemp close from within the root Qml item
+        qgcApp()->qmlAttemptWindowClose();
         event->ignore();
         return;
     }
-
-    // We still need to shutdown LinkManager even though no active connections so that we don't get any
-    // more auto-connect links during shutdown.
-    qgcApp()->toolbox()->linkManager()->shutdown();
-
-    // This will process any remaining flight log save dialogs
-    qgcApp()->processEvents(QEventLoop::ExcludeUserInputEvents);
 
     // Should not be any active connections
     if (qgcApp()->toolbox()->linkManager()->anyActiveLinks()) {
         qWarning() << "All links should be disconnected by now";
     }
 
-    // We have to pull out the QmlWidget from the main window and delete it here, before
-    // the MainWindow ends up getting deleted. Otherwise the Qml has a reference to MainWindow
-    // inside it which in turn causes a shutdown crash.
-
-    //-- Unit test gets here with _mainQmlWidgetHolder being NULL
-
-    if(_mainQmlWidgetHolder)
-    {
-        // Remove image provider
-        _mainQmlWidgetHolder->getEngine()->removeImageProvider(QLatin1String("QGCImages"));
-        _centralLayout->removeWidget(_mainQmlWidgetHolder);
-        delete _mainQmlWidgetHolder;
-        _mainQmlWidgetHolder = NULL;
-    }
-
     _storeCurrentViewState();
     storeSettings();
-
-    event->accept();
 
     //-- TODO: This effectively causes the QGCApplication destructor to not being able
     //   to access the pointer it is trying to delete.
@@ -523,11 +497,11 @@ void MainWindow::connectCommonActions()
 {
     // Audio output
     _ui.actionMuteAudioOutput->setChecked(qgcApp()->toolbox()->audioOutput()->isMuted());
-    connect(qgcApp()->toolbox()->audioOutput(), SIGNAL(mutedChanged(bool)), _ui.actionMuteAudioOutput, SLOT(setChecked(bool)));
-    connect(_ui.actionMuteAudioOutput, SIGNAL(triggered(bool)), qgcApp()->toolbox()->audioOutput(), SLOT(mute(bool)));
+    connect(qgcApp()->toolbox()->audioOutput(), &GAudioOutput::mutedChanged, _ui.actionMuteAudioOutput, &QAction::setChecked);
+    connect(_ui.actionMuteAudioOutput, &QAction::triggered, qgcApp()->toolbox()->audioOutput(), &GAudioOutput::mute);
 
     // Application Settings
-    connect(_ui.actionSettings, SIGNAL(triggered()), this, SLOT(showSettings()));
+    connect(_ui.actionSettings, &QAction::triggered, this, &MainWindow::showSettings);
 
     // Views actions
     connect(_ui.actionFlight,   &QAction::triggered,    qgcApp(),   &QGCApplication::showFlyView);
@@ -567,7 +541,7 @@ void MainWindow::showSettings()
 
 void MainWindow::_vehicleAdded(Vehicle* vehicle)
 {
-    connect(vehicle->uas(), SIGNAL(valueChanged(int,QString,QString,QVariant,quint64)), this, SIGNAL(valueChanged(int,QString,QString,QVariant,quint64)));
+    connect(vehicle->uas(), &UAS::valueChanged, this, &MainWindow::valueChanged);
 }
 
 /// Stores the state of the toolbar, status bar and widgets associated with the current view

@@ -45,15 +45,15 @@ QGC_LOGGING_CATEGORY(ParameterLoaderVerboseLog, "ParameterLoaderVerboseLog")
 
 Fact ParameterLoader::_defaultFact;
 
-ParameterLoader::ParameterLoader(AutoPilotPlugin* autopilot, Vehicle* vehicle, QObject* parent) :
-    QObject(parent),
-    _autopilot(autopilot),
-    _vehicle(vehicle),
-    _mavlink(qgcApp()->toolbox()->mavlinkProtocol()),
-    _parametersReady(false),
-    _initialLoadComplete(false),
-    _defaultComponentId(FactSystem::defaultComponentId),
-    _totalParamCount(0)
+ParameterLoader::ParameterLoader(AutoPilotPlugin* autopilot, Vehicle* vehicle, QObject* parent)
+    : QObject(parent)
+    , _autopilot(autopilot)
+    , _vehicle(vehicle)
+    , _mavlink(qgcApp()->toolbox()->mavlinkProtocol())
+    , _parametersReady(false)
+    , _initialLoadComplete(false)
+    , _defaultComponentId(FactSystem::defaultComponentId)
+    , _totalParamCount(0)
 {
     Q_ASSERT(_autopilot);
     Q_ASSERT(_vehicle);
@@ -72,10 +72,9 @@ ParameterLoader::ParameterLoader(AutoPilotPlugin* autopilot, Vehicle* vehicle, Q
 
     _cacheTimeoutTimer.setSingleShot(true);
     _cacheTimeoutTimer.setInterval(2500);
-    connect(&_cacheTimeoutTimer, &QTimer::timeout, this, &ParameterLoader::refreshAllParameters);
+    connect(&_cacheTimeoutTimer, &QTimer::timeout, this, &ParameterLoader::_timeoutRefreshAll);
 
-    // FIXME: Why not direct connect?
-    connect(_vehicle->uas(), SIGNAL(parameterUpdate(int, int, QString, int, int, int, QVariant)), this, SLOT(_parameterUpdate(int, int, QString, int, int, int, QVariant)));
+    connect(_vehicle->uas(), &UASInterface::parameterUpdate, this, &ParameterLoader::_parameterUpdate);
 
     /* Initially attempt a local cache load, refresh over the link if it fails */
     _tryCacheLookup();
@@ -296,9 +295,13 @@ void ParameterLoader::_valueUpdated(const QVariant& value)
 
     _writeParameterRaw(componentId, fact->name(), value);
     qCDebug(ParameterLoaderLog) << "Set parameter (componentId:" << componentId << "name:" << name << value << ")";
+
+    if (fact->rebootRequired() && !qgcApp()->runningUnitTests()) {
+        qgcApp()->showMessage(QStringLiteral("Change of parameter %1 requires a Vehicle reboot to take effect").arg(name));
+    }
 }
 
-void ParameterLoader::refreshAllParameters(void)
+void ParameterLoader::refreshAllParameters(uint8_t componentID)
 {
     _dataMutex.lock();
 
@@ -307,11 +310,13 @@ void ParameterLoader::refreshAllParameters(void)
     }
 
     // Reset index wait lists
-    foreach (int componentId, _paramCountMap.keys()) {
+    foreach (int cid, _paramCountMap.keys()) {
         // Add/Update all indices to the wait list, parameter index is 0-based
-        for (int waitingIndex=0; waitingIndex<_paramCountMap[componentId]; waitingIndex++) {
+        if(componentID != MAV_COMP_ID_ALL && componentID != cid)
+            continue;
+        for (int waitingIndex = 0; waitingIndex < _paramCountMap[cid]; waitingIndex++) {
             // This will add a new waiting index if needed and set the retry count for that index to 0
-            _waitingReadParamIndexMap[componentId][waitingIndex] = 0;
+            _waitingReadParamIndexMap[cid][waitingIndex] = 0;
         }
     }
 
@@ -321,10 +326,11 @@ void ParameterLoader::refreshAllParameters(void)
     Q_ASSERT(mavlink);
 
     mavlink_message_t msg;
-    mavlink_msg_param_request_list_pack(mavlink->getSystemId(), mavlink->getComponentId(), &msg, _vehicle->id(), MAV_COMP_ID_ALL);
-    _vehicle->sendMessage(msg);
+    mavlink_msg_param_request_list_pack(mavlink->getSystemId(), mavlink->getComponentId(), &msg, _vehicle->id(), componentID);
+    _vehicle->sendMessageOnLink(_vehicle->priorityLink(), msg);
 
-    qCDebug(ParameterLoaderLog) << "Request to refresh all parameters";
+    QString what = (componentID == MAV_COMP_ID_ALL) ? "MAV_COMP_ID_ALL" : QString::number(componentID);
+    qCDebug(ParameterLoaderLog) << "Request to refresh all parameters for component ID:" << what;
 }
 
 void ParameterLoader::_determineDefaultComponentId(void)
@@ -523,7 +529,7 @@ void ParameterLoader::_tryCacheLookup()
 
     mavlink_message_t msg;
     mavlink_msg_param_request_read_pack(mavlink->getSystemId(), mavlink->getComponentId(), &msg, _vehicle->id(), MAV_COMP_ID_ALL, "_HASH_CHECK", -1);
-    _vehicle->sendMessage(msg);
+    _vehicle->sendMessageOnLink(_vehicle->priorityLink(), msg);
 }
 
 void ParameterLoader::_readParameterRaw(int componentId, const QString& paramName, int paramIndex)
@@ -539,7 +545,7 @@ void ParameterLoader::_readParameterRaw(int componentId, const QString& paramNam
                                         componentId,                // Target component id
                                         fixedParamName,             // Named parameter being requested
                                         paramIndex);                // Parameter index being requested, -1 for named
-    _vehicle->sendMessage(msg);
+    _vehicle->sendMessageOnLink(_vehicle->priorityLink(), msg);
 }
 
 void ParameterLoader::_writeParameterRaw(int componentId, const QString& paramName, const QVariant& value)
@@ -592,7 +598,7 @@ void ParameterLoader::_writeParameterRaw(int componentId, const QString& paramNa
 
     mavlink_message_t msg;
     mavlink_msg_param_set_encode(_mavlink->getSystemId(), _mavlink->getComponentId(), &msg, &p);
-    _vehicle->sendMessage(msg);
+    _vehicle->sendMessageOnLink(_vehicle->priorityLink(), msg);
 }
 
 void ParameterLoader::_writeLocalParamCache()
@@ -664,7 +670,7 @@ void ParameterLoader::_saveToEEPROM(void)
     if (_vehicle->firmwarePlugin()->isCapable(FirmwarePlugin::MavCmdPreflightStorageCapability)) {
         mavlink_message_t msg;
         mavlink_msg_command_long_pack(_mavlink->getSystemId(), _mavlink->getComponentId(), &msg, _vehicle->id(), 0, MAV_CMD_PREFLIGHT_STORAGE, 1, 1, -1, -1, -1, 0, 0, 0);
-        _vehicle->sendMessage(msg);
+        _vehicle->sendMessageOnLink(_vehicle->priorityLink(), msg);
         qCDebug(ParameterLoaderLog) << "_saveToEEPROM";
     } else {
         qCDebug(ParameterLoaderLog) << "_saveToEEPROM skipped due to FirmwarePlugin::isCapable";
@@ -864,7 +870,7 @@ void ParameterLoader::_checkInitialLoadComplete(void)
 
     if (initialLoadFailures) {
         qgcApp()->showMessage("QGroundControl was unable to retrieve the full set of parameters from the vehicle. "
-                              "This will cause QGroundControl to be unable to display it's full user interface. "
+                              "This will cause QGroundControl to be unable to display its full user interface. "
                               "If you are using modified firmware, you may need to resolve any vehicle startup errors to resolve the issue. "
                               "If you are using standard firmware, you may need to upgrade to a newer version to resolve the issue.");
         qCWarning(ParameterLoaderLog) << "The following parameter indices could not be loaded after the maximum number of retries: " << indexList;
@@ -884,3 +890,9 @@ void ParameterLoader::_initialRequestTimeout(void)
     refreshAllParameters();
     _initialRequestTimeoutTimer.start();
 }
+
+void ParameterLoader::_timeoutRefreshAll()
+{
+    refreshAllParameters();
+}
+

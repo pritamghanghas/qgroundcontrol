@@ -40,6 +40,8 @@ import QGroundControl.Controllers   1.0
 QGCView {
     id:         _root
 
+    property bool syncNeeded: controller.missionItems.dirty // Unsaved changes, visible to parent container
+
     viewPanel:          panel
     topDialogMargin:    height - mainWindow.availableHeight
 
@@ -55,41 +57,37 @@ QGCView {
     readonly property real      _rightPanelOpacity: 0.8
     readonly property int       _toolButtonCount:   6
     readonly property string    _autoSyncKey:       "AutoSync"
-    readonly property string    _showHelpKey:       "ShowHelp"
     readonly property int       _addMissionItemsButtonAutoOffTimeout:   10000
     readonly property var       _defaultVehicleCoordinate:   QtPositioning.coordinate(37.803784, -122.462276)
 
     property var    _missionItems:          controller.missionItems
     property var    _currentMissionItem
-
-    property bool   gpsLock:        _activeVehicle ? _activeVehicle.coordinateValid : false
-    property bool   _firstGpsLock:  true
-
-    //property var    _homePositionManager:       QGroundControl.homePositionManager
-    //property string _homePositionName:          _homePositionManager.homePositions.get(0).name
-    //property var    offlineHomePosition:        _homePositionManager.homePositions.get(0).coordinate
+    property bool   _firstVehiclePosition:  true
+    property var    activeVehiclePosition:  _activeVehicle ? _activeVehicle.coordinate : QtPositioning.coordinate()
 
     property var    liveHomePosition:           controller.liveHomePosition
     property var    liveHomePositionAvailable:  controller.liveHomePositionAvailable
     property var    homePosition:               _defaultVehicleCoordinate
 
-    property bool _syncNeeded:                  controller.missionItems.dirty
     property bool _syncInProgress:              _activeVehicle ? _activeVehicle.missionManager.inProgress : false
 
-    property bool _showHelp:                    QGroundControl.flightMapSettings.loadBoolMapSetting(editorMap.mapName, _showHelpKey, true)
+    Component.onCompleted:          updateMapToVehiclePosition()
+    onActiveVehiclePositionChanged: updateMapToVehiclePosition()
 
-    onGpsLockChanged:       updateMapToVehiclePosition()
+    Connections {
+        target: multiVehicleManager
 
-    Component.onCompleted: {
-        helpPanel.source = "MissionEditorHelp.qml"
-        updateMapToVehiclePosition()
+        onActiveVehicleChanged: {
+            // When the active vehicle changes we need to allow the first vehicle position to move the map again
+            _firstVehiclePosition = true
+            updateMapToVehiclePosition()
+        }
     }
 
     function updateMapToVehiclePosition() {
-        if (gpsLock && _firstGpsLock) {
-            _firstGpsLock = false
-            editorMap.latitude = _activeVehicle.latitude
-            editorMap.longitude = _activeVehicle.longitude
+        if (_activeVehicle && _activeVehicle.coordinateValid && _activeVehicle.coordinate.isValid && _firstVehiclePosition) {
+            _firstVehiclePosition = false
+            editorMap.center = _activeVehicle.coordinate
         }
     }
 
@@ -181,26 +179,10 @@ QGCView {
                 id:             editorMap
                 anchors.fill:   parent
                 mapName:        "MissionEditor"
-                latitude:       mainWindow.tabletPosition.latitude
-                longitude:      mainWindow.tabletPosition.longitude
 
                 readonly property real animationDuration: 500
 
                 Behavior on zoomLevel {
-                    NumberAnimation {
-                        duration:       editorMap.animationDuration
-                        easing.type:    Easing.InOutQuad
-                    }
-                }
-
-                Behavior on latitude {
-                    NumberAnimation {
-                        duration:       editorMap.animationDuration
-                        easing.type:    Easing.InOutQuad
-                    }
-                }
-
-                Behavior on longitude {
                     NumberAnimation {
                         duration:       editorMap.animationDuration
                         easing.type:    Easing.InOutQuad
@@ -359,6 +341,14 @@ QGCView {
                     opacity:        _rightPanelOpacity
                     z:              QGroundControl.zOrderTopMost
 
+                    MouseArea {
+                        // This MouseArea prevents the Map below it from getting Mouse events. Without this
+                        // things like mousewheel will scroll the Flickable and then scroll the map as well.
+                        anchors.fill:       parent
+                        preventStealing:    true
+                        onWheel:            wheel.accepted = true
+                    }
+
                     ListView {
                         anchors.fill:   parent
                         spacing:        _margin / 2
@@ -401,16 +391,6 @@ QGCView {
                     }
                 }
 
-                //-- Help Panel
-                Loader {
-                    id:         helpPanel
-                    width:      parent.width  * 0.65
-                    height:     parent.height * 0.75
-                    z:          QGroundControl.zOrderTopMost
-                    anchors.verticalCenter:   parent.verticalCenter
-                    anchors.horizontalCenter: parent.horizontalCenter
-                }
-
                 Item {
                     id:     toolbarSpacer
                     height: mainWindow.tbHeight
@@ -450,7 +430,7 @@ QGCView {
                     DropButton {
                         id:                 syncButton
                         dropDirection:      dropRight
-                        buttonImage:        _syncNeeded ? "/qmlimages/MapSyncChanged.svg" : "/qmlimages/MapSync.svg"
+                        buttonImage:        syncNeeded ? "/qmlimages/MapSyncChanged.svg" : "/qmlimages/MapSync.svg"
                         viewportMargins:    ScreenTools.defaultFontPixelWidth / 2
                         exclusiveGroup:     _dropButtonsExclusiveGroup
                         z:                  QGroundControl.zOrderWidgets
@@ -561,14 +541,6 @@ QGCView {
                             checked = false
                         }
                     }
-
-                    RoundButton {
-                        id:                 helpButton
-                        buttonImage:        "/qmlimages/Help.svg"
-                        exclusiveGroup:     _dropButtonsExclusiveGroup
-                        z:                  QGroundControl.zOrderWidgets
-                        checked:            _showHelp
-                    }
                 }
 
                 MissionItemStatus {
@@ -587,6 +559,34 @@ QGCView {
     } // QGCViewPanel
 
     Component {
+        id: syncLoadFromVehicleOverwrite
+
+        QGCViewMessage {
+            id:         syncLoadFromVehicleCheck
+            message:   "You have unsaved/unsent mission changes. Loading the mission from the Vehicle will lose these changes. Are you sure you want to load the mission from the Vehicle?"
+
+            function accept() {
+                hideDialog()
+                controller.getMissionItems()
+            }
+        }
+    }
+
+    Component {
+        id: syncLoadFromFileOverwrite
+
+        QGCViewMessage {
+            id:         syncLoadFromVehicleCheck
+            message:   "You have unsaved/unsent mission changes. Loading a mission from a file will lose these changes. Are you sure you want to load a mission from a file?"
+
+            function accept() {
+                hideDialog()
+                controller.loadMissionFromFile()
+            }
+        }
+    }
+
+    Component {
         id: syncDropDownComponent
 
         Column {
@@ -596,7 +596,7 @@ QGCView {
             QGCLabel {
                 width:      columnHolder.width
                 wrapMode:   Text.WordWrap
-                text:       _syncNeeded && !controller.autoSync ?
+                text:       syncNeeded && !controller.autoSync ?
                                 "You have unsaved changed to you mission. You should send to your vehicle, or save to a file:" :
                                 "Sync:"
             }
@@ -621,7 +621,11 @@ QGCView {
 
                     onClicked: {
                         syncButton.hideDropDown()
-                        controller.getMissionItems()
+                        if (syncNeeded) {
+                            _root.showDialog(syncLoadFromVehicleOverwrite, "Mission overwrite", _root.showDialogDefaultWidth, StandardButton.Yes | StandardButton.Cancel)
+                        } else {
+                            controller.getMissionItems()
+                        }
                     }
                 }
             }
@@ -644,7 +648,11 @@ QGCView {
 
                     onClicked: {
                         syncButton.hideDropDown()
-                        controller.loadMissionFromFile()
+                        if (syncNeeded) {
+                            _root.showDialog(syncLoadFromFileOverwrite, "Mission overwrite", _root.showDialogDefaultWidth, StandardButton.Yes | StandardButton.Cancel)
+                        } else {
+                            controller.loadMissionFromFile()
+                        }
                     }
                 }
             }

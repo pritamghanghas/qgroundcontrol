@@ -56,11 +56,9 @@ public:
     /// Returns true if the full set of facts are ready
     bool parametersAreReady(void) { return _parametersReady; }
 
-public slots:
     /// Re-request the full set of parameters from the autopilot
-    void refreshAllParameters(void);
+    void refreshAllParameters(uint8_t componentID = MAV_COMP_ID_ALL);
 
-public:
     /// Request a refresh on the specific parameter
     void refreshParameter(int componentId, const QString& name);
     
@@ -102,7 +100,6 @@ protected:
     Vehicle*            _vehicle;
     MAVLinkProtocol*    _mavlink;
     
-private slots:
     void _parameterUpdate(int uasId, int componentId, QString parameterName, int parameterCount, int parameterId, int mavType, QVariant value);
     void _valueUpdated(const QVariant& value);
     void _restartWaitingParamTimer(void);
@@ -110,6 +107,9 @@ private slots:
     void _tryCacheLookup(void);
     void _initialRequestTimeout(void);
     
+private slots:
+    void _timeoutRefreshAll();
+
 private:
     static QVariant _stringToTypedVariant(const QString& string, FactMetaData::ValueType_t type, bool failOk = false);
     int _actualComponentId(int componentId);

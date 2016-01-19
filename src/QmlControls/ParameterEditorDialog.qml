@@ -38,6 +38,7 @@ QGCViewDialog {
     id: root
 
     property Fact   fact
+    property bool   showRCToParam:  false
     property bool   validate:       false
     property string validateValue
 
@@ -99,13 +100,15 @@ QGCViewDialog {
         QGCComboBox {
             id:             factCombo
             width:          valueField.width
-            visible:        fact.enumStrings.length != 0 && !validate
+            visible:        _showCombo
             model:          fact.enumStrings
+
+            property bool _showCombo: fact.enumStrings.length != 0 && !validate
 
             Component.onCompleted: {
                 // We can't bind directly to fact.enumIndex since that would add an unknown value
                 // if there are no enum strings.
-                if (visible) {
+                if (_showCombo) {
                     currentIndex = fact.enumIndex
                 }
             }
@@ -185,7 +188,7 @@ QGCViewDialog {
         anchors.right:  parent.right
         anchors.bottom: parent.bottom
         text:           "Set RC to Param..."
-        visible:        !validate && !ScreenTools.isMobile
+        visible:        !validate && showRCToParam
         onClicked:      controller.setRCToParam(fact.name)
     }
 } // QGCViewDialog

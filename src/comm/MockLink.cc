@@ -390,6 +390,10 @@ void MockLink::_handleIncomingMavlinkBytes(const uint8_t* bytes, int cBytes)
                 _handleCommandLong(msg);
                 break;
 
+            case MAVLINK_MSG_ID_MANUAL_CONTROL:
+                _handleManualControl(msg);
+                break;
+
             default:
                 break;
         }
@@ -399,10 +403,7 @@ void MockLink::_handleIncomingMavlinkBytes(const uint8_t* bytes, int cBytes)
 void MockLink::_handleHeartBeat(const mavlink_message_t& msg)
 {
     Q_UNUSED(msg);
-#if 0
-    mavlink_heartbeat_t heartbeat;
-    mavlink_msg_heartbeat_decode(&msg, &heartbeat);
-#endif
+    qCDebug(MockLinkLog) << "Heartbeat";
 }
 
 void MockLink::_handleSetMode(const mavlink_message_t& msg)
@@ -414,6 +415,14 @@ void MockLink::_handleSetMode(const mavlink_message_t& msg)
 
     _mavBaseMode = request.base_mode;
     _mavCustomMode = request.custom_mode;
+}
+
+void MockLink::_handleManualControl(const mavlink_message_t& msg)
+{
+    mavlink_manual_control_t manualControl;
+    mavlink_msg_manual_control_decode(&msg, &manualControl);
+
+    qDebug() << "MANUAL_CONTROL" << manualControl.x << manualControl.y << manualControl.z << manualControl.r;
 }
 
 void MockLink::_setParamFloatUnionIntoMap(int componentId, const QString& paramName, float paramFloat)
