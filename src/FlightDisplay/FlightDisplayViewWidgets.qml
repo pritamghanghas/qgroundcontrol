@@ -41,6 +41,24 @@ Item {
 
     property bool _isInstrumentVisible: QGroundControl.loadBoolGlobalSetting(_InstrumentVisibleKey, true)
 
+    property bool _flying: multiVehicleManager.activeVehicleAvailable? multiVehicleManager.activeVehicle.flying : false;
+
+    property bool _armed: multiVehicleManager.activeVehicleAvailable? multiVehicleManager.activeVehicle.armed : false;
+
+//    multiVehicleManager.onActiveVehicleAvailableChanged: checkFlying()
+
+//    function checkFlying() {
+//        if(!multiVehicleManager.activeVehicleAvailable) {
+//            return false
+//        }
+//        Binding on _flying {
+//            when: multiVehicleManager.activeVehicleAvailable
+//            parent._flying: multiVehicleManager.activeVehicle.flying
+//        }
+
+//        return multiVehicleManager.activeVehicle.flying
+//    }
+
     QGCMapPalette { id: mapPal; lightColors: !isBackgroundDark }
 
     function getGadgetWidth() {
@@ -299,6 +317,55 @@ Item {
                 checked = false
             }
         }
+
+        // takeoff button
+        RoundButton {
+            id:                     takeoffButton
+            visible:                !_flying && _armed
+            onClicked: {
+                if (multiVehicleManager.activeVehicle) {
+                    multiVehicleManager.activeVehicle.doGuidedTakeoff(5)
+                }
+            }
+        }
+
+        DropButton {
+            id:                     zAxisControl
+            visible:                _flying;
+            dropDirection:          dropRight
+            buttonImage:            "/qmlimages/MapCenter.svg"
+            viewportMargins:        ScreenTools.defaultFontPixelWidth / 2
+            z:                      QGroundControl.zOrderWidgets
+
+            dropDownComponent: Component {
+                Column {
+                    QGCLabel {
+                        text:           zheight.value + "m"
+                        font.pixelSize: ScreenTools.defaultFontPixelSize
+                        font.weight:    Font.DemiBold
+                        color:          "white"
+                        horizontalAlignment: TextEdit.AlignHCenter
+                    }
+                    Slider {
+                        id:                 zheight
+                        minimumValue:       5
+                        maximumValue:       2005
+                        stepSize:           (maximumValue - minimumValue)/100
+                        tickmarksEnabled:   true
+                        orientation:        Qt.Vertical
+                        anchors.top: parent.top
+                        anchors.bottom: parent.bottom
+
+                        onValueChanged: {
+                            if (multiVehicleManager.activeVehicle) {
+                                multiVehicleManager.activeVehicle.doChangeAltitude(value)
+                            }
+                        }
+                    }
+                }
+            }
+        } // drop button
+
 
     }
 

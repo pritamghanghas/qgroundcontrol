@@ -97,6 +97,7 @@ Vehicle::Vehicle(LinkInterface*             link,
     , _updateCount(0)
     , _rcRSSI(0)
     , _rcRSSIstore(100.0)
+    , _flying(false)
     , _connectionLost(false)
     , _connectionLostEnabled(true)
     , _missionManager(NULL)
@@ -641,6 +642,7 @@ void Vehicle::_updateAltitude(UASInterface*, double altitudeAMSL, double altitud
         _climbRate = climbRate;
         _addChange(CLIMBRATE_CHANGED);
     }
+    _checkFlying();
 }
 
 void Vehicle::_updateNavigationControllerErrors(UASInterface*, double altitudeError, double speedError, double xtrackError) {
@@ -1062,9 +1064,64 @@ void Vehicle::setArmed(bool armed)
     sendMessage(msg);
 }
 
+void Vehicle::doChangeAltitude(int height)
+{
+//    mavlink_message_t msg;
+//    mavlink_set_position_target_global_int_t pos;
+
+    qDebug("setting height to %d", height);
+//    pos.time_boot_ms = _mavlink->
+
+//    mavlink_msg_set_position_target_global_int_encode(_mavlink->getSystemId(), _mavlink->getComponentId(), &msg, )
+
+//    mavlink_msg_command_long_encode(_mavlink->getSystemId(), _mavlink->getComponentId(), &msg, &cmd);
+
+//    sendMessage(msg);
+}
+
+void Vehicle::doGuidedTakeoff(int height)
+{
+    if (flightMode() != "Guided") {
+        return;
+    }
+    mavlink_message_t msg;
+    mavlink_command_long_t cmd;
+
+    cmd.command = (uint16_t)MAV_CMD_NAV_TAKEOFF;
+    cmd.confirmation = 0;
+    cmd.param1 = 0.0f;
+    cmd.param2 = 0.0f;
+    cmd.param3 = 0.0f;
+    cmd.param4 = _heading;
+    cmd.param5 = latitude();
+    cmd.param6 = longitude();
+    cmd.param7 = height;
+    cmd.target_system = id();
+    cmd.target_component = 0;
+
+    mavlink_msg_command_long_encode(_mavlink->getSystemId(), _mavlink->getComponentId(), &msg, &cmd);
+
+    sendMessage(msg);
+}
+
 bool Vehicle::flightModeSetAvailable(void)
 {
     return _firmwarePlugin->isCapable(FirmwarePlugin::SetFlightModeCapability);
+}
+
+bool Vehicle::flying()
+{
+    _flying = armed() && (_altitudeRelative > 0);
+    return _flying;
+}
+
+void Vehicle::_checkFlying()
+{
+    bool oldFlying = _flying;
+    bool newFlying = flying();
+    if (oldFlying != newFlying) {
+        emit flyingChanged(newFlying);
+    }
 }
 
 QStringList Vehicle::flightModes(void)

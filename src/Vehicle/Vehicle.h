@@ -72,6 +72,7 @@ public:
     Q_PROPERTY(bool                 homePositionAvailable   READ homePositionAvailable                  NOTIFY homePositionAvailableChanged)
     Q_PROPERTY(QGeoCoordinate       homePosition            READ homePosition                           NOTIFY homePositionChanged)
     Q_PROPERTY(bool                 armed                   READ armed              WRITE setArmed      NOTIFY armedChanged)
+    Q_PROPERTY(bool                 flying                  READ flying                                 NOTIFY flyingChanged)
     Q_PROPERTY(bool                 flightModeSetAvailable  READ flightModeSetAvailable                 CONSTANT)
     Q_PROPERTY(QStringList          flightModes             READ flightModes                            CONSTANT)
     Q_PROPERTY(QString              flightMode              READ flightMode         WRITE setFlightMode NOTIFY flightModeChanged)
@@ -133,6 +134,8 @@ public:
 
     Q_INVOKABLE void virtualTabletJoystickValue(double roll, double pitch, double yaw, double thrust);
     Q_INVOKABLE void disconnectInactiveVehicle(void);
+    Q_INVOKABLE void doGuidedTakeoff(int height); // height in meters
+    Q_INVOKABLE void doChangeAltitude(int height);
 
     // Property accessors
 
@@ -199,6 +202,7 @@ public:
 
     bool armed(void) { return _armed; }
     void setArmed(bool armed);
+    bool flying();
 
     bool flightModeSetAvailable(void);
     QStringList flightModes(void);
@@ -299,6 +303,7 @@ signals:
     void homePositionAvailableChanged(bool homePositionAvailable);
     void homePositionChanged(const QGeoCoordinate& homePosition);
     void armedChanged(bool armed);
+    void flyingChanged(bool flying);
     void flightModeChanged(const QString& flightMode);
     void hilModeChanged(bool hilMode);
     void missingParametersChanged(bool missingParameters);
@@ -399,6 +404,7 @@ private:
     void _mapTrajectoryStop(void);
     void _connectionActive(void);
     void _say(const QString& text, int severity);
+    void _checkFlying();
 
     void    _addChange                      (int id);
     float   _oneDecimal                     (float value);
@@ -462,6 +468,7 @@ private:
     QString         _formatedMessage;
     int             _rcRSSI;
     double          _rcRSSIstore;
+    bool            _flying;
 
     // Lost connection handling
     bool                _connectionLost;
