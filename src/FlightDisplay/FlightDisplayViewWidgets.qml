@@ -321,6 +321,7 @@ Item {
         // takeoff button
         RoundButton {
             id:                     takeoffButton
+            buttonImage:            "/qmlimages/takeoff.svg"
             visible:                !_flying && _armed
             onClicked: {
                 if (multiVehicleManager.activeVehicle) {
@@ -333,9 +334,10 @@ Item {
             id:                     zAxisControl
             visible:                _flying;
             dropDirection:          dropRight
-            buttonImage:            "/qmlimages/MapCenter.svg"
+            buttonImage:            "/qmlimages/takeoff.svg"
             viewportMargins:        ScreenTools.defaultFontPixelWidth / 2
             z:                      QGroundControl.zOrderWidgets
+            property real desiredHeight:    5
 
             dropDownComponent: Component {
                 Column {
@@ -349,19 +351,20 @@ Item {
                     Slider {
                         id:                 zheight
                         minimumValue:       5
-                        maximumValue:       2005
-                        stepSize:           (maximumValue - minimumValue)/100
-                        tickmarksEnabled:   true
+                        maximumValue:       500
+                        stepSize:           1
                         orientation:        Qt.Vertical
-                        anchors.top: parent.top
-                        anchors.bottom: parent.bottom
 
                         onValueChanged: {
-                            if (multiVehicleManager.activeVehicle) {
-                                multiVehicleManager.activeVehicle.doChangeAltitude(value)
-                            }
+                            zAxisControl.desiredHeight = value;
                         }
                     }
+                }
+            }
+
+            onClicked: {
+                if (!checked && multiVehicleManager.activeVehicle) {
+                    multiVehicleManager.activeVehicle.doChangeAltitude(zAxisControl.desiredHeight)
                 }
             }
         } // drop button

@@ -1066,17 +1066,31 @@ void Vehicle::setArmed(bool armed)
 
 void Vehicle::doChangeAltitude(int height)
 {
-//    mavlink_message_t msg;
-//    mavlink_set_position_target_global_int_t pos;
-
     qDebug("setting height to %d", height);
-//    pos.time_boot_ms = _mavlink->
 
-//    mavlink_msg_set_position_target_global_int_encode(_mavlink->getSystemId(), _mavlink->getComponentId(), &msg, )
+    mavlink_message_t msg;
+    mavlink_set_position_target_global_int_t pos;
 
-//    mavlink_msg_command_long_encode(_mavlink->getSystemId(), _mavlink->getComponentId(), &msg, &cmd);
+    pos.time_boot_ms = QGC::groundTimeUsecs();
+    pos.lat_int = _coordinate.latitude()*1E7;
+    pos.lon_int = _coordinate.longitude()*1E7;
+    pos.alt = height;
+    pos.vx = 0;
+    pos.vy = 0;
+    pos.vz = 0;
+    pos.afx = 0;
+    pos.afy = 0;
+    pos.yaw = _heading;
+    pos.yaw_rate = 0;
+//    pos.type_mask = 0b0000111111111111;
+    pos.type_mask = 0b1111101111111000;
+    pos.target_system = id();
+    pos.target_component = 0;
+    pos.coordinate_frame = MAV_FRAME_GLOBAL_RELATIVE_ALT_INT;
 
-//    sendMessage(msg);
+    mavlink_msg_set_position_target_global_int_encode(_mavlink->getSystemId(), _mavlink->getComponentId(), &msg, &pos);
+
+    sendMessage(msg);
 }
 
 void Vehicle::doGuidedTakeoff(int height)

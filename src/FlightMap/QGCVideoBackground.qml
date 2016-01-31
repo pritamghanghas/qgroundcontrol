@@ -30,6 +30,7 @@ This file is part of the QGROUNDCONTROL project
 import QtQuick 2.4
 import QtQuick.Controls 1.3
 import QtQuick.Controls.Styles 1.2
+import QGroundControl                1.0
 import QGroundControl.QgcQtGStreamer 1.0
 import QGroundControl.ScreenTools    1.0
 import QGroundControl.Controls       1.0
@@ -39,6 +40,7 @@ VideoItem {
     property var display
     property var receiver
     property var runVideo:  false
+    property real _margins: ScreenTools.defaultFontPixelHeight
     surface: display
 
     ListModel {
@@ -264,22 +266,45 @@ VideoItem {
         }
     }
 
+
+    RoundButton {
+        id: videoSettings
+        buttonImage: "/qmlimages/cameraSettings.svg"
+        anchors.leftMargin: _margins
+        anchors.topMargin: _margins*5
+        anchors.top: parent.top
+        anchors.left: parent.left
+        z:                  QGroundControl.zOrderWidgets
+        visible: !_mainIsMap;
+    }
+
+//    RoundButton {
+//        id: cameraControl
+//        anchors.topMargin: _margins
+//        anchors.top: videoSettings.bottom
+//        anchors.left: videoSettings.left
+//        z: QGroundControl.zOrderWidgets
+//        visible: !_mainIsMap;
+//    }
+
     Item {
-        id : combo
+        id : combos
         width: parent.width*0.4
-        anchors.right: parent.right
+        anchors.leftMargin: _margins
+        anchors.top: videoSettings.top
+        anchors.left: videoSettings.right
         x: parent.width - width;
         y: parent.height * 0.1;
-        visible: !_mainIsMap;
+        visible: videoSettings.checked && !_mainIsMap
 
         Row {
-            spacing: 10
+            spacing: _margins
             layoutDirection: Qt.LeftToRight
 
 
             QGCComboBox {
                 id:         meteringComboBox
-                width: combo.width*0.2
+                width: combos.width*0.2
                 visible:    true
                 model:      meteringModesList
 
@@ -290,7 +315,7 @@ VideoItem {
 
             QGCComboBox {
                 id:         exposureComboBox
-                width: combo.width*0.22
+                width: combos.width*0.22
                 visible:    true
                 model:      exposureModesList
 
@@ -301,7 +326,7 @@ VideoItem {
 
             QGCComboBox {
                 id:         awbComboBox
-                width: combo.width*0.22
+                width: combos.width*0.22
                 visible:    true
                 model:      awbModesList
 
@@ -312,7 +337,7 @@ VideoItem {
 
             QGCComboBox {
                 id:         resolutionSelectionComboBox
-                width: combo.width*0.3
+                width: combos.width*0.3
                 visible:    true
                 model:      resolutionList
 

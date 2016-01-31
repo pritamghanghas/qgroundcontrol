@@ -28,24 +28,121 @@ import QGroundControl.Controls      1.0
 import QGroundControl.Palette       1.0
 import QGroundControl.ScreenTools   1.0
 
-Rectangle {
-    color: qgcPal.window
+QGCView {
+    id:                 _hoverbirdsView
+    viewPanel:          panel
+    anchors.fill:       parent
 
-    QGCPalette { id: qgcPal; colorGroupEnabled: true }
+    QGCPalette { id: palette; colorGroupEnabled: enabled }
 
-    Column {
-        anchors.margins:    ScreenTools.defaultFontPixelHeight
-        anchors.left:       parent.left
-        anchors.top:        parent.top
-        spacing:            ScreenTools.defaultFontPixelHeight
+    property real _margins: ScreenTools.defaultFontPixelHeight
 
-        QGCButton {
-            text:       "Shutdown Controller"
-            onClicked:  QGroundControl.nodeSelector.shutdownAll();
-        }
-        QGCButton {
-            text:       "Restart Controller"
-            onClicked:  QGroundControl.nodeSelector.restartAll();
-        }
-    }
-}
+    QGCViewPanel {
+        id:             panel
+        anchors.fill:   parent
+        anchors.margins: _margins
+
+        QGCFlickable {
+            clip:               true
+            anchors.fill:       parent
+            contentHeight:      wiredMaxAltitudeLabelField.y + wiredMaxAltitudeLabelField.height + _margins
+            contentWidth:       wiredMaxAltitudeLabelField.x + wiredMaxAltitudeLabelField.width + _margins
+
+            QGCLabel {
+                id:         piControlLabel
+                anchors.leftMargin: _margins
+                anchors.topMargin: _margins
+                text:       "System Control"
+                font.weight: Font.DemiBold
+            }
+
+            Rectangle {
+                id:                     piControlActions
+                anchors.topMargin:      _margins / 2
+                anchors.rightMargin:    _margins
+                anchors.left:           parent.left
+                anchors.top:            piControlLabel.bottom
+                width:                  shutdownButton.x + shutdownButton.width + _margins
+                height:                 restartButton.y + restartButton.height + _margins
+                color:                  palette.windowShade
+
+                QGCButton {
+                    id:                 shutdownButton
+                    anchors.margins:    _margins
+                    anchors.left:       parent.left
+                    anchors.top:        parent.top
+                    text:               "Shutdown Controller"
+                    onClicked:          QGroundControl.nodeSelector.shutdownAll();
+                }
+                QGCButton {
+                    id:             restartButton
+                    anchors.topMargin: _margins
+                    anchors.top:   shutdownButton.bottom
+                    anchors.left: shutdownButton.left
+                    anchors.right: shutdownButton.right
+                    text:           "Restart Controller"
+                    onClicked:      QGroundControl.nodeSelector.restartAll();
+                }
+            } // Rectangle - System Control
+
+            QGCLabel {
+                id:                 _wiredLimits
+                anchors.leftMargin: _margins
+                anchors.left:       piControlActions.right
+                anchors.top:        piControlLabel.top
+                text:               "Wire Limits"
+                font.weight:        Font.DemiBold
+            }
+
+            Rectangle {
+                id:                 _wireLimitSettings
+                anchors.topMargin:  _margins / 2
+                anchors.left:       _wiredLimits.left
+                anchors.top:        _wiredLimits.bottom
+                width:              panSweepAngleField.x + panSweepAngleField.width + _margins
+                height:             wiredMaxAltitudeLabelField.y + wiredMaxAltitudeLabelField.height + _margins
+                color:              palette.windowShade
+
+                QGCLabel {
+                    id: panSweepAngleLabel
+                    text : "Pan sweep angle"
+                    anchors.margins: _margins
+                    anchors.left: parent.left
+                    anchors.baseline: panSweepAngleField.baseline
+                }
+                QGCTextField {
+                    id: panSweepAngleField
+                    anchors.margins: _margins
+                    anchors.left: panSweepAngleLabel.right
+                    anchors.top: parent.top
+                }
+
+                QGCLabel {
+                    id: wiredMinAltitudeLabel
+                    text : "Wired Min Alt";
+                    anchors.left: panSweepAngleLabel.left
+                    anchors.baseline: wiredMinAltitudeLabelField.baseline
+                }
+                QGCTextField {
+                    id: wiredMinAltitudeLabelField
+                    anchors.topMargin: _margins
+                    anchors.left: panSweepAngleField.left
+                    anchors.top: panSweepAngleField.bottom
+                }
+
+                QGCLabel {
+                    id: wiredMaxAltitudeLabel
+                    text : "Wired Max Alt";
+                    anchors.left: panSweepAngleLabel.left
+                    anchors.baseline: wiredMaxAltitudeLabelField.baseline
+                }
+                QGCTextField {
+                    id: wiredMaxAltitudeLabelField
+                    anchors.topMargin: _margins
+                    anchors.left: panSweepAngleField.left
+                    anchors.top: wiredMinAltitudeLabelField.bottom
+                }
+            } // Rectangle altitude control
+      } // QGCFlickable
+    } // QGCViewPanel
+} // QGCView
