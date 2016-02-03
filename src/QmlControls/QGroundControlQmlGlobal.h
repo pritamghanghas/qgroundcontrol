@@ -41,6 +41,7 @@
 #endif
 
 class QGCToolbox;
+class HBSettings;
 
 class QGroundControlQmlGlobal : public QGCTool
 {
@@ -51,6 +52,7 @@ public:
     ~QGroundControlQmlGlobal();
 
 
+    Q_PROPERTY(HBSettings*          hbSettings          READ hbSettings             CONSTANT)
     Q_PROPERTY(FlightMapSettings*   flightMapSettings   READ flightMapSettings      CONSTANT)
     Q_PROPERTY(HomePositionManager* homePositionManager READ homePositionManager    CONSTANT)
     Q_PROPERTY(LinkManager*         linkManager         READ linkManager            CONSTANT)
@@ -96,6 +98,7 @@ public:
 
     // Property accesors
 
+    HBSettings*             hbSettings()                { return _hbSettings;       }
     FlightMapSettings*      flightMapSettings   ()      { return _flightMapSettings; }
     HomePositionManager*    homePositionManager ()      { return _homePositionManager; }
     LinkManager*            linkManager ()              { return _linkManager; }
@@ -149,6 +152,7 @@ signals:
     void mavlinkSystemIDChanged         (int id);
 
 private:
+    HBSettings*             _hbSettings;
     FlightMapSettings*      _flightMapSettings;
     HomePositionManager*    _homePositionManager;
     LinkManager*            _linkManager;

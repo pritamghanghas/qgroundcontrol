@@ -322,6 +322,7 @@ Item {
             id:                     takeoffButton
             buttonImage:            "/qmlimages/takeoff.svg"
             visible:                !_flying && _armed
+            buttonAnchors.margins:  width*0.15
             onClicked: {
                 if (multiVehicleManager.activeVehicle) {
                     multiVehicleManager.activeVehicle.doGuidedTakeoff(5)
@@ -334,6 +335,7 @@ Item {
             visible:                _flying;
             dropDirection:          dropRight
             buttonImage:            "/qmlimages/takeoff.svg"
+//            buttonAnchors.margins:  width*0.15
             viewportMargins:        ScreenTools.defaultFontPixelWidth / 2
             z:                      QGroundControl.zOrderWidgets
             property real desiredHeight:    5
@@ -349,8 +351,8 @@ Item {
                     }
                     Slider {
                         id:                 zheight
-                        minimumValue:       5
-                        maximumValue:       500
+                        minimumValue:       QGroundControl.hbSettings.value("wiredMinAltitude", 5);
+                        maximumValue:       QGroundControl.hbSettings.value("wiredMaxAltitude", 60);
                         stepSize:           1
                         orientation:        Qt.Vertical
 

@@ -15,3 +15,9 @@ SOURCES += \
     src/hb/thermalimageprovider.cpp \
     src/hb/mjpegimagegrabber.cpp
 }
+
+HEADERS += \
+    $$PWD/hbsettings.h
+
+SOURCES += \
+    $$PWD/hbsettings.cpp

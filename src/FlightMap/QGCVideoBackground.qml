@@ -270,6 +270,7 @@ VideoItem {
     RoundButton {
         id: videoSettings
         buttonImage: "/qmlimages/cameraSettings.svg"
+        buttonAnchors.margins:  width*0.15
         anchors.leftMargin: _margins
         anchors.topMargin: _margins*5
         anchors.top: parent.top

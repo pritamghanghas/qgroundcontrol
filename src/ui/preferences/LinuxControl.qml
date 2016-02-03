@@ -81,7 +81,7 @@ QGCView {
                     anchors.left: shutdownButton.left
                     anchors.right: shutdownButton.right
                     text:           "Restart Controller"
-                    onClicked:      QGroundControl.nodeSelector.restartAll();
+                    onClicked: QGroundControl.nodeSelector.restartAll();
                 }
             } // Rectangle - System Control
 
@@ -112,9 +112,14 @@ QGCView {
                 }
                 QGCTextField {
                     id: panSweepAngleField
+                    validator: IntValidator { bottom: 5; top: 360 }
                     anchors.margins: _margins
                     anchors.left: panSweepAngleLabel.right
                     anchors.top: parent.top
+                    text: QGroundControl.hbSettings.value("panSweepAngle", 20)
+                    onEditingFinished: {
+                        QGroundControl.hbSettings.setValue("panSweepAngle", text);
+                    }
                 }
 
                 QGCLabel {
@@ -125,9 +130,14 @@ QGCView {
                 }
                 QGCTextField {
                     id: wiredMinAltitudeLabelField
+                    validator: IntValidator { bottom: 5; top: 2000 }
                     anchors.topMargin: _margins
                     anchors.left: panSweepAngleField.left
                     anchors.top: panSweepAngleField.bottom
+                    text: QGroundControl.hbSettings.value("wiredMinAltitude", 5)
+                    onEditingFinished: {
+                        QGroundControl.hbSettings.setValue("wiredMinAltitude", text);
+                    }
                 }
 
                 QGCLabel {
@@ -138,9 +148,14 @@ QGCView {
                 }
                 QGCTextField {
                     id: wiredMaxAltitudeLabelField
+                    validator: IntValidator { bottom: 5; top: 2000 }
                     anchors.topMargin: _margins
                     anchors.left: panSweepAngleField.left
                     anchors.top: wiredMinAltitudeLabelField.bottom
+                    text: QGroundControl.hbSettings.value("wiredMaxAltitude", 60)
+                    onEditingFinished: {
+                        QGroundControl.hbSettings.setValue("wiredMaxAltitude", text);
+                    }
                 }
             } // Rectangle altitude control
       } // QGCFlickable

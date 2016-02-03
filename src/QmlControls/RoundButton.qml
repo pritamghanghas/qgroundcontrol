@@ -10,6 +10,7 @@ Item {
 
     signal          clicked()
     property alias  buttonImage:        button.source
+    property alias  buttonAnchors:      button.anchors
     property real   radius:             ScreenTools.defaultFontPixelHeight * 1.5
 
     width:  radius * 2

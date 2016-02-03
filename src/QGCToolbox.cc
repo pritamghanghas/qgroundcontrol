@@ -34,6 +34,7 @@
 #include "MultiVehicleManager.h"
 #include "QGCImageProvider.h"
 #include "UASMessageHandler.h"
+#include "hbsettings.h"
 
 QGCToolbox::QGCToolbox(QGCApplication* app)
     : _audioOutput(NULL)
@@ -49,6 +50,7 @@ QGCToolbox::QGCToolbox(QGCApplication* app)
     , _missionCommands(NULL)
     , _multiVehicleManager(NULL)
     , _uasMessageHandler(NULL)
+    , _hbSettings(NULL)
 {
     _audioOutput =              new GAudioOutput(app);
     _autopilotPluginManager =   new AutoPilotPluginManager(app);
@@ -63,6 +65,7 @@ QGCToolbox::QGCToolbox(QGCApplication* app)
     _missionCommands =          new MissionCommands(app);
     _multiVehicleManager =      new MultiVehicleManager(app);
     _uasMessageHandler =        new UASMessageHandler(app);
+    _hbSettings =               new HBSettings(app);
 
     _audioOutput->setToolbox(this);
     _autopilotPluginManager->setToolbox(this);
@@ -77,6 +80,7 @@ QGCToolbox::QGCToolbox(QGCApplication* app)
     _missionCommands->setToolbox(this);
     _multiVehicleManager->setToolbox(this);
     _uasMessageHandler->setToolbox(this);
+    _hbSettings->setToolbox(this);
 }
 
 QGCToolbox::~QGCToolbox()
@@ -93,6 +97,7 @@ QGCToolbox::~QGCToolbox()
     delete _missionCommands;
     delete _multiVehicleManager;
     delete _uasMessageHandler;
+    delete _hbSettings;
 }
 
 QGCTool::QGCTool(QGCApplication* app)
