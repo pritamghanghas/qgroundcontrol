@@ -330,47 +330,52 @@ Item {
             }
         }
 
-        DropButton {
+        // z-axis control
+        RoundButton {
             id:                     zAxisControl
+            property real desiredHeight:    zheight.minimumValue
+
             visible:                _flying;
-            dropDirection:          dropRight
             buttonImage:            "/qmlimages/takeoff.svg"
-//            buttonAnchors.margins:  width*0.15
-            viewportMargins:        ScreenTools.defaultFontPixelWidth / 2
-            z:                      QGroundControl.zOrderWidgets
-            property real desiredHeight:    5
-
-            dropDownComponent: Component {
-                Column {
-                    QGCLabel {
-                        text:           zheight.value + "m"
-                        font.pixelSize: ScreenTools.defaultFontPixelSize
-                        font.weight:    Font.DemiBold
-                        color:          "white"
-                        horizontalAlignment: TextEdit.AlignHCenter
-                    }
-                    Slider {
-                        id:                 zheight
-                        minimumValue:       QGroundControl.hbSettings.value("wiredMinAltitude", 5);
-                        maximumValue:       QGroundControl.hbSettings.value("wiredMaxAltitude", 60);
-                        stepSize:           1
-                        orientation:        Qt.Vertical
-
-                        onValueChanged: {
-                            zAxisControl.desiredHeight = value;
-                        }
-                    }
-                }
-            }
+            buttonAnchors.margins:  width*0.15
 
             onClicked: {
                 if (!checked && multiVehicleManager.activeVehicle) {
                     multiVehicleManager.activeVehicle.doChangeAltitude(zAxisControl.desiredHeight)
                 }
             }
-        } // drop button
+        } // roundbutton button
 
+    } // tool column
 
+    Rectangle {
+        id: zAxisControlSlider
+        z:  QGroundControl.zOrderWidgets
+        visible: zAxisControl.checked
+        anchors.left: toolColumn.right
+        anchors.top: toolColumn.top
+        anchors.bottom: parent.bottom
+        anchors.leftMargin: ScreenTools.defaultFontPixelHeight
+        Column {
+            QGCLabel {
+                text:           "Rel: " + zheight.value + "m"
+                font.pixelSize: ScreenTools.defaultFontPixelSize
+                font.weight:    Font.DemiBold
+                color:          "white"
+                horizontalAlignment: TextEdit.AlignHCenter
+            }
+            Slider {
+                id:                 zheight
+                height: zAxisControlSlider.height * 0.7
+                minimumValue:       QGroundControl.hbSettings.value("wiredMinAltitude", 5);
+                maximumValue:       QGroundControl.hbSettings.value("wiredMaxAltitude", 60);
+                stepSize:           1
+                orientation:        Qt.Vertical
+
+                onValueChanged: {
+                    zAxisControl.desiredHeight = value;
+                }
+            }
+        }
     }
-
 }
