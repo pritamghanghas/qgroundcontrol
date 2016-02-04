@@ -418,10 +418,11 @@ VideoItem {
             Image {
                 id: leftArrow
                 rotation: 90
-                anchors.fill: parent
+                width: parent.width/1.5
+                height: parent.height/1.5
                 fillMode: Qt.KeepAspectRatio
+                anchors.verticalCenter: parent.verticalCenter
                 anchors.left: parent.left
-                horizontalAlignment: Image.AlignLeft
                 source: "/qmlimages/arrow_dark.svg"
             }
             MouseArea {
@@ -450,10 +451,11 @@ VideoItem {
             Image {
                 id: topArrow
                 rotation: 180
-                anchors.fill: parent
-                fillMode: Qt.KeepAspectRatio
                 anchors.top: parent.top
-                verticalAlignment: Image.AlignTop
+                anchors.horizontalCenter: parent.horizontalCenter
+                width: parent.width/1.5
+                height: parent.height/1.5
+                fillMode: Qt.KeepAspectRatio
                 source: "/qmlimages/arrow_dark.svg"
             }
             MouseArea {
@@ -481,10 +483,11 @@ VideoItem {
             Image {
                 id: rightArrow
                 rotation: 270
-                anchors.fill: parent
-                fillMode: Qt.KeepAspectRatio
                 anchors.right: parent.right
-                horizontalAlignment: Image.AlignRight
+                anchors.verticalCenter: parent.verticalCenter
+                width: parent.width/1.5
+                height: parent.height/1.5
+                fillMode: Qt.KeepAspectRatio
                 source: "/qmlimages/arrow_dark.svg"
             }
             MouseArea {
@@ -511,10 +514,11 @@ VideoItem {
             anchors.horizontalCenter: parent.horizontalCenter
             Image {
                 id: downArrow
-                anchors.fill: parent
                 fillMode: Qt.KeepAspectRatio
                 anchors.bottom: parent.bottom
-                verticalAlignment: Image.AlignBottom
+                anchors.horizontalCenter: parent.horizontalCenter
+                width: parent.width/1.5
+                height: parent.height/1.5
                 source: "/qmlimages/arrow_dark.svg"
             }
             MouseArea {
