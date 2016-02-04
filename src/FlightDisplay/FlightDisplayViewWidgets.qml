@@ -366,7 +366,7 @@ Item {
             }
             Slider {
                 id:                 zheight
-                height: zAxisControlSlider.height * 0.7
+                height:             zAxisControlSlider.height * 0.7
                 minimumValue:       QGroundControl.hbSettings.value("wiredMinAltitude", 5);
                 maximumValue:       QGroundControl.hbSettings.value("wiredMaxAltitude", 60);
                 stepSize:           1

@@ -112,6 +112,11 @@ Vehicle::Vehicle(LinkInterface*             link,
     , _joystickManager(joystickManager)
     , _flowImageIndex(0)
     , _allLinksInactiveSent(false)
+    ,_headingMid(0)
+    ,_sweepAngle(0)
+    ,_headingLeft(0)
+    ,_headingRight(0)
+    ,_currentDirection(1)
 {
     _addLink(link);
 
@@ -199,6 +204,9 @@ Vehicle::Vehicle(LinkInterface*             link,
 
     _mapTrajectoryTimer.setInterval(_mapTrajectoryMsecsBetweenPoints);
     connect(&_mapTrajectoryTimer, &QTimer::timeout, this, &Vehicle::_addNewMapTrajectoryPoint);
+
+    // listen on heading change
+    connect(this, &Vehicle::headingChanged, this, &Vehicle::_onHeadingChanged);
 }
 
 Vehicle::~Vehicle()
@@ -1092,6 +1100,80 @@ void Vehicle::doChangeAltitude(int height)
     mavlink_msg_set_position_target_global_int_encode(_mavlink->getSystemId(), _mavlink->getComponentId(), &msg, &pos);
 
     sendMessage(msg);
+}
+
+void Vehicle::doChangeYaw(float angle, bool relative, int direction)
+{
+    qDebug("moving yaw by angle %f and its %s", angle, relative ? "relative" : "absolute");
+    _currentDirection = direction;
+
+    mavlink_message_t msg;
+    mavlink_command_long_t cmd;
+
+    cmd.command = (uint16_t)MAV_CMD_CONDITION_YAW;
+    cmd.confirmation = 0;
+    cmd.param1 = angle;
+    cmd.param2 = 0.0f;
+    cmd.param3 = direction;
+    cmd.param4 = relative ? 1 : 0;
+    cmd.param5 = 0.0f;
+    cmd.param6 = 0.0f;
+    cmd.param7 = 0.0f;
+    cmd.target_system = id();
+    cmd.target_component = 0;
+
+    mavlink_msg_command_long_encode(_mavlink->getSystemId(), _mavlink->getComponentId(), &msg, &cmd);
+
+    sendMessage(msg);
+
+}
+
+void Vehicle::doSweepYaw(float sweepAngle)
+{
+    if (!sweepAngle) {
+        _headingLeft = 0.0f;
+        _headingRight = 0.0f;
+        return;
+    }
+
+    _sweepAngle = sweepAngle;
+    _headingMid = _heading;
+
+    _headingLeft = _headingMid - sweepAngle/2;
+    if (_headingLeft < 0) {
+        _headingLeft = 360 - fabs(_headingLeft);
+    }
+
+    _headingRight = _headingMid + sweepAngle/2;
+    if (_headingRight >= 360) {
+        _headingRight = _headingRight - 360;
+    }
+
+
+
+    qDebug(" we will sweep from angle %f to %f", _headingLeft, _headingRight);
+
+    // start by sweeping right
+    doChangeYaw(sweepAngle/2, true, 1);
+}
+
+void Vehicle::_onHeadingChanged()
+{
+    if (!_sweepAngle) { // this means user has stopped sweep
+        return;
+    }
+
+    if(_currentDirection == -1) { // ccw
+        if (fabs(_heading - _headingLeft) < 0.5) {
+            qDebug("reached left ccw angel %f, start moving right/cw now", _headingLeft);
+            doChangeYaw(_sweepAngle, true, 1);
+        }
+    } else if ( _currentDirection == 1) {
+        if (fabs(_heading - _headingRight) < 0.5) {
+            qDebug("reached right/cw angel %f, start moving left/ccw now", _headingRight);
+            doChangeYaw(_sweepAngle, true, -1);
+        }
+    }
 }
 
 void Vehicle::doGuidedTakeoff(int height)

@@ -129,6 +129,9 @@
         <file alias="land.svg">src/hb/images/land.svg</file>
         <file alias="takeoff.svg">src/hb/images/takeoff.svg</file>
         <file alias="cameraSettings.svg">src/hb/images/cameraSettings.svg</file>
+        <file alias="look.svg">src/hb/images/look.svg</file>
+        <file alias="rotate.svg">src/hb/images/rotate.svg</file>
+        <file alias="arrow_dark.svg">src/hb/images/arrow_dark.svg</file>
     </qresource>
     <qresource prefix="/res">
         <file alias="AntennaRC">resources/Antenna_RC.svg</file>

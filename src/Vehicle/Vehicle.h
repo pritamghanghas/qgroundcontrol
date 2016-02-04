@@ -136,6 +136,8 @@ public:
     Q_INVOKABLE void disconnectInactiveVehicle(void);
     Q_INVOKABLE void doGuidedTakeoff(int height); // height in meters
     Q_INVOKABLE void doChangeAltitude(int height);
+    Q_INVOKABLE void doChangeYaw(float angle, bool relative, int direction); // true relative false absolute
+    Q_INVOKABLE void doSweepYaw(float sweepAngle);
 
     // Property accessors
 
@@ -389,6 +391,8 @@ private slots:
     void _imageReady                        (UASInterface* uas);
     void _connectionLostTimeout(void);
 
+    void _onHeadingChanged();
+
 private:
     bool _containsLink(LinkInterface* link);
     void _addLink(LinkInterface* link);
@@ -517,5 +521,12 @@ private:
     static const char* _settingsGroup;
     static const char* _joystickModeSettingsKey;
     static const char* _joystickEnabledSettingsKey;
+
+    // sweep support
+    float _headingMid;
+    float _sweepAngle;
+    float _headingLeft;
+    float _headingRight;
+    int   _currentDirection;
 };
 #endif
