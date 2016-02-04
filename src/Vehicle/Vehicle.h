@@ -136,7 +136,7 @@ public:
     Q_INVOKABLE void disconnectInactiveVehicle(void);
     Q_INVOKABLE void doGuidedTakeoff(int height); // height in meters
     Q_INVOKABLE void doChangeAltitude(int height);
-    Q_INVOKABLE void doChangeYaw(float angle, bool relative, int direction); // true relative false absolute
+    Q_INVOKABLE void doChangeYaw(float angle, float speed, bool relative, int direction); // true relative false absolute
     Q_INVOKABLE void doSweepYaw(float sweepAngle);
 
     // Property accessors

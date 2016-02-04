@@ -313,13 +313,13 @@ VideoItem {
     function onIncrementYaw()
     {
         console.log("move yaw right by ", stepSize())
-        multiVehicleManager.activeVehicle.doChangeYaw(stepSize(), true, 1);
+        multiVehicleManager.activeVehicle.doChangeYaw(stepSize(), 0.0, true, 1);
     }
 
     function onDecrementYaw()
     {
         console.log("move yaw left by ", stepSize())
-        multiVehicleManager.activeVehicle.doChangeYaw(stepSize(), true, -1);
+        multiVehicleManager.activeVehicle.doChangeYaw(stepSize(), 0.0, true, -1);
     }
 
     function onIncrementPitch()

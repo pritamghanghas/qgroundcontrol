@@ -1102,7 +1102,7 @@ void Vehicle::doChangeAltitude(int height)
     sendMessage(msg);
 }
 
-void Vehicle::doChangeYaw(float angle, bool relative, int direction)
+void Vehicle::doChangeYaw(float angle, float speed, bool relative, int direction)
 {
     qDebug("moving yaw by angle %f and its %s", angle, relative ? "relative" : "absolute");
     _currentDirection = direction;
@@ -1113,7 +1113,7 @@ void Vehicle::doChangeYaw(float angle, bool relative, int direction)
     cmd.command = (uint16_t)MAV_CMD_CONDITION_YAW;
     cmd.confirmation = 0;
     cmd.param1 = angle;
-    cmd.param2 = 0.0f;
+    cmd.param2 = speed;
     cmd.param3 = direction;
     cmd.param4 = relative ? 1 : 0;
     cmd.param5 = 0.0f;
@@ -1154,7 +1154,7 @@ void Vehicle::doSweepYaw(float sweepAngle)
     qDebug(" we will sweep from angle %f to %f", _headingLeft, _headingRight);
 
     // start by sweeping right
-    doChangeYaw(sweepAngle/2, true, 1);
+    doChangeYaw(sweepAngle/2, 1.0f, true, 1);
 }
 
 void Vehicle::_onHeadingChanged()
@@ -1166,12 +1166,12 @@ void Vehicle::_onHeadingChanged()
     if(_currentDirection == -1) { // ccw
         if (fabs(_heading - _headingLeft) < 0.5) {
             qDebug("reached left ccw angel %f, start moving right/cw now", _headingLeft);
-            doChangeYaw(_sweepAngle, true, 1);
+            doChangeYaw(_sweepAngle, 1.0f, true, 1);
         }
     } else if ( _currentDirection == 1) {
         if (fabs(_heading - _headingRight) < 0.5) {
             qDebug("reached right/cw angel %f, start moving left/ccw now", _headingRight);
-            doChangeYaw(_sweepAngle, true, -1);
+            doChangeYaw(_sweepAngle, 1.0f, true, -1);
         }
     }
 }
