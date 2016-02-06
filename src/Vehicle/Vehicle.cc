@@ -1150,7 +1150,7 @@ void Vehicle::doChangeAltitude(int height)
 
 void Vehicle::doChangeYaw(float angle, float speed, bool relative, int direction)
 {
-    qDebug("moving yaw by angle %f and its %s", angle, relative ? "relative" : "absolute");
+//    qDebug("moving yaw by angle %f and its %s", angle, relative ? "relative" : "absolute");
     _currentDirection = direction;
 
     mavlink_message_t msg;
@@ -1213,12 +1213,12 @@ void Vehicle::_onHeadingChanged()
 
     if(_currentDirection == -1) { // ccw
         if (fabs(_heading - _headingLeft) < HEADING_MARGIN) {
-            qDebug("reached left ccw angel %f, start moving right/cw now", _headingLeft);
+//            qDebug("reached left ccw angel %f, start moving right/cw now", _headingLeft);
             doChangeYaw(_sweepAngle, _sweepSpeed, true, 1);
         }
     } else if ( _currentDirection == 1) {
         if (fabs(_heading - _headingRight) < HEADING_MARGIN) {
-            qDebug("reached right/cw angel %f, start moving left/ccw now", _headingRight);
+//            qDebug("reached right/cw angel %f, start moving left/ccw now", _headingRight);
             doChangeYaw(_sweepAngle, _sweepSpeed, true, -1);
         }
     }
