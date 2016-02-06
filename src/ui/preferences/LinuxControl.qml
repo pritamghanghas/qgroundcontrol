@@ -105,14 +105,16 @@ QGCView {
 
                 QGCLabel {
                     id: panSweepAngleLabel
-                    text : "Pan sweep angle"
+                    text : "Pan sweep angle (degree)"
                     anchors.margins: _margins
                     anchors.left: parent.left
                     anchors.baseline: panSweepAngleField.baseline
                 }
                 QGCTextField {
                     id: panSweepAngleField
-                    validator: IntValidator { bottom: 5; top: 360 }
+                    // limiting to 160 degree max as Ardupilot doesn't seem to honour direction
+                    // it leads to trouble when moving angle cloe to 180 or more
+                    validator: IntValidator { bottom: 5; top: 160 }
                     anchors.margins: _margins
                     anchors.left: panSweepAngleLabel.right
                     anchors.top: parent.top
@@ -123,8 +125,26 @@ QGCView {
                 }
 
                 QGCLabel {
+                    id: panSweepSpeedLabel
+                    text : "sweep speed (degree/s)"
+                    anchors.left: panSweepAngleLabel.left
+                    anchors.baseline: panSweepSpeedField.baseline
+                }
+                QGCTextField {
+                    id: panSweepSpeedField
+                    validator: IntValidator { bottom: 1; top: 160 }
+                    anchors.topMargin: _margins
+                    anchors.left: panSweepAngleField.left
+                    anchors.top: panSweepAngleField.bottom
+                    text: QGroundControl.hbSettings.value("panSweepSpeed", 5)
+                    onEditingFinished: {
+                        QGroundControl.hbSettings.setValue("panSweepSpeed", text);
+                    }
+                }
+
+                QGCLabel {
                     id: wiredMinAltitudeLabel
-                    text : "Wired Min Alt";
+                    text : "Wired Min Alt (meter)";
                     anchors.left: panSweepAngleLabel.left
                     anchors.baseline: wiredMinAltitudeLabelField.baseline
                 }
@@ -133,7 +153,7 @@ QGCView {
                     validator: IntValidator { bottom: 5; top: 2000 }
                     anchors.topMargin: _margins
                     anchors.left: panSweepAngleField.left
-                    anchors.top: panSweepAngleField.bottom
+                    anchors.top: panSweepSpeedField.bottom
                     text: QGroundControl.hbSettings.value("wiredMinAltitude", 5)
                     onEditingFinished: {
                         QGroundControl.hbSettings.setValue("wiredMinAltitude", text);
@@ -142,7 +162,7 @@ QGCView {
 
                 QGCLabel {
                     id: wiredMaxAltitudeLabel
-                    text : "Wired Max Alt";
+                    text : "Wired Max Alt (meter)";
                     anchors.left: panSweepAngleLabel.left
                     anchors.baseline: wiredMaxAltitudeLabelField.baseline
                 }

@@ -41,6 +41,7 @@ QGC_LOGGING_CATEGORY(VehicleLog, "VehicleLog")
 #define UPDATE_TIMER 50
 #define DEFAULT_LAT  38.965767f
 #define DEFAULT_LON -120.083923f
+#define HEADING_MARGIN 1.0f
 
 const char* Vehicle::_settingsGroup =               "Vehicle%1";        // %1 replaced with mavlink system id
 const char* Vehicle::_joystickModeSettingsKey =     "JoystickMode";
@@ -112,17 +113,18 @@ Vehicle::Vehicle(LinkInterface*             link,
     , _joystickManager(joystickManager)
     , _flowImageIndex(0)
     , _allLinksInactiveSent(false)
-    ,_headingMid(0)
-    ,_sweepAngle(0)
-    ,_headingLeft(0)
-    ,_headingRight(0)
-    ,_currentDirection(1)
     , _messagesReceived(0)
     , _messagesSent(0)
     , _messagesLost(0)
     , _messageSeq(0)
     , _compID(0)
     , _heardFrom(false)
+    ,_headingMid(0)
+    ,_sweepAngle(0)
+    ,_sweepSpeed(0)
+    ,_headingLeft(0)
+    ,_headingRight(0)
+    ,_currentDirection(1)
 {
     _addLink(link);
 
@@ -1172,16 +1174,18 @@ void Vehicle::doChangeYaw(float angle, float speed, bool relative, int direction
 
 }
 
-void Vehicle::doSweepYaw(float sweepAngle)
+void Vehicle::doSweepYaw(float sweepAngle, float sweepSpeed)
 {
     if (!sweepAngle) {
         _headingLeft = 0.0f;
         _headingRight = 0.0f;
+        _sweepSpeed = 0.0f;
         return;
     }
 
     _sweepAngle = sweepAngle;
     _headingMid = _heading;
+    _sweepSpeed = sweepSpeed;
 
     _headingLeft = _headingMid - sweepAngle/2;
     if (_headingLeft < 0) {
@@ -1198,7 +1202,7 @@ void Vehicle::doSweepYaw(float sweepAngle)
     qDebug(" we will sweep from angle %f to %f", _headingLeft, _headingRight);
 
     // start by sweeping right
-    doChangeYaw(sweepAngle/2, 1.0f, true, 1);
+    doChangeYaw(sweepAngle/2, _sweepSpeed, true, 1);
 }
 
 void Vehicle::_onHeadingChanged()
@@ -1208,14 +1212,14 @@ void Vehicle::_onHeadingChanged()
     }
 
     if(_currentDirection == -1) { // ccw
-        if (fabs(_heading - _headingLeft) < 0.5) {
+        if (fabs(_heading - _headingLeft) < HEADING_MARGIN) {
             qDebug("reached left ccw angel %f, start moving right/cw now", _headingLeft);
-            doChangeYaw(_sweepAngle, 1.0f, true, 1);
+            doChangeYaw(_sweepAngle, _sweepSpeed, true, 1);
         }
     } else if ( _currentDirection == 1) {
-        if (fabs(_heading - _headingRight) < 0.5) {
+        if (fabs(_heading - _headingRight) < HEADING_MARGIN) {
             qDebug("reached right/cw angel %f, start moving left/ccw now", _headingRight);
-            doChangeYaw(_sweepAngle, 1.0f, true, -1);
+            doChangeYaw(_sweepAngle, _sweepSpeed, true, -1);
         }
     }
 }

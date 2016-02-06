@@ -143,7 +143,7 @@ public:
     Q_INVOKABLE void doGuidedTakeoff(int height); // height in meters
     Q_INVOKABLE void doChangeAltitude(int height);
     Q_INVOKABLE void doChangeYaw(float angle, float speed, bool relative, int direction); // true relative false absolute
-    Q_INVOKABLE void doSweepYaw(float sweepAngle);
+    Q_INVOKABLE void doSweepYaw(float sweepAngle, float sweepSpeed);
 
     // Property accessors
 
@@ -545,6 +545,7 @@ private:
     // sweep support
     float _headingMid;
     float _sweepAngle;
+    float _sweepSpeed;
     float _headingLeft;
     float _headingRight;
     int   _currentDirection;

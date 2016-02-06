@@ -389,9 +389,9 @@ VideoItem {
             z:            QGroundControl.zOrderWidgets
             onClicked: {
                 if(checked) {
-                    multiVehicleManager.activeVehicle.doSweepYaw(QGroundControl.hbSettings.value("panSweepAngle", 20));
+                    multiVehicleManager.activeVehicle.doSweepYaw(QGroundControl.hbSettings.value("panSweepAngle", 20), QGroundControl.hbSettings.value("panSweepAngle", 5));
                 } else {
-                    multiVehicleManager.activeVehicle.doSweepYaw(0);
+                    multiVehicleManager.activeVehicle.doSweepYaw(0, 0);
                 }
             }
         }
