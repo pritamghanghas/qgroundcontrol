@@ -130,9 +130,11 @@ LinuxBuild {
     CONFIG += qesp_linux_udev
 }
 
-WindowsBuild {
-    RC_FILE = $${BASEDIR}/qgroundcontrol.rc
-}
+RC_ICONS = resources/icons/qgroundcontrol.ico
+QMAKE_TARGET_COMPANY = "qgroundcontrol.org"
+QMAKE_TARGET_DESCRIPTION = "Open source ground control app provided by QGroundControl dev team"
+QMAKE_TARGET_COPYRIGHT = "Copyright (C) 2016 QGroundControl Development Team. All rights reserved."
+QMAKE_TARGET_PRODUCT = "qgroundcontrol"
 
 #
 # Build-specific settings
@@ -205,11 +207,6 @@ INCLUDEPATH += \
 FORMS += \
     src/ui/MainWindow.ui \
     src/QGCQmlWidgetHolder.ui \
-
-!iOSBuild {
-FORMS += \
-    src/ui/SerialSettings.ui \
-}
 
 !MobileBuild {
 FORMS += \
@@ -309,7 +306,6 @@ contains(DEFINES, QGC_ENABLE_BLUETOOTH) {
 HEADERS += \
     src/comm/QGCSerialPortInfo.h \
     src/comm/SerialLink.h \
-    src/ui/SerialConfigurationWindow.h \
 }
 
 !MobileBuild {
@@ -420,7 +416,6 @@ SOURCES += \
 SOURCES += \
     src/comm/QGCSerialPortInfo.cc \
     src/comm/SerialLink.cc \
-    src/ui/SerialConfigurationWindow.cc \
 }
 
 contains(DEFINES, QGC_ENABLE_BLUETOOTH) {
