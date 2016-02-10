@@ -97,6 +97,7 @@
 #include "VideoSurface.h"
 #include "VideoReceiver.h"
 #include "LogDownloadController.h"
+#include "PX4AirframeLoader.h"
 
 #ifndef __ios__
     #include "SerialLink.h"
@@ -128,8 +129,9 @@ const char* QGCApplication::_settingsVersionKey             = "SettingsVersion";
 const char* QGCApplication::_promptFlightDataSave           = "PromptFLightDataSave";
 const char* QGCApplication::_promptFlightDataSaveNotArmed   = "PromptFLightDataSaveNotArmed";
 const char* QGCApplication::_styleKey                       = "StyleIsDark";
-const char* QGCApplication::_defaultMapPositionLatKey       = "DefaultMapPositionLat";
-const char* QGCApplication::_defaultMapPositionLonKey       = "DefaultMapPositionLon";
+const char* QGCApplication::_lastKnownHomePositionLatKey    = "LastKnownHomePositionLat";
+const char* QGCApplication::_lastKnownHomePositionLonKey    = "LastKnownHomePositionLon";
+const char* QGCApplication::_lastKnownHomePositionAltKey    = "LastKnownHomePositionAlt";
 
 const char* QGCApplication::_darkStyleFile          = ":/res/styles/style-dark.css";
 const char* QGCApplication::_lightStyleFile         = ":/res/styles/style-light.css";
@@ -185,7 +187,7 @@ QGCApplication::QGCApplication(int &argc, char* argv[], bool unitTesting)
 #endif
     , _toolbox(NULL)
     , _bluetoothAvailable(false)
-    , _defaultMapPosition(37.803784, -122.462276)
+    , _lastKnownHomePosition(37.803784, -122.462276, 0.0)
 {
     Q_ASSERT(_app == NULL);
     _app = this;
@@ -365,12 +367,18 @@ QGCApplication::QGCApplication(int &argc, char* argv[], bool unitTesting)
 
     if (fClearSettingsOptions) {
         // User requested settings to be cleared on command line
+
         settings.clear();
         settings.setValue(_settingsVersionKey, QGC_SETTINGS_VERSION);
+
+        QFile::remove(PX4AirframeLoader::aiframeMetaDataFile());
+        QFile::remove(PX4ParameterMetaData::parameterMetaDataFile());
+        QFile::remove(ParameterLoader::parameterCacheFile());
     }
 
-    _defaultMapPosition.setLatitude(settings.value(_defaultMapPositionLatKey, 37.803784).toDouble());
-    _defaultMapPosition.setLongitude(settings.value(_defaultMapPositionLonKey, -122.462276).toDouble());
+    _lastKnownHomePosition.setLatitude(settings.value(_lastKnownHomePositionLatKey, 37.803784).toDouble());
+    _lastKnownHomePosition.setLongitude(settings.value(_lastKnownHomePositionLonKey, -122.462276).toDouble());
+    _lastKnownHomePosition.setAltitude(settings.value(_lastKnownHomePositionAltKey, 0.0).toDouble());
 
     // Initialize Bluetooth
 #ifdef QGC_ENABLE_BLUETOOTH
@@ -767,11 +775,12 @@ void QGCApplication::_showSetupVehicleComponent(VehicleComponent* vehicleCompone
     QMetaObject::invokeMethod(_rootQmlObject(), "showSetupVehicleComponent", Q_RETURN_ARG(QVariant, varReturn), Q_ARG(QVariant, varComponent));
 }
 
-void QGCApplication::setDefaultMapPosition(QGeoCoordinate& defaultMapPosition)
+void QGCApplication::setLastKnownHomePosition(QGeoCoordinate& lastKnownHomePosition)
 {
     QSettings settings;
 
-    settings.setValue(_defaultMapPositionLatKey, defaultMapPosition.latitude());
-    settings.setValue(_defaultMapPositionLonKey, defaultMapPosition.longitude());
-    _defaultMapPosition = defaultMapPosition;
+    settings.setValue(_lastKnownHomePositionLatKey, lastKnownHomePosition.latitude());
+    settings.setValue(_lastKnownHomePositionLonKey, lastKnownHomePosition.longitude());
+    settings.setValue(_lastKnownHomePositionAltKey, lastKnownHomePosition.altitude());
+    _lastKnownHomePosition = lastKnownHomePosition;
 }

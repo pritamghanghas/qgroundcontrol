@@ -80,7 +80,7 @@ public:
 
     Q_PROPERTY(NodeSelector*        nodeSelector        READ nodeSelector           CONSTANT)
 
-    Q_PROPERTY(QGeoCoordinate defaultMapPosition        READ defaultMapPosition     CONSTANT)
+    Q_PROPERTY(QGeoCoordinate lastKnownHomePosition READ lastKnownHomePosition CONSTANT)
 
     Q_INVOKABLE void    saveGlobalSetting       (const QString& key, const QString& value);
     Q_INVOKABLE QString loadGlobalSetting       (const QString& key, const QString& defaultValue);
@@ -119,7 +119,7 @@ public:
     bool    isVersionCheckEnabled   () { return _toolbox->mavlinkProtocol()->versionCheckEnabled(); }
     int     mavlinkSystemID         () { return _toolbox->mavlinkProtocol()->getSystemId(); }
 
-    QGeoCoordinate defaultMapPosition() { return qgcApp()->defaultMapPosition(); }
+    QGeoCoordinate lastKnownHomePosition() { return qgcApp()->lastKnownHomePosition(); }
 
     Fact*   offlineEditingFirmwareType () { return &_offlineEditingFirmwareTypeFact; }
 

@@ -249,8 +249,10 @@ HEADERS += \
     src/HomePositionManager.h \
     src/Joystick/Joystick.h \
     src/Joystick/JoystickManager.h \
+    src/JsonHelper.h \
     src/LogCompressor.h \
     src/MG.h \
+    src/MissionManager/MissionCommandList.h \
     src/MissionManager/MissionCommands.h \
     src/MissionManager/MissionController.h \
     src/MissionManager/MissionItem.h \
@@ -372,8 +374,10 @@ SOURCES += \
     src/HomePositionManager.cc \
     src/Joystick/Joystick.cc \
     src/Joystick/JoystickManager.cc \
+    src/JsonHelper.cc \
     src/LogCompressor.cc \
     src/main.cc \
+    src/MissionManager/MissionCommandList.cc \
     src/MissionManager/MissionCommands.cc \
     src/MissionManager/MissionController.cc \
     src/MissionManager/MissionItem.cc \

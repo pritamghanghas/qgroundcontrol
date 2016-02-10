@@ -221,6 +221,15 @@ QList<MAV_CMD> PX4FirmwarePlugin::supportedMissionCommands(void)
          << MAV_CMD_CONDITION_DELAY
          << MAV_CMD_DO_VTOL_TRANSITION
          << MAV_CMD_DO_DIGICAM_CONTROL
-         << MAV_CMD_DO_SET_SERVO;
+         << MAV_CMD_DO_SET_SERVO
+         << MAV_CMD_DO_CHANGE_SPEED;
     return list;
+}
+
+void PX4FirmwarePlugin::missionCommandOverrides(QString& commonJsonFilename, QString& fixedWingJsonFilename, QString& multiRotorJsonFilename) const
+{
+    // No overrides
+    commonJsonFilename = QStringLiteral(":/json/PX4/MavCmdInfoCommon.json");
+    fixedWingJsonFilename = QStringLiteral(":/json/PX4/MavCmdInfoFixedWing.json");
+    multiRotorJsonFilename = QStringLiteral(":/json/PX4/MavCmdInfoMultiRotor.json");
 }

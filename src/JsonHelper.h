@@ -2,7 +2,7 @@
  
  QGroundControl Open Source Ground Control Station
  
- (c) 2009 - 2015 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ (c) 2009 - 2014 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  
  This file is part of the QGROUNDCONTROL project
  
@@ -21,25 +21,17 @@
  
  ======================================================================*/
 
-/// @file
-///     @author Don Gagne <don@thegagnes.com>
+#ifndef JsonHelper_H
+#define JsonHelper_H
 
-#include "QGCLoggingCategory.h"
+#include <QJsonObject>
+#include <QGeoCoordinate>
 
-// Add Global logging categories (not class specific) here using QGC_LOGGING_CATEGORY
-QGC_LOGGING_CATEGORY(FirmwareUpgradeLog,        "FirmwareUpgradeLog")
-QGC_LOGGING_CATEGORY(FirmwareUpgradeVerboseLog, "FirmwareUpgradeVerboseLog")
-QGC_LOGGING_CATEGORY(MissionCommandsLog,        "MissionCommandsLog")
-
-
-QGCLoggingCategoryRegister* _instance = NULL;
-
-QGCLoggingCategoryRegister* QGCLoggingCategoryRegister::instance(void)
+class JsonHelper
 {
-    if (!_instance) {
-        _instance = new QGCLoggingCategoryRegister();
-        Q_CHECK_PTR(_instance);
-    }
-    
-    return _instance;
-}
+public:
+    static bool validateRequiredKeys(const QJsonObject& jsonObject, const QStringList& keys, QString& errorString);
+    static bool toQGeoCoordinate(const QJsonValue& jsonValue, QGeoCoordinate& coordinate, bool altitudeRequired, QString& errorString);
+};
+
+#endif
