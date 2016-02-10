@@ -327,6 +327,7 @@ Item {
                 if (multiVehicleManager.activeVehicle) {
                     multiVehicleManager.activeVehicle.doGuidedTakeoff(5)
                 }
+                checked = false;
             }
         }
 

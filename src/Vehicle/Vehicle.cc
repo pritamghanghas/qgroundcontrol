@@ -1227,7 +1227,7 @@ void Vehicle::_onHeadingChanged()
 void Vehicle::doGuidedTakeoff(int height)
 {
     if (flightMode() != "Guided") {
-        return;
+        setFlightMode("Guided");
     }
     mavlink_message_t msg;
     mavlink_command_long_t cmd;
