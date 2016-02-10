@@ -1032,7 +1032,7 @@ QStringList Vehicle::joystickModes(void)
 {
     QStringList list;
 
-    list << "Normal" << "Attitude" << "Position" << "Force" << "Velocity";
+    list << "Normal" << "Attitude" << "Position" << "Force" << "Velocity" << "RCOverride";
 
     return list;
 }
