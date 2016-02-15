@@ -67,7 +67,6 @@ QGCView {
 
     property bool _syncInProgress:              _activeVehicle ? _activeVehicle.missionManager.inProgress : false
 
-    Component.onCompleted:          updateMapToVehiclePosition()
     onActiveVehiclePositionChanged: updateMapToVehiclePosition()
 
     Connections {
@@ -92,8 +91,20 @@ QGCView {
     }
 
     function loadFromFile() {
-        controller.loadMissionFromFile()
-        fitViewportToMissionItems()
+        if (ScreenTools.isMobile) {
+            _root.showDialog(mobileFilePicker, "Select Mission File", _root.showDialogDefaultWidth, StandardButton.Yes | StandardButton.Cancel)
+        } else {
+            controller.loadMissionFromFile()
+            fitViewportToMissionItems()
+        }
+    }
+
+    function saveToFile() {
+        if (ScreenTools.isMobile) {
+            _root.showDialog(mobileFileSaver, "Save Mission File", _root.showDialogDefaultWidth, StandardButton.Save | StandardButton.Cancel)
+        } else {
+            controller.saveToFile()
+        }
     }
 
     function normalizeLat(lat) {
@@ -106,29 +117,32 @@ QGCView {
         return lon  + 180.0
     }
 
-    /// Fix the map viewport to the current mission items. We don't fit the home position in this process.
+    /// Fix the map viewport to the current mission items.
     function fitViewportToMissionItems() {
-        var missionItem = _missionItems.get(0)
-        var north = normalizeLat(missionItem.coordinate.latitude)
-        var south = north
-        var east = normalizeLon(missionItem.coordinate.longitude)
-        var west = east
+        if (_missionItems.count == 1) {
+            editorMap.center = _missionItems.get(0).coordinate
+        } else {
+            var missionItem = _missionItems.get(0)
+            var north = normalizeLat(missionItem.coordinate.latitude)
+            var south = north
+            var east = normalizeLon(missionItem.coordinate.longitude)
+            var west = east
 
-        for (var i=1; i<_missionItems.count; i++) {
-            missionItem = _missionItems.get(i)
+            for (var i=1; i<_missionItems.count; i++) {
+                missionItem = _missionItems.get(i)
 
-            if (missionItem.specifiesCoordinate && !missionItem.standaloneCoordinate) {
-                var lat = normalizeLat(missionItem.coordinate.latitude)
-                var lon = normalizeLon(missionItem.coordinate.longitude)
+                if (missionItem.specifiesCoordinate && !missionItem.standaloneCoordinate) {
+                    var lat = normalizeLat(missionItem.coordinate.latitude)
+                    var lon = normalizeLon(missionItem.coordinate.longitude)
 
-                north = Math.max(north, lat)
-                south = Math.min(south, lat)
-                east = Math.max(east, lon)
-                west = Math.min(west, lon)
+                    north = Math.max(north, lat)
+                    south = Math.min(south, lat)
+                    east = Math.max(east, lon)
+                    west = Math.min(west, lon)
+                }
             }
+            editorMap.visibleRegion = QtPositioning.rectangle(QtPositioning.coordinate(north - 90.0, west - 180.0), QtPositioning.coordinate(south - 90.0, east - 180.0))
         }
-
-        editorMap.visibleRegion = QtPositioning.rectangle(QtPositioning.coordinate(north - 90.0, west - 180.0), QtPositioning.coordinate(south - 90.0, east - 180.0))
     }
 
     MissionController {
@@ -174,6 +188,56 @@ QGCView {
     }
 
     property int _moveDialogMissionItemIndex
+
+    Component {
+        id: mobileFilePicker
+
+        QGCViewDialog {
+            ListView {
+                anchors.margins:    _margin
+                anchors.fill:       parent
+                spacing:            _margin / 2
+                orientation:    ListView.Vertical
+                model: controller.getMobileMissionFiles()
+
+                delegate: QGCButton {
+                    text: modelData
+
+                    onClicked: {
+                        hideDialog()
+                        controller.loadMobileMissionFromFile(modelData)
+                        fitViewportToMissionItems()
+                    }
+                }
+            }
+        }
+    }
+
+    Component {
+        id: mobileFileSaver
+
+        QGCViewDialog {
+            function accept() {
+                hideDialog()
+                console.log(filenameTextField.text)
+                controller.saveMobileMissionToFile(filenameTextField.text)
+            }
+
+            Column {
+                anchors.left:   parent.left
+                anchors.right:  parent.right
+                spacing:        ScreenTools.defaultFontPixelHeight
+
+                QGCLabel {
+                    text: "File name:"
+                }
+
+                QGCTextField {
+                    id: filenameTextField
+                }
+            }
+        }
+    }
 
     Component {
         id: moveDialog
@@ -223,6 +287,9 @@ QGCView {
                 mapName:        "MissionEditor"
 
                 readonly property real animationDuration: 500
+
+                // Initial map position duplicates Fly view position
+                Component.onCompleted: editorMap.center = QGroundControl.flightMapPosition
 
                 Behavior on zoomLevel {
                     NumberAnimation {
@@ -373,18 +440,21 @@ QGCView {
                     MouseArea {
                         // This MouseArea prevents the Map below it from getting Mouse events. Without this
                         // things like mousewheel will scroll the Flickable and then scroll the map as well.
-                        anchors.fill:       parent
+                        anchors.fill:       editorListView
                         preventStealing:    true
                         onWheel:            wheel.accepted = true
                     }
 
                     ListView {
-                        anchors.fill:   parent
+                        id:             editorListView
+                        anchors.left:   parent.left
+                        anchors.right:  parent.right
+                        anchors.top:    parent.top
+                        height:         Math.min(contentHeight, parent.height)
                         spacing:        _margin / 2
                         orientation:    ListView.Vertical
                         model:          controller.missionItems
-
-                        property real _maxItemHeight: 0
+                        cacheBuffer:    height * 2
 
                         delegate: MissionItemEditor {
                             missionItem:    object
@@ -397,11 +467,6 @@ QGCView {
                             onRemove: {
                                 itemDragger.clearItem()
                                 controller.removeMissionItem(object.sequenceNumber)
-                            }
-
-                            onRemoveAll: {
-                                itemDragger.clearItem()
-                                controller.removeAllMissionItems()
                             }
 
                             onInsert: {
@@ -477,6 +542,15 @@ QGCView {
                                         onClicked: {
                                             centerMapButton.hideDropDown()
                                             editorMap.center = controller.missionItems.get(0).coordinate
+                                        }
+                                    }
+
+                                    QGCButton {
+                                        text: "Mission"
+
+                                        onClicked: {
+                                            centerMapButton.hideDropDown()
+                                            fitViewportToMissionItems()
                                         }
                                     }
 
@@ -602,6 +676,20 @@ QGCView {
     }
 
     Component {
+        id: removeAllPromptDialog
+
+        QGCViewMessage {
+            message: "Are you sure you want to delete all mission items?"
+
+            function accept() {
+                itemDragger.clearItem()
+                controller.removeAllMissionItems()
+                hideDialog()
+            }
+        }
+    }
+
+    Component {
         id: syncDropDownComponent
 
         Column {
@@ -647,14 +735,13 @@ QGCView {
 
             Row {
                 spacing: ScreenTools.defaultFontPixelWidth
-                visible: !ScreenTools.isMobile
 
                 QGCButton {
                     text:       "Save to file..."
 
                     onClicked: {
                         syncButton.hideDropDown()
-                        controller.saveMissionToFile()
+                        saveToFile()
                     }
                 }
 
@@ -671,6 +758,15 @@ QGCView {
                     }
                 }
             }
+
+            QGCButton {
+                text:       "Remove all"
+                onClicked:  {
+                    syncButton.hideDropDown()
+                    _root.showDialog(removeAllPromptDialog, "Delete all", _root.showDialogDefaultWidth, StandardButton.Yes | StandardButton.No)
+                }
+            }
+
 /*
         FIXME: autoSync is temporarily disconnected since it's still buggy
 
