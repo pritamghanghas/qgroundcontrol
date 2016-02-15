@@ -72,7 +72,7 @@ void MissionController::start(bool editMode)
 
     // We start with an empty mission
     _missionItems = new QmlObjectListModel(this);
-    _addPlannedHomePosition(false /* addToCenter */);
+    _addPlannedHomePosition(_missionItems, false /* addToCenter */);
     _initAllMissionItems();
 }
 
@@ -94,7 +94,7 @@ void MissionController::_newMissionItemsAvailableFromVehicle(void)
         qCDebug(MissionControllerLog) << "loading from vehicle count"<< _missionItems->count();
 
         if (!_activeVehicle->firmwarePlugin()->sendHomePositionToVehicle() || _missionItems->count() == 0) {
-            _addPlannedHomePosition(true /* addToCenter */);
+            _addPlannedHomePosition(_missionItems,true /* addToCenter */);
         }
 
         _missionItemsRequested = false;
@@ -176,14 +176,15 @@ void MissionController::removeMissionItem(int index)
 void MissionController::removeAllMissionItems(void)
 {
     if (_missionItems) {
-        while (_missionItems->count() != 1) {
-            removeMissionItem(_missionItems->count() - 1);
-        }
+        QmlObjectListModel* oldItems = _missionItems;
+        _missionItems = new QmlObjectListModel(this);
+        _addPlannedHomePosition(_missionItems, false /* addToCenter */);
+        _initAllMissionItems();
+        oldItems->deleteLater();
     }
 }
 
-#ifndef __mobile__
-bool MissionController::_loadJsonMissionFile(const QByteArray& bytes, QString& errorString)
+bool MissionController::_loadJsonMissionFile(const QByteArray& bytes, QmlObjectListModel* missionItems, QString& errorString)
 {
     QJsonParseError jsonParseError;
     QJsonDocument   jsonDoc(QJsonDocument::fromJson(bytes, &jsonParseError));
@@ -219,7 +220,7 @@ bool MissionController::_loadJsonMissionFile(const QByteArray& bytes, QString& e
 
             MissionItem* item = new MissionItem(_activeVehicle, this);
             if (item->load(itemValue.toObject(), errorString)) {
-                _missionItems->append(item);
+                missionItems->append(item);
             } else {
                 return false;
             }
@@ -230,20 +231,18 @@ bool MissionController::_loadJsonMissionFile(const QByteArray& bytes, QString& e
         MissionItem* item = new MissionItem(_activeVehicle, this);
 
         if (item->load(json[_jsonPlannedHomePositionKey].toObject(), errorString)) {
-            _missionItems->insert(0, item);
+            missionItems->insert(0, item);
         } else {
             return false;
         }
     } else {
-        _addPlannedHomePosition(true /* addToCenter */);
+        _addPlannedHomePosition(missionItems, true /* addToCenter */);
     }
 
     return true;
 }
-#endif
 
-#ifndef __mobile__
-bool MissionController::_loadTextMissionFile(QTextStream& stream, QString& errorString)
+bool MissionController::_loadTextMissionFile(QTextStream& stream, QmlObjectListModel* missionItems, QString& errorString)
 {
     bool addPlannedHomePosition = false;
 
@@ -267,7 +266,7 @@ bool MissionController::_loadTextMissionFile(QTextStream& stream, QString& error
             MissionItem* item = new MissionItem(_activeVehicle, this);
 
             if (item->load(stream)) {
-                _missionItems->append(item);
+                missionItems->append(item);
             } else {
                 errorString = QStringLiteral("The mission file is corrupted.");
                 return false;
@@ -278,29 +277,31 @@ bool MissionController::_loadTextMissionFile(QTextStream& stream, QString& error
         return false;
     }
 
-    if (addPlannedHomePosition || _missionItems->count() == 0) {
-        _addPlannedHomePosition(true /* addToCenter */);
+    if (addPlannedHomePosition || missionItems->count() == 0) {
+        _addPlannedHomePosition(missionItems, true /* addToCenter */);
+
+        // Update sequence numbers in DO_JUMP commands to take into account added home position
+        for (int i=1; i<missionItems->count(); i++) {
+            MissionItem* item = qobject_cast<MissionItem*>(missionItems->get(i));
+            if (item->command() == MavlinkQmlSingleton::MAV_CMD_DO_JUMP) {
+                // Home is in position 0
+                item->setParam1((int)item->param1() + 1);
+            }
+        }
     }
 
     return true;
 }
-#endif
 
-void MissionController::loadMissionFromFile(void)
+void MissionController::_loadMissionFromFile(const QString& filename)
 {
-#ifndef __mobile__
     QString errorString;
-    QString filename = QGCFileDialog::getOpenFileName(NULL, "Select Mission File to load", QString(), "Mission file (*.mission);;All Files (*.*)");
 
     if (filename.isEmpty()) {
         return;
     }
 
-    if (_missionItems) {
-        _deinitAllMissionItems();
-        _missionItems->deleteLater();
-    }
-    _missionItems = new QmlObjectListModel(this);
+    QmlObjectListModel* newMissionItems = new QmlObjectListModel(this);
 
     QFile file(filename);
 
@@ -313,39 +314,56 @@ void MissionController::loadMissionFromFile(void)
         QString firstLine = stream.readLine();
         if (firstLine.contains(QRegExp("QGC.*WPL"))) {
             stream.seek(0);
-            _loadTextMissionFile(stream, errorString);
+            _loadTextMissionFile(stream, newMissionItems, errorString);
         } else {
-            _loadJsonMissionFile(bytes, errorString);
+            _loadJsonMissionFile(bytes, newMissionItems, errorString);
         }
     }
 
     if (!errorString.isEmpty()) {
-        _missionItems->clear();
+        delete newMissionItems;
         qgcApp()->showMessage(errorString);
+        return;
     }
 
+    if (_missionItems) {
+        _deinitAllMissionItems();
+        _missionItems->deleteLater();
+    }
+    _missionItems = newMissionItems;
     if (_missionItems->count() == 0) {
-        _addPlannedHomePosition(true /* addToCenter */);
+        _addPlannedHomePosition(_missionItems, true /* addToCenter */);
     }
 
     _initAllMissionItems();
+}
+
+void MissionController::loadMissionFromFile(void)
+{
+#ifndef __mobile__
+    QString filename = QGCFileDialog::getOpenFileName(NULL, "Select Mission File to load", QString(), "Mission file (*.mission);;All Files (*.*)");
+
+    if (filename.isEmpty()) {
+        return;
+    }
+    _loadMissionFromFile(filename);
 #endif
 }
 
-void MissionController::saveMissionToFile(void)
+void MissionController::_saveMissionToFile(const QString& filename)
 {
-#ifndef __mobile__
-    QString filename = QGCFileDialog::getSaveFileName(NULL, "Select file to save mission to", QString(), "Mission file (*.mission);;All Files (*.*)");
+    qDebug() << filename;
 
     if (filename.isEmpty()) {
         return;
     }
 
+    QString missionFilename = filename;
     if (!QFileInfo(filename).fileName().contains(".")) {
-        filename += ".mission";
+        missionFilename += ".mission";
     }
 
-    QFile file(filename);
+    QFile file(missionFilename);
 
     if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
         qgcApp()->showMessage(file.errorString());
@@ -384,7 +402,39 @@ void MissionController::saveMissionToFile(void)
     }
 
     _missionItems->setDirty(false);
+}
+
+void MissionController::saveMissionToFile(void)
+{
+#ifndef __mobile__
+    QString filename = QGCFileDialog::getSaveFileName(NULL, "Select file to save mission to", QString(), "Mission file (*.mission);;All Files (*.*)");
+
+    if (filename.isEmpty()) {
+        return;
+    }
+    _saveMissionToFile(filename);
 #endif
+}
+
+void MissionController::saveMobileMissionToFile(const QString& filename)
+{
+    QStringList docDirs = QStandardPaths::standardLocations(QStandardPaths::DocumentsLocation);
+    if (docDirs.count() <= 0) {
+        qWarning() << "No Documents location";
+        return;
+    }
+
+    _saveMissionToFile(docDirs.at(0) + QDir::separator() + filename);
+}
+
+void MissionController::loadMobileMissionFromFile(const QString& filename)
+{
+    QStringList docDirs = QStandardPaths::standardLocations(QStandardPaths::DocumentsLocation);
+    if (docDirs.count() <= 0) {
+        qWarning() << "No Documents location";
+        return;
+    }
+    _loadMissionFromFile(docDirs.at(0) + QDir::separator() + filename);
 }
 
 void MissionController::_calcPrevWaypointValues(double homeAlt, MissionItem* currentItem, MissionItem* prevItem, double* azimuth, double* distance, double* altDifference)
@@ -446,12 +496,17 @@ void MissionController::_recalcWaypointLines(void)
 
     _waypointLines.clear();
 
+    bool linkBackToHome = false;
     for (int i=1; i<_missionItems->count(); i++) {
         MissionItem* item = qobject_cast<MissionItem*>(_missionItems->get(i));
 
         // Assume the worst
         item->setAzimuth(0.0);
         item->setDistance(-1.0);
+
+        if (firstCoordinateItem && item->command() == MavlinkQmlSingleton::MAV_CMD_NAV_TAKEOFF) {
+            linkBackToHome = true;
+        }
 
         if (item->specifiesCoordinate()) {
             double absoluteAltitude = item->coordinate().altitude();
@@ -462,23 +517,8 @@ void MissionController::_recalcWaypointLines(void)
             maxAltSeen = std::max(maxAltSeen, absoluteAltitude);
 
             if (!item->standaloneCoordinate()) {
-                if (firstCoordinateItem) {
-                    if (item->command() == MavlinkQmlSingleton::MAV_CMD_NAV_TAKEOFF) {
-                        // The first coordinate we hit is a takeoff command so link back to home position
-                        if (showHomePosition) {
-                            double azimuth, distance, altDifference;
-
-                            _waypointLines.append(new CoordinateVector(homeItem->coordinate(), item->coordinate()));
-                            _calcPrevWaypointValues(homeAlt, item, homeItem, &azimuth, &distance, &altDifference);
-                            item->setAltDifference(altDifference);
-                            item->setAzimuth(azimuth);
-                            item->setDistance(distance);
-                        }
-                    } else {
-                        // First coordiante is not a takeoff command, it does not link backwards to anything
-                    }
-                    firstCoordinateItem = false;
-                } else if (!lastCoordinateItem->homePosition() || showHomePosition) {
+                firstCoordinateItem = false;
+                if (!lastCoordinateItem->homePosition() || (showHomePosition && linkBackToHome)) {
                     double azimuth, distance, altDifference;
 
                     // Subsequent coordinate items link to last coordinate item. If the last coordinate item
@@ -638,6 +678,7 @@ void MissionController::_activeVehicleChanged(Vehicle* activeVehicle)
 
         disconnect(missionManager, &MissionManager::newMissionItemsAvailable,   this, &MissionController::_newMissionItemsAvailableFromVehicle);
         disconnect(missionManager, &MissionManager::inProgressChanged,          this, &MissionController::_inProgressChanged);
+        disconnect(missionManager, &MissionManager::currentItemChanged,         this, &MissionController::_currentMissionItemChanged);
         disconnect(_activeVehicle, &Vehicle::homePositionAvailableChanged,      this, &MissionController::_activeVehicleHomePositionAvailableChanged);
         disconnect(_activeVehicle, &Vehicle::homePositionChanged,               this, &MissionController::_activeVehicleHomePositionChanged);
         _activeVehicle = NULL;
@@ -650,6 +691,7 @@ void MissionController::_activeVehicleChanged(Vehicle* activeVehicle)
 
         connect(missionManager, &MissionManager::newMissionItemsAvailable,  this, &MissionController::_newMissionItemsAvailableFromVehicle);
         connect(missionManager, &MissionManager::inProgressChanged,         this, &MissionController::_inProgressChanged);
+        connect(missionManager, &MissionManager::currentItemChanged,        this, &MissionController::_currentMissionItemChanged);
         connect(_activeVehicle, &Vehicle::homePositionAvailableChanged,     this, &MissionController::_activeVehicleHomePositionAvailableChanged);
         connect(_activeVehicle, &Vehicle::homePositionChanged,              this, &MissionController::_activeVehicleHomePositionChanged);
 
@@ -785,21 +827,21 @@ double MissionController::_normalizeLon(double lon)
 }
 
 /// Add the home position item to the front of the list
-void MissionController::_addPlannedHomePosition(bool addToCenter)
+void MissionController::_addPlannedHomePosition(QmlObjectListModel* missionItems, bool addToCenter)
 {
     MissionItem* homeItem = new MissionItem(_activeVehicle, this);
-    _missionItems->insert(0, homeItem);
+    missionItems->insert(0, homeItem);
 
-    if (_missionItems->count() > 1  && addToCenter) {
-        MissionItem* item = qobject_cast<MissionItem*>(_missionItems->get(1));
+    if (missionItems->count() > 1  && addToCenter) {
+        MissionItem* item = qobject_cast<MissionItem*>(missionItems->get(1));
 
         double north = _normalizeLat(item->coordinate().latitude());
         double south = north;
         double east = _normalizeLon(item->coordinate().longitude());
         double west = east;
 
-        for (int i=2; i<_missionItems->count(); i++) {
-            item = qobject_cast<MissionItem*>(_missionItems->get(i));
+        for (int i=2; i<missionItems->count(); i++) {
+            item = qobject_cast<MissionItem*>(missionItems->get(i));
 
             double lat = _normalizeLat(item->coordinate().latitude());
             double lon = _normalizeLon(item->coordinate().longitude());
@@ -814,4 +856,38 @@ void MissionController::_addPlannedHomePosition(bool addToCenter)
     } else {
         homeItem->setCoordinate(qgcApp()->lastKnownHomePosition());
     }
+}
+
+void MissionController::_currentMissionItemChanged(int sequenceNumber)
+{
+    if (!_editMode) {
+        if (!_activeVehicle->firmwarePlugin()->sendHomePositionToVehicle()) {
+            sequenceNumber++;
+        }
+
+        for (int i=0; i<_missionItems->count(); i++) {
+            MissionItem* item = qobject_cast<MissionItem*>(_missionItems->get(i));
+            item->setIsCurrentItem(item->sequenceNumber() == sequenceNumber);
+        }
+    }
+}
+
+QStringList MissionController::getMobileMissionFiles(void)
+{
+    QStringList missionFiles;
+
+    QStringList docDirs = QStandardPaths::standardLocations(QStandardPaths::DocumentsLocation);
+    if (docDirs.count() <= 0) {
+        qWarning() << "No Documents location";
+        return QStringList();
+    }
+    QDir missionDir = docDirs.at(0);
+
+    QFileInfoList missionFileInfoList = missionDir.entryInfoList(QStringList(QStringLiteral("*.mission")),  QDir::Files, QDir::Name);
+
+    foreach (const QFileInfo& missionFileInfo, missionFileInfoList) {
+        missionFiles << missionFileInfo.baseName() + ".mission";
+    }
+
+    return missionFiles;
 }
