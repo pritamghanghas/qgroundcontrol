@@ -221,7 +221,8 @@ Vehicle::Vehicle(LinkInterface*             link,
     connect(&_mapTrajectoryTimer, &QTimer::timeout, this, &Vehicle::_addNewMapTrajectoryPoint);
 
     // listen on heading change
-    connect(this, &Vehicle::headingChanged, this, &Vehicle::_onHeadingChanged);
+    // FixME:: needs more care, documentation says one shouldn't connect to this.
+    connect(heading(), &Fact::valueChanged, this, &Vehicle::_onHeadingChanged);
 
     // Build FactGroup object model
 
@@ -989,7 +990,7 @@ void Vehicle::doChangeAltitude(int height)
     pos.vz = 0;
     pos.afx = 0;
     pos.afy = 0;
-    pos.yaw = _heading;
+    pos.yaw = _headingFact.cookedValue().toFloat();
     pos.yaw_rate = 0;
 //    pos.type_mask = 0b0000111111111111;
     pos.type_mask = 0b1111101111111000;
@@ -1038,7 +1039,7 @@ void Vehicle::doSweepYaw(float sweepAngle, float sweepSpeed)
     }
 
     _sweepAngle = sweepAngle;
-    _headingMid = _heading;
+    _headingMid = _headingFact.cookedValue().toFloat();
     _sweepSpeed = sweepSpeed;
 
     _headingLeft = _headingMid - sweepAngle/2;
@@ -1066,12 +1067,12 @@ void Vehicle::_onHeadingChanged()
     }
 
     if(_currentDirection == -1) { // ccw
-        if (fabs(_heading - _headingLeft) < HEADING_MARGIN) {
+        if (fabs(_headingFact.cookedValue().toFloat() - _headingLeft) < HEADING_MARGIN) {
 //            qDebug("reached left ccw angel %f, start moving right/cw now", _headingLeft);
             doChangeYaw(_sweepAngle, _sweepSpeed, true, 1);
         }
     } else if ( _currentDirection == 1) {
-        if (fabs(_heading - _headingRight) < HEADING_MARGIN) {
+        if (fabs(_headingFact.cookedValue().toFloat() - _headingRight) < HEADING_MARGIN) {
 //            qDebug("reached right/cw angel %f, start moving left/ccw now", _headingRight);
             doChangeYaw(_sweepAngle, _sweepSpeed, true, -1);
         }
@@ -1091,7 +1092,7 @@ void Vehicle::doGuidedTakeoff(int height)
     cmd.param1 = 0.0f;
     cmd.param2 = 0.0f;
     cmd.param3 = 0.0f;
-    cmd.param4 = _heading;
+    cmd.param4 = _headingFact.cookedValue().toFloat();
     cmd.param5 = latitude();
     cmd.param6 = longitude();
     cmd.param7 = height;
@@ -1110,7 +1111,7 @@ bool Vehicle::flightModeSetAvailable(void)
 
 bool Vehicle::flying()
 {
-    _flying = armed() && (_altitudeRelative > 0);
+    _flying = armed() && (_altitudeRelativeFact.cookedValue() > 0.5f);
     return _flying;
 }
 
