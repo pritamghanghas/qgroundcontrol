@@ -32,6 +32,9 @@ This file is part of the QGROUNDCONTROL project
 #include <QApplication>
 #include <QSslSocket>
 #include <QProcessEnvironment>
+#include <QHostAddress>
+#include <QUdpSocket>
+#include <QtPlugin>
 
 #include "QGCApplication.h"
 
@@ -56,6 +59,7 @@ This file is part of the QGROUNDCONTROL project
 #endif
 
 #include <iostream>
+#include "QGCMapEngine.h"
 
 /* SDL does ugly things to main() */
 #ifdef main
@@ -139,9 +143,25 @@ int main(int argc, char *argv[])
 #endif
 #endif
 
-    // install the message handler
 #ifdef Q_OS_WIN
+    // install the message handler
     qInstallMessageHandler(msgHandler);
+
+    // Set our own OpenGL buglist
+    qputenv("QT_OPENGL_BUGLIST", ":/opengl/resources/opengl/buglist.json");
+
+    // Allow for command line override of renderer
+    for (int i = 0; i < argc; i++) {
+        const QString arg(argv[i]);
+        if (arg == QStringLiteral("-angle")) {
+            QCoreApplication::setAttribute(Qt::AA_UseOpenGLES);
+            break;
+        } else if (arg == QStringLiteral("-swrast")) {
+            QCoreApplication::setAttribute(Qt::AA_UseSoftwareOpenGL);
+            break;
+        }
+    }
+
 #endif
 
     // The following calls to qRegisterMetaType are done to silence debug output which warns
@@ -218,6 +238,8 @@ int main(int argc, char *argv[])
     qRegisterMetaType<QList<QPair<QByteArray,QByteArray> > >();
 
     app->_initCommon();
+    //-- Initialize Cache System
+    getQGCMapEngine()->init();
 
     int exitCode = 0;
 
@@ -251,6 +273,8 @@ int main(int argc, char *argv[])
     }
 
     delete app;
+    //-- Shutdown Cache System
+    destroyMapEngine();
 
     qDebug() << "After app delete";
 

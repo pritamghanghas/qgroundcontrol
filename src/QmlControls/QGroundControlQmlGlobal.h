@@ -58,6 +58,7 @@ public:
     Q_PROPERTY(LinkManager*         linkManager         READ linkManager            CONSTANT)
     Q_PROPERTY(MissionCommands*     missionCommands     READ missionCommands        CONSTANT)
     Q_PROPERTY(MultiVehicleManager* multiVehicleManager READ multiVehicleManager    CONSTANT)
+    Q_PROPERTY(QGCMapEngineManager*  mapEngineManager  READ mapEngineManager     CONSTANT)
 
     Q_PROPERTY(qreal                zOrderTopMost       READ zOrderTopMost          CONSTANT) ///< z order for top most items, toolbar, main window sub view
     Q_PROPERTY(qreal                zOrderWidgets       READ zOrderWidgets          CONSTANT) ///< z order value to widgets, for example: zoom controls, hud widgetss
@@ -83,6 +84,9 @@ public:
     Q_PROPERTY(QGeoCoordinate lastKnownHomePosition READ lastKnownHomePosition CONSTANT)
     Q_PROPERTY(QGeoCoordinate flightMapPosition MEMBER _flightMapPosition NOTIFY flightMapPositionChanged)
 
+    /// @ return: true: experimental survey ip code is turned on
+    Q_PROPERTY(bool experimentalSurvey READ experimentalSurvey WRITE setExperimentalSurvey NOTIFY experimentalSurveyChanged)
+
     Q_INVOKABLE void    saveGlobalSetting       (const QString& key, const QString& value);
     Q_INVOKABLE QString loadGlobalSetting       (const QString& key, const QString& defaultValue);
     Q_INVOKABLE void    saveBoolGlobalSetting   (const QString& key, bool value);
@@ -102,9 +106,10 @@ public:
     HBSettings*             hbSettings()                { return _hbSettings;       }
     FlightMapSettings*      flightMapSettings   ()      { return _flightMapSettings; }
     HomePositionManager*    homePositionManager ()      { return _homePositionManager; }
-    LinkManager*            linkManager ()              { return _linkManager; }
-    MissionCommands*        missionCommands ()          { return _missionCommands; }
+    LinkManager*            linkManager         ()      { return _linkManager; }
+    MissionCommands*        missionCommands     ()      { return _missionCommands; }
     MultiVehicleManager*    multiVehicleManager ()      { return _multiVehicleManager; }
+    QGCMapEngineManager*     mapEngineManager  ()      { return _mapEngineManager; }
 
     qreal                   zOrderTopMost       ()      { return 1000; }
     qreal                   zOrderWidgets       ()      { return 100; }
@@ -139,6 +144,9 @@ public:
     void    setIsVersionCheckEnabled    (bool enable);
     void    setMavlinkSystemID          (int  id);
 
+    bool experimentalSurvey(void) const;
+    void setExperimentalSurvey(bool experimentalSurvey);
+
     // Overrides from QGCTool
     virtual void setToolbox(QGCToolbox* toolbox);
 
@@ -152,6 +160,7 @@ signals:
     void isVersionCheckEnabledChanged   (bool enabled);
     void mavlinkSystemIDChanged         (int id);
     void flightMapPositionChanged       (QGeoCoordinate flightMapPosition);
+    void experimentalSurveyChanged      (bool experimentalSurvey);
 
 private:
     HBSettings*             _hbSettings;
@@ -160,6 +169,7 @@ private:
     LinkManager*            _linkManager;
     MissionCommands*        _missionCommands;
     MultiVehicleManager*    _multiVehicleManager;
+    QGCMapEngineManager*     _mapEngineManager;
 
     bool _virtualTabletJoystick;
 

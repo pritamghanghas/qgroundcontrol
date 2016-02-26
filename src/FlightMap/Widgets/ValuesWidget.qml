@@ -56,6 +56,15 @@ QGCFlickable {
         qgcView.showDialog(propertyPicker, "Value Widget Setup", qgcView.showDialogDefaultWidth, StandardButton.Ok)
     }
 
+    function listContains(list, value) {
+        for (var i=0; i<list.length; i++) {
+            if (list[i] === value) {
+                return true
+            }
+        }
+        return false
+    }
+
     MouseArea {
         anchors.fill:   parent
         onClicked:      showPicker()
@@ -74,18 +83,21 @@ QGCFlickable {
                 width:  _largeColumn.width
 
                 property Fact fact: _activeVehicle.getFact(modelData.replace("Vehicle.", ""))
+                property bool largeValue: _root.listContains(controller.altitudeProperties, fact.name)
 
                 QGCLabel {
                     width:                  parent.width
                     horizontalAlignment:    Text.AlignHCenter
                     color:                  textColor
+                    fontSizeMode:           Text.HorizontalFit
                     text:                   fact.shortDescription + (fact.units ? " (" + fact.units + ")" : "")
                 }
                 QGCLabel {
                     width:                  parent.width
                     horizontalAlignment:    Text.AlignHCenter
-                    font.pixelSize:         ScreenTools.largeFontPixelSize
-                    font.weight:            Font.DemiBold
+                    font.pixelSize:         ScreenTools.largeFontPixelSize * (largeValue ? 1.3 : 1.0)
+                    font.weight:            largeValue ? Font.ExtraBold : Font.Normal
+                    fontSizeMode:           Text.HorizontalFit
                     color:                  textColor
                     text:                   fact.valueString
                 }
@@ -115,6 +127,7 @@ QGCFlickable {
                     width:                  parent.width
                     horizontalAlignment:    Text.AlignHCenter
                     font.pixelSize:         ScreenTools.smallFontPixelSize
+                    fontSizeMode:           Text.HorizontalFit
                     color:                  textColor
                     text:                   fact.shortDescription
                 }
@@ -122,12 +135,14 @@ QGCFlickable {
                     width:                  parent.width
                     horizontalAlignment:    Text.AlignHCenter
                     color:                  textColor
+                    fontSizeMode:           Text.HorizontalFit
                     text:                   fact.enumOrValueString
                 }
                 QGCLabel {
                     width:                  parent.width
                     horizontalAlignment:    Text.AlignHCenter
                     font.pixelSize:         ScreenTools.smallFontPixelSize
+                    fontSizeMode:           Text.HorizontalFit
                     color:                  textColor
                     text:                   fact.units
                 }
@@ -141,21 +156,28 @@ QGCFlickable {
         QGCViewDialog {
             id: _propertyPickerDialog
 
-            QGCLabel {
-                id:     _label
-                text:   "Select the values you want to display:"
-            }
+            QGCFlickable {
+                anchors.fill:       parent
+                contentHeight:      _loader.y + _loader.height
+                flickableDirection: Flickable.VerticalFlick
+                clip:               true
 
-            Loader {
-                anchors.left:       parent.left
-                anchors.right:      parent.right
-                anchors.topMargin:  _margins
-                anchors.top:        _label.bottom
-                anchors.bottom:     parent.bottom
-                sourceComponent:    factGroupList
+                QGCLabel {
+                    id:     _label
+                    text:   "Select the values you want to display:"
+                }
 
-                property var factGroup:     _activeVehicle
-                property var factGroupName: "Vehicle"
+                Loader {
+                    id:                 _loader
+                    anchors.left:       parent.left
+                    anchors.right:      parent.right
+                    anchors.topMargin:  _margins
+                    anchors.top:        _label.bottom
+                    sourceComponent:    factGroupList
+
+                    property var factGroup:     _activeVehicle
+                    property var factGroupName: "Vehicle"
+                }
             }
         }
     }
@@ -184,15 +206,6 @@ QGCFlickable {
                     spacing: _margins
 
                     property string propertyName: factGroupName + "." + modelData
-
-                    function contains(list, value) {
-                        for (var i=0; i<list.length; i++) {
-                            if (list[i] === value) {
-                                return true
-                            }
-                        }
-                        return false
-                    }
 
                     function removeFromList(list, value) {
                         var newList = []
@@ -236,14 +249,14 @@ QGCFlickable {
                     QGCCheckBox {
                         id:         _addCheckBox
                         text:       factGroup.getFact(modelData).shortDescription
-                        checked:    _largeCheckBox.checked || parent.contains(controller.smallValues, propertyName)
+                        checked:    _largeCheckBox.checked || listContains(controller.smallValues, propertyName)
                         onClicked:  updateValues()
                     }
 
                     QGCCheckBox {
                         id:         _largeCheckBox
                         text:       "large"
-                        checked:    parent.contains(controller.largeValues, propertyName)
+                        checked:    listContains(controller.largeValues, propertyName)
                         enabled:    _addCheckBox.checked
                         onClicked:  updateValues()
                     }

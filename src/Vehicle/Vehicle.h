@@ -33,7 +33,6 @@
 #include "FactGroup.h"
 #include "LinkInterface.h"
 #include "QGCMAVLink.h"
-#include "MissionItem.h"
 #include "QmlObjectListModel.h"
 #include "MAVLinkProtocol.h"
 #include "UASMessageHandler.h"
@@ -52,6 +51,74 @@ class UASMessage;
 Q_DECLARE_LOGGING_CATEGORY(VehicleLog)
 
 class Vehicle;
+
+class VehicleVibrationFactGroup : public FactGroup
+{
+    Q_OBJECT
+
+public:
+    VehicleVibrationFactGroup(QObject* parent = NULL);
+
+    Q_PROPERTY(Fact* xAxis      READ xAxis      CONSTANT)
+    Q_PROPERTY(Fact* yAxis      READ yAxis      CONSTANT)
+    Q_PROPERTY(Fact* zAxis      READ zAxis      CONSTANT)
+    Q_PROPERTY(Fact* clipCount1 READ clipCount1 CONSTANT)
+    Q_PROPERTY(Fact* clipCount2 READ clipCount2 CONSTANT)
+    Q_PROPERTY(Fact* clipCount3 READ clipCount3 CONSTANT)
+
+    Fact* xAxis(void)       { return &_xAxisFact; }
+    Fact* yAxis(void)       { return &_yAxisFact; }
+    Fact* zAxis(void)       { return &_zAxisFact; }
+    Fact* clipCount1(void)  { return &_clipCount1Fact; }
+    Fact* clipCount2(void)  { return &_clipCount2Fact; }
+    Fact* clipCount3(void)  { return &_clipCount3Fact; }
+
+    void setVehicle(Vehicle* vehicle);
+
+    static const char* _xAxisFactName;
+    static const char* _yAxisFactName;
+    static const char* _zAxisFactName;
+    static const char* _clipCount1FactName;
+    static const char* _clipCount2FactName;
+    static const char* _clipCount3FactName;
+
+private:
+    Vehicle*    _vehicle;
+    Fact        _xAxisFact;
+    Fact        _yAxisFact;
+    Fact        _zAxisFact;
+    Fact        _clipCount1Fact;
+    Fact        _clipCount2Fact;
+    Fact        _clipCount3Fact;
+};
+
+class VehicleWindFactGroup : public FactGroup
+{
+    Q_OBJECT
+
+public:
+    VehicleWindFactGroup(QObject* parent = NULL);
+
+    Q_PROPERTY(Fact* direction      READ direction      CONSTANT)
+    Q_PROPERTY(Fact* speed          READ speed          CONSTANT)
+    Q_PROPERTY(Fact* verticalSpeed  READ verticalSpeed  CONSTANT)
+
+    Fact* direction(void)       { return &_directionFact; }
+    Fact* speed(void)           { return &_speedFact; }
+    Fact* verticalSpeed(void)   { return &_verticalSpeedFact; }
+
+    void setVehicle(Vehicle* vehicle);
+
+    static const char* _directionFactName;
+    static const char* _speedFactName;
+    static const char* _verticalSpeedFactName;
+
+private:
+    Vehicle*    _vehicle;
+    Fact        _directionFact;
+    Fact        _speedFact;
+    Fact        _verticalSpeedFact;
+};
 
 class VehicleGPSFactGroup : public FactGroup
 {
@@ -161,7 +228,6 @@ public:
     Q_PROPERTY(AutoPilotPlugin*     autopilot               MEMBER _autopilotPlugin                     CONSTANT)
     Q_PROPERTY(QGeoCoordinate       coordinate              READ coordinate                             NOTIFY coordinateChanged)
     Q_PROPERTY(bool                 coordinateValid         READ coordinateValid                        NOTIFY coordinateValidChanged)
-    Q_PROPERTY(MissionManager*      missionManager          MEMBER _missionManager                      CONSTANT)
     Q_PROPERTY(bool                 homePositionAvailable   READ homePositionAvailable                  NOTIFY homePositionAvailableChanged)
     Q_PROPERTY(QGeoCoordinate       homePosition            READ homePosition                           NOTIFY homePositionChanged)
     Q_PROPERTY(bool                 armed                   READ armed              WRITE setArmed      NOTIFY armedChanged)
@@ -175,7 +241,6 @@ public:
     Q_PROPERTY(float                latitude                READ latitude                               NOTIFY coordinateChanged)
     Q_PROPERTY(float                longitude               READ longitude                              NOTIFY coordinateChanged)
     Q_PROPERTY(QString              currentState            READ currentState                           NOTIFY currentStateChanged)
-    Q_PROPERTY(QmlObjectListModel*  missionItems            READ missionItemsModel                      CONSTANT)
     Q_PROPERTY(bool                 messageTypeNone         READ messageTypeNone                        NOTIFY messageTypeChanged)
     Q_PROPERTY(bool                 messageTypeNormal       READ messageTypeNormal                      NOTIFY messageTypeChanged)
     Q_PROPERTY(bool                 messageTypeWarning      READ messageTypeWarning                     NOTIFY messageTypeChanged)
@@ -216,6 +281,8 @@ public:
 
     Q_PROPERTY(FactGroup* gps       READ gpsFactGroup       CONSTANT)
     Q_PROPERTY(FactGroup* battery   READ batteryFactGroup   CONSTANT)
+    Q_PROPERTY(FactGroup* wind      READ windFactGroup      CONSTANT)
+    Q_PROPERTY(FactGroup* vibration READ vibrationFactGroup CONSTANT)
 
     /// Resets link status counters
     Q_INVOKABLE void resetCounters  ();
@@ -243,7 +310,6 @@ public:
     QGeoCoordinate coordinate(void) { return _coordinate; }
     bool coordinateValid(void)      { return _coordinateValid; }
     void _setCoordinateValid(bool coordinateValid);
-    QmlObjectListModel* missionItemsModel(void);
 
     typedef enum {
         JoystickModeRC,         ///< Joystick emulates an RC Transmitter
@@ -369,8 +435,10 @@ public:
     Fact* altitudeRelative  (void) { return &_altitudeRelativeFact; }
     Fact* altitudeAMSL      (void) { return &_altitudeAMSLFact; }
 
-    FactGroup* gpsFactGroup     (void) { return &_gpsFactGroup; }
-    FactGroup* batteryFactGroup (void) { return &_batteryFactGroup; }
+    FactGroup* gpsFactGroup         (void) { return &_gpsFactGroup; }
+    FactGroup* batteryFactGroup     (void) { return &_batteryFactGroup; }
+    FactGroup* windFactGroup        (void) { return &_windFactGroup; }
+    FactGroup* vibrationFactGroup   (void) { return &_vibrationFactGroup; }
 
     void setConnectionLostEnabled(bool connectionLostEnabled);
 
@@ -476,6 +544,8 @@ private:
     void _handleRCChannelsRaw(mavlink_message_t& message);
     void _handleBatteryStatus(mavlink_message_t& message);
     void _handleSysStatus(mavlink_message_t& message);
+    void _handleWind(mavlink_message_t& message);
+    void _handleVibration(mavlink_message_t& message);
     void _missionManagerError(int errorCode, const QString& errorMsg);
     void _mapTrajectoryStart(void);
     void _mapTrajectoryStop(void);
@@ -588,8 +658,10 @@ private:
     Fact _altitudeRelativeFact;
     Fact _altitudeAMSLFact;
 
-    VehicleGPSFactGroup     _gpsFactGroup;
-    VehicleBatteryFactGroup _batteryFactGroup;
+    VehicleGPSFactGroup         _gpsFactGroup;
+    VehicleBatteryFactGroup     _batteryFactGroup;
+    VehicleWindFactGroup        _windFactGroup;
+    VehicleVibrationFactGroup   _vibrationFactGroup;
 
     static const char* _rollFactName;
     static const char* _pitchFactName;
@@ -599,8 +671,11 @@ private:
     static const char* _climbRateFactName;
     static const char* _altitudeRelativeFactName;
     static const char* _altitudeAMSLFactName;
+
     static const char* _gpsFactGroupName;
     static const char* _batteryFactGroupName;
+    static const char* _windFactGroupName;
+    static const char* _vibrationFactGroupName;
 
     static const int _vehicleUIUpdateRateMSecs = 100;
 

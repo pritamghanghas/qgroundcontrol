@@ -58,8 +58,15 @@ bool JsonHelper::toQGeoCoordinate(const QJsonValue& jsonValue, QGeoCoordinate& c
     QJsonArray coordinateArray = jsonValue.toArray();
     int requiredCount = altitudeRequired ? 3 : 2;
     if (coordinateArray.count() != requiredCount) {
-        errorString = QString("Json array must contains %1 values").arg(requiredCount);
+        errorString = QString("Coordinate array must contain %1 values").arg(requiredCount);
         return false;
+    }
+
+    foreach(const QJsonValue& jsonValue, coordinateArray) {
+        if (jsonValue.type() != QJsonValue::Double) {
+            errorString = QString("Coordinate array may only contain double values, found: %1").arg(jsonValue.type());
+            return false;
+        }
     }
 
     coordinate = QGeoCoordinate(coordinateArray[0].toDouble(), coordinateArray[1].toDouble());
@@ -75,7 +82,19 @@ bool JsonHelper::toQGeoCoordinate(const QJsonValue& jsonValue, QGeoCoordinate& c
     return true;
 }
 
-bool JsonHelper::validateKeyTypes(QJsonObject& jsonObject, const QStringList& keys, const QList<QJsonValue::Type>& types, QString& errorString)
+void JsonHelper::writeQGeoCoordinate(QJsonValue& jsonValue, const QGeoCoordinate& coordinate, bool writeAltitude)
+{
+    QJsonArray coordinateArray;
+
+    coordinateArray << coordinate.latitude() << coordinate.longitude();
+    if (writeAltitude) {
+        coordinateArray << coordinate.altitude();
+    }
+
+    jsonValue = QJsonValue(coordinateArray);
+}
+
+bool JsonHelper::validateKeyTypes(const QJsonObject& jsonObject, const QStringList& keys, const QList<QJsonValue::Type>& types, QString& errorString)
 {
     for (int i=0; i<keys.count(); i++) {
         if (jsonObject.contains(keys[i])) {

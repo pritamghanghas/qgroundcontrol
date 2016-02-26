@@ -65,7 +65,7 @@ FlightMap {
         delegate:
             MapPolyline {
                 line.width: 3
-                line.color: "orange"
+                line.color: "red"
                 z:          QGroundControl.zOrderMapItems - 1
                 path: [
                     { latitude: object.coordinate1.latitude, longitude: object.coordinate1.longitude },
@@ -89,7 +89,7 @@ FlightMap {
 
     // Add the mission items to the map
     MissionItemView {
-        model: _mainIsMap ? _missionController.missionItems : 0
+        model: _mainIsMap ? _missionController.visualItems : 0
     }
 
     // Add lines between waypoints

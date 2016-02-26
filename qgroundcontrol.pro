@@ -23,8 +23,8 @@ exists($${OUT_PWD}/qgroundcontrol.pro) {
 
 message(Qt version $$[QT_VERSION])
 
-!equals(QT_MAJOR_VERSION, 5) | !greaterThan(QT_MINOR_VERSION, 3) {
-    error("Unsupported Qt version, 5.4+ is required")
+!equals(QT_MAJOR_VERSION, 5) | !greaterThan(QT_MINOR_VERSION, 4) {
+    error("Unsupported Qt version, 5.5+ is required")
 }
 
 include(QGCCommon.pri)
@@ -204,6 +204,8 @@ INCLUDEPATH += \
     src/ui/uas \
     src/VehicleSetup \
     src/ViewWidgets \
+    src/QtLocationPlugin \
+    src/QtLocationPlugin/QMLControl \
 
 FORMS += \
     src/ui/MainWindow.ui \
@@ -259,6 +261,9 @@ HEADERS += \
     src/MissionManager/MissionController.h \
     src/MissionManager/MissionItem.h \
     src/MissionManager/MissionManager.h \
+    src/MissionManager/ComplexMissionItem.h \
+    src/MissionManager/SimpleMissionItem.h \
+    src/MissionManager/VisualMissionItem.h \
     src/QGC.h \
     src/QGCApplication.h \
     src/QGCComboBox.h \
@@ -287,7 +292,8 @@ HEADERS += \
     src/AutoPilotPlugins/PX4/PX4AirframeLoader.h \
     src/AutoPilotPlugins/APM/APMAirframeLoader.h \
     src/QmlControls/QGCImageProvider.h \
-    src/AutoPilotPlugins/APM/APMRemoteParamsDownloader.h
+    src/AutoPilotPlugins/APM/APMRemoteParamsDownloader.h \
+    src/QtLocationPlugin/QMLControl/QGCMapEngineManager.h \
 
 DebugBuild {
 HEADERS += \
@@ -385,6 +391,9 @@ SOURCES += \
     src/MissionManager/MissionController.cc \
     src/MissionManager/MissionItem.cc \
     src/MissionManager/MissionManager.cc \
+    src/MissionManager/ComplexMissionItem.cc \
+    src/MissionManager/SimpleMissionItem.cc \
+    src/MissionManager/VisualMissionItem.cc \
     src/QGC.cc \
     src/QGCApplication.cc \
     src/QGCComboBox.cc \
@@ -410,7 +419,8 @@ SOURCES += \
     src/AutoPilotPlugins/PX4/PX4AirframeLoader.cc \
     src/AutoPilotPlugins/APM/APMAirframeLoader.cc \
     src/QmlControls/QGCImageProvider.cc \
-    src/AutoPilotPlugins/APM/APMRemoteParamsDownloader.cc
+    src/AutoPilotPlugins/APM/APMRemoteParamsDownloader.cc \
+    src/QtLocationPlugin/QMLControl/QGCMapEngineManager.cc \
 
 DebugBuild {
 SOURCES += \
@@ -500,6 +510,7 @@ HEADERS += \
     src/MissionManager/MissionControllerManagerTest.h \
     src/MissionManager/MissionItemTest.h \
     src/MissionManager/MissionManagerTest.h \
+    src/MissionManager/SimpleMissionItemTest.h \
     src/qgcunittest/GeoTest.h \
     src/qgcunittest/FileDialogTest.h \
     src/qgcunittest/FileManagerTest.h \
@@ -523,6 +534,7 @@ SOURCES += \
     src/MissionManager/MissionControllerManagerTest.cc \
     src/MissionManager/MissionItemTest.cc \
     src/MissionManager/MissionManagerTest.cc \
+    src/MissionManager/SimpleMissionItemTest.cc \
     src/qgcunittest/GeoTest.cc \
     src/qgcunittest/FileDialogTest.cc \
     src/qgcunittest/FileManagerTest.cc \

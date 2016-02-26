@@ -34,6 +34,8 @@
 #include "MultiVehicleManager.h"
 #include "QGCImageProvider.h"
 #include "UASMessageHandler.h"
+#include "QGCMapEngineManager.h"
+
 #include "hbsettings.h"
 
 QGCToolbox::QGCToolbox(QGCApplication* app)
@@ -49,6 +51,7 @@ QGCToolbox::QGCToolbox(QGCApplication* app)
     , _mavlinkProtocol(NULL)
     , _missionCommands(NULL)
     , _multiVehicleManager(NULL)
+    , _mapEngineManager(NULL)
     , _uasMessageHandler(NULL)
     , _hbSettings(NULL)
 {
@@ -64,6 +67,7 @@ QGCToolbox::QGCToolbox(QGCApplication* app)
     _mavlinkProtocol =          new MAVLinkProtocol(app);
     _missionCommands =          new MissionCommands(app);
     _multiVehicleManager =      new MultiVehicleManager(app);
+    _mapEngineManager =       new QGCMapEngineManager(app);
     _uasMessageHandler =        new UASMessageHandler(app);
     _hbSettings =               new HBSettings(app);
 
@@ -79,6 +83,7 @@ QGCToolbox::QGCToolbox(QGCApplication* app)
     _mavlinkProtocol->setToolbox(this);
     _missionCommands->setToolbox(this);
     _multiVehicleManager->setToolbox(this);
+    _mapEngineManager->setToolbox(this);
     _uasMessageHandler->setToolbox(this);
     _hbSettings->setToolbox(this);
 }
@@ -95,6 +100,7 @@ QGCToolbox::~QGCToolbox()
     delete _linkManager;
     delete _mavlinkProtocol;
     delete _missionCommands;
+    delete _mapEngineManager;
     delete _multiVehicleManager;
     delete _uasMessageHandler;
     delete _hbSettings;

@@ -110,7 +110,7 @@ Item {
     //-- Instrument Panel
     QGCInstrumentWidget {
         id:                     instrumentGadget
-        anchors.margins:        ScreenTools.defaultFontPixelHeight
+        anchors.margins:        ScreenTools.defaultFontPixelHeight / 2
         anchors.right:          parent.right
         anchors.verticalCenter: parent.verticalCenter
         visible:                !QGroundControl.virtualTabletJoystick
@@ -119,18 +119,17 @@ Item {
         heading:                _heading
         rollAngle:              _roll
         pitchAngle:             _pitch
-        altitudeFact:           _altitudeAMSLFact
         groundSpeedFact:        _groundSpeedFact
         airSpeedFact:           _airSpeedFact
         isSatellite:            _isSatellite
         z:                      QGroundControl.zOrderWidgets
         qgcView:                parent.parent.qgcView
-        maxHeight:              parent.height - (ScreenTools.defaultFontPixelHeight * 2)
+        maxHeight:              parent.height - (anchors.margins * 2)
     }
 
     QGCInstrumentWidgetAlternate {
         id:                     instrumentGadgetAlternate
-        anchors.margins:        ScreenTools.defaultFontPixelHeight
+        anchors.margins:        ScreenTools.defaultFontPixelHeight / 2
         anchors.top:            parent.top
         anchors.right:          parent.right
         visible:                QGroundControl.virtualTabletJoystick
@@ -139,7 +138,6 @@ Item {
         heading:                _heading
         rollAngle:              _roll
         pitchAngle:             _pitch
-        altitudeFact:           _altitudeAMSLFact
         groundSpeedFact:        _groundSpeedFact
         airSpeedFact:           _airSpeedFact
         isSatellite:            _isSatellite
@@ -155,9 +153,6 @@ Item {
         textColor:          _isSatellite ? "white" : "black"
         visible:            QGroundControl.virtualTabletJoystick
         maxHeight:          multiTouchItem.y - y
-
-        Component.onCompleted: console.log(y)
-        onHeightChanged: console.log(y, height, multiTouchItem.y)
     }
 
     //-- Vertical Tool Buttons

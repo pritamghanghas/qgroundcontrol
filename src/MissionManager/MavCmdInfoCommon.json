@@ -120,6 +120,12 @@
                 "units":            "radians",
                 "default":          0.0,
                 "decimalPlaces":    2
+            },
+            "param7": {
+                "label":            "Altitude:",
+                "units":            "meters",
+                "default":          0.0,
+                "decimalPlaces":    2
             }
         },
         {
@@ -132,8 +138,8 @@
             "category":             "Basic",
             "param1": {
                 "label":            "Pitch:",
-                "units":            "radians",
-                "default":          0.26179939,
+                "units":            "degrees",
+                "default":          15,
                 "decimalPlaces":    2
             },
             "param4": {
@@ -288,6 +294,12 @@
             "param4": {
                 "label":            "Heading:",
                 "units":            "degrees",
+                "default":          0.0,
+                "decimalPlaces":    2
+            },
+            "param7": {
+                "label":            "Altitude:",
+                "units":            "meters",
                 "default":          0.0,
                 "decimalPlaces":    2
             }
@@ -530,6 +542,7 @@
             "friendlyName":         "Land start",
             "description":          "Marker to indicate start of landing sequence.",
             "specifiesCoordinate":  true,
+            "standaloneCoordinate": true,
             "friendlyEdit":         true,
             "category":             "Basic"
         },

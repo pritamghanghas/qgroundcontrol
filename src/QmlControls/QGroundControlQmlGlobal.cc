@@ -41,6 +41,7 @@ QGroundControlQmlGlobal::QGroundControlQmlGlobal(QGCApplication* app)
     , _linkManager(NULL)
     , _missionCommands(NULL)
     , _multiVehicleManager(NULL)
+    , _mapEngineManager(NULL)
     , _virtualTabletJoystick(false)
     , _offlineEditingFirmwareTypeFact(QString(), "OfflineEditingFirmwareType", FactMetaData::valueTypeUint32, (uint32_t)MAV_AUTOPILOT_ARDUPILOTMEGA)
     , _offlineEditingFirmwareTypeMetaData(FactMetaData::valueTypeUint32)
@@ -68,12 +69,13 @@ void QGroundControlQmlGlobal::setToolbox(QGCToolbox* toolbox)
 {
     QGCTool::setToolbox(toolbox);
 
-    _hbSettings          = toolbox->hbSettings();
-    _flightMapSettings =    toolbox->flightMapSettings();
-    _homePositionManager =  toolbox->homePositionManager();
-    _linkManager =          toolbox->linkManager();
-    _missionCommands =      toolbox->missionCommands();
-    _multiVehicleManager =  toolbox->multiVehicleManager();
+    _hbSettings             = toolbox->hbSettings();
+    _flightMapSettings      = toolbox->flightMapSettings();
+    _homePositionManager    = toolbox->homePositionManager();
+    _linkManager            = toolbox->linkManager();
+    _missionCommands        = toolbox->missionCommands();
+    _multiVehicleManager    = toolbox->multiVehicleManager();
+    _mapEngineManager     = toolbox->mapEngineManager();
 }
 
 
@@ -207,4 +209,19 @@ void QGroundControlQmlGlobal::setVirtualTabletJoystick(bool enabled)
         _virtualTabletJoystick = enabled;
         emit virtualTabletJoystickChanged(enabled);
     }
+}
+
+bool QGroundControlQmlGlobal::experimentalSurvey(void) const
+{
+    QSettings settings;
+
+    return settings.value("ExperimentalSurvey", false).toBool();
+}
+
+void QGroundControlQmlGlobal::setExperimentalSurvey(bool experimentalSurvey)
+{
+    QSettings settings;
+
+    settings.setValue("ExperimentalSurvey", experimentalSurvey);
+    emit experimentalSurveyChanged(experimentalSurvey);
 }
