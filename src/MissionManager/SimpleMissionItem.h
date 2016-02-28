@@ -101,6 +101,7 @@ public:
     QString         commandName             (void) const final;
     QGeoCoordinate  coordinate              (void) const final { return _missionItem.coordinate(); }
     QGeoCoordinate  exitCoordinate          (void) const final { return coordinate(); }
+    int             sequenceNumber          (void) const final { return _missionItem.sequenceNumber(); }
 
     bool coordinateHasRelativeAltitude      (void) const final { return _missionItem.relativeAltitude(); }
     bool exitCoordinateHasRelativeAltitude  (void) const final { return coordinateHasRelativeAltitude(); }
@@ -116,16 +117,13 @@ public slots:
 
 signals:
     void commandChanged             (int command);
-    void coordinateChanged          (const QGeoCoordinate& coordinate);
-    void exitCoordinateChanged      (const QGeoCoordinate& exitCoordinate);
-    //void dirtyChanged               (bool dirty);
     void frameChanged               (int frame);
     void friendlyEditAllowedChanged (bool friendlyEditAllowed);
     void headingDegreesChanged      (double heading);
     void rawEditChanged             (bool rawEdit);
     void uiModelChanged             (void);
     void showHomePositionChanged    (bool showHomePosition);
-    
+
 private slots:
     void _setDirtyFromSignal(void);
     void _sendCommandChanged(void);

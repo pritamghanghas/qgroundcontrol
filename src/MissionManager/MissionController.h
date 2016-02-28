@@ -59,10 +59,14 @@ public:
     Q_INVOKABLE void removeAllMissionItems(void);
     Q_INVOKABLE QStringList getMobileMissionFiles(void);
 
-    /// @param i: index to insert at
+    /// Add a new simple mission item to the list
+    ///     @param i: index to insert at
+    /// @return Sequence number for new item
     Q_INVOKABLE int insertSimpleMissionItem(QGeoCoordinate coordinate, int i);
 
-    /// @param i: index to insert at
+    /// Add a new complex mission item to the list
+    ///     @param i: index to insert at
+    /// @return Sequence number for new item
     Q_INVOKABLE int insertComplexMissionItem(QGeoCoordinate coordinate, int i);
 
     // Property accessors
@@ -113,10 +117,11 @@ private:
     void _addPlannedHomePosition(QmlObjectListModel* visualItems, bool addToCenter);
     double _normalizeLat(double lat);
     double _normalizeLon(double lon);
-    bool _loadJsonMissionFile(const QByteArray& bytes, QmlObjectListModel* visualItems, QString& errorString);
+    bool _loadJsonMissionFile(const QByteArray& bytes, QmlObjectListModel* visualItems, QmlObjectListModel* complexItems, QString& errorString);
     bool _loadTextMissionFile(QTextStream& stream, QmlObjectListModel* visualItems, QString& errorString);
     void _loadMissionFromFile(const QString& file);
     void _saveMissionToFile(const QString& file);
+    int _nextSequenceNumber(void);
 
 private:
     bool                _editMode;
