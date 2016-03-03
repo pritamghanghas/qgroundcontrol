@@ -53,7 +53,7 @@ QGCView {
     readonly property real      _margin:            ScreenTools.defaultFontPixelHeight / 2
     readonly property var       _activeVehicle:     multiVehicleManager.activeVehicle
     readonly property real      _editFieldWidth:    ScreenTools.defaultFontPixelWidth * 16
-    readonly property real      _rightPanelWidth:   ScreenTools.defaultFontPixelWidth * 30
+    readonly property real      _rightPanelWidth:   Math.min(parent.width / 3, ScreenTools.defaultFontPixelWidth * 30)
     readonly property real      _rightPanelOpacity: 0.8
     readonly property int       _toolButtonCount:   6
     readonly property string    _autoSyncKey:       "AutoSync"
@@ -367,14 +367,8 @@ QGCView {
 
                 // Add the complex mission item polygon to the map
                 MapItemView {
-                    model:      controller.complexVisualItems
-                    delegate:   polygonItemComponent
-                }
-
-                Component {
-                    id: polygonItemComponent
-
-                    MapPolygon {
+                    model: controller.complexVisualItems
+                    delegate: MapPolygon {
                         color:      'green'
                         path:       object.polygonPath
                         opacity:    0.5
@@ -491,14 +485,6 @@ QGCView {
                     width:          _rightPanelWidth
                     opacity:        _rightPanelOpacity
                     z:              QGroundControl.zOrderTopMost
-
-                    MouseArea {
-                        // This MouseArea prevents the Map below it from getting Mouse events. Without this
-                        // things like mousewheel will scroll the Flickable and then scroll the map as well.
-                        anchors.fill:       editorListView
-                        preventStealing:    true
-                        onWheel:            wheel.accepted = true
-                    }
 
                     ListView {
                         id:             editorListView
@@ -716,6 +702,7 @@ QGCView {
                     currentMissionItem: _currentMissionItem
                     missionItems:       controller.visualItems
                     expandedWidth:      missionItemEditor.x - (ScreenTools.defaultFontPixelWidth * 2)
+                    visible:            !ScreenTools.isShortScreen
                 }
             } // FlightMap
         } // Item - split view container
