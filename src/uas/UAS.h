@@ -638,6 +638,7 @@ protected:
 
 private:
     void _say(const QString& text, int severity = 6);
+    int _scaleJoystickToRC(double v, int channel) const;
 
 private:
     Vehicle*                _vehicle;

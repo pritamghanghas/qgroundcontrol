@@ -37,6 +37,7 @@
 #include "QGCLoggingCategory.h"
 #include "Vehicle.h"
 #include "Joystick.h"
+#include "APMRadioComponent.h"
 #include "QGCApplication.h"
 
 QGC_LOGGING_CATEGORY(UASLog, "UASLog")
@@ -1590,7 +1591,20 @@ void UAS::setExternalControlSetpoint(float roll, float pitch, float yaw, float t
 
             // Send the MANUAL_COMMAND message
             mavlink_msg_manual_control_pack(mavlink->getSystemId(), mavlink->getComponentId(), &message, this->uasId, newPitchCommand, newRollCommand, newThrustCommand, newYawCommand, buttons);
-        } else if(joystickMode == Vehicle::JoystickMode_OVERRIDE) {
+        } else if (joystickMode == Vehicle::JoystickMode_OVERRIDE) {
+
+            // first check if rc is calibrated, the final values sent to the vehicle will depend on it.
+            // we take care of 4 channels only for the time being.
+            auto components = _vehicle->autopilotPlugin()->vehicleComponents();
+            bool isRCCalibrated = false;
+            for (auto component : components) {
+                if (component.canConvert<APMRadioComponent*>()) {
+                    APMRadioComponent* radio = component.value<APMRadioComponent*>();
+                    Q_ASSERT(radio);
+                    isRCCalibrated = radio->setupComplete();
+                }
+            }
+
             // Save the new manual control inputs
             manualRollAngle = roll;
             manualPitchAngle = pitch;
@@ -1598,15 +1612,41 @@ void UAS::setExternalControlSetpoint(float roll, float pitch, float yaw, float t
             manualThrust = thrust;
             manualButtons = buttons;
 
-            // Store scaling values for all 3 axes
-            const float axesScaling = 1.0 * 1000.0;
+            // new ones
+            float newRollCommand    = 0;
+            float newPitchCommand   = 0;
+            float newYawCommand     = 0;
+            float newThrustCommand  = 0;
+            if (!isRCCalibrated) { // if rc not calibrating pwm defaults to 1000 to 2000
 
-            // Calculate the new commands for roll, pitch, yaw, and thrust
-            // assuming all our systems will be belheli based and all pwm controls are 1000 to 2000pwm
-            const float newRollCommand = 1500 + (roll * axesScaling)/2;
-            const float newPitchCommand = 1500 + (pitch * axesScaling)/2;
-            const float newYawCommand = 1500 + (yaw * axesScaling)/2;
-            const float newThrustCommand = 1000+ (thrust * axesScaling);
+                // Store scaling values for all 3 axes
+                const float axesScaling = 1.0 * 1000.0;
+
+                // Calculate the new commands for roll, pitch, yaw, and thrust
+                newRollCommand = 1500 + (roll * axesScaling)/2;
+                newPitchCommand = 1500 + (pitch * axesScaling)/2;
+                newYawCommand = 1500 + (yaw * axesScaling)/2;
+                newThrustCommand = 1000+ (thrust * axesScaling);
+            } else {
+
+                qCDebug(UASLog) << "mapping joystick to rc values";
+
+                // roll
+                int mappedChannel = _vehicle->autopilotPlugin()->getParameterFact(-1, "RCMAP_ROLL")->rawValue().toInt();
+                newRollCommand = _scaleJoystickToRC(roll, mappedChannel);
+
+                // pitch
+                mappedChannel = _vehicle->autopilotPlugin()->getParameterFact(-1, "RCMAP_PITCH")->rawValue().toInt();
+                newPitchCommand = _scaleJoystickToRC(pitch, mappedChannel);
+
+                // yaw
+                mappedChannel = _vehicle->autopilotPlugin()->getParameterFact(-1, "RCMAP_YAW")->rawValue().toInt();
+                newYawCommand = _scaleJoystickToRC(yaw, mappedChannel);
+
+                // throttle
+                mappedChannel = _vehicle->autopilotPlugin()->getParameterFact(-1, "RCMAP_THROTTLE")->rawValue().toInt();
+                newThrustCommand = _scaleJoystickToRC(thrust*2-1, mappedChannel);
+            }
 
             qCDebug(UASLog) << "roll:" << newRollCommand << "pitch:" << newPitchCommand
                             << "yaw:" << newYawCommand << "thrust:" << newThrustCommand;
@@ -1621,6 +1661,30 @@ void UAS::setExternalControlSetpoint(float roll, float pitch, float yaw, float t
         // Emit an update in control values to other UI elements, like the HSI display
         emit attitudeThrustSetPointChanged(this, roll, pitch, yaw, thrust, QGC::groundTimeMilliseconds());
     }
+}
+
+/** @brief scale joystick axis to RC value
+ *         using min,max,trim,rev from UAS
+ */
+int UAS::_scaleJoystickToRC(double v, int channel) const
+{
+    int min  = _vehicle->autopilotPlugin()->getParameterFact(-1, QString("RC%1_MIN").arg(channel))->rawValue().toInt();
+    int max  = _vehicle->autopilotPlugin()->getParameterFact(-1, QString("RC%1_MAX").arg(channel))->rawValue().toInt();
+    int trim = _vehicle->autopilotPlugin()->getParameterFact(-1, QString("RC%1_TRIM").arg(channel))->rawValue().toInt();
+    int rev  = _vehicle->autopilotPlugin()->getParameterFact(-1,  QString("RC%1_REV").arg(channel))->rawValue().toInt();
+    if (rev == -1)
+        v = -v;
+
+    int ppm = trim;
+    if (v > 0)
+        ppm += (max - trim) * v;
+    else if (v < 0)
+        ppm -= (min - trim) * v;
+    if (ppm < min) ppm = min;
+    if (ppm > max) ppm = max;
+
+    qCDebug(UASLog) << v << "->" << ppm << "(min=" << min << ", trim=" << trim << ", max=" << max << ", rev=" << rev << ") for channel " << channel;
+    return ppm;
 }
 
 #ifndef __mobile__
