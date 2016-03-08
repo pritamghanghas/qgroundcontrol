@@ -74,9 +74,8 @@ linux {
     CONFIG += iOSBuild MobileBuild app_bundle
     DEFINES += __ios__
     QMAKE_IOS_DEPLOYMENT_TARGET = 8.0
-    QMAKE_IOS_TARGETED_DEVICE_FAMILY = 2 #- iPad only for now
+    QMAKE_IOS_TARGETED_DEVICE_FAMILY = 1,2 # Universal
     QMAKE_LFLAGS += -Wl,-no_pie
-    warning("iOS build is experimental and not yet fully functional")
 } else {
     error("Unsupported build platform, only Linux, Windows, Android and Mac (Mac OS and iOS) are supported")
 }
@@ -88,16 +87,24 @@ MobileBuild {
 # set the QGC version from git
 
 exists ($$PWD/.git) {
-  GIT_DESCRIBE = $$system(git --git-dir $$PWD/.git --work-tree $$PWD describe --always --tags)
-  GIT_HASH     = $$system(git rev-parse HEAD)
-  VERSION      = $$replace(GIT_DESCRIBE, "v", "")
-  VERSION      = $$replace(VERSION, "-", ".")
-  VERSION      = $$section(VERSION, ".", 0, 3)
-  message(QGroundControl version $${GIT_DESCRIBE} hash $${GIT_HASH})
+    GIT_DESCRIBE = $$system(git --git-dir $$PWD/.git --work-tree $$PWD describe --always --tags)
+    GIT_HASH     = $$system(git rev-parse HEAD)
+    VERSION      = $$replace(GIT_DESCRIBE, "v", "")
+    VERSION      = $$replace(VERSION, "-", ".")
+    VERSION      = $$section(VERSION, ".", 0, 3)
+    MacBuild {
+        MAC_VERSION  = $$section(VERSION, ".", 0, 2)
+        MAC_BUILD    = $$section(VERSION, ".", 3, 3)
+        message(QGroundControl version $${MAC_VERSION} build $${MAC_BUILD} describe $${GIT_DESCRIBE} hash $${GIT_HASH})
+    } else {
+        message(QGroundControl version $${VERSION} describe $${GIT_DESCRIBE} hash $${GIT_HASH})
+    }
 } else {
-  GIT_DESCRIBE = None
-  GIT_HASH = None
-  VERSION = 0.0.0   # Marker to indicate out-of-tree build
+    GIT_DESCRIBE    = None
+    GIT_HASH        = None
+    VERSION         = 0.0.0   # Marker to indicate out-of-tree build
+    MAC_VERSION     = 0.0.0
+    MAC_BUILD       = 0
 }
 
 DEFINES += GIT_TAG=\"\\\"$$GIT_DESCRIBE\\\"\"

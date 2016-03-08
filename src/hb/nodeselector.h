@@ -22,8 +22,8 @@ Q_SIGNALS:
 
 public Q_SLOTS:
     void onNewNodeDiscovered(const PiNode& node);
-    void selectNext();
-    void selectPrevious();
+    bool selectNext();
+    bool selectPrevious();
     PiNode currentNode() const;
     int currentNodeIndex() const { return m_currentIndex; }
     // returns port on the client side where udp packets are being sents

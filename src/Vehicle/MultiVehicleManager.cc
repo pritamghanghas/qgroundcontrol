@@ -50,6 +50,7 @@ MultiVehicleManager::MultiVehicleManager(QGCApplication* app)
     , _activeVehicleAvailable(false)
     , _parameterReadyVehicleAvailable(false)
     , _activeVehicle(NULL)
+    , _disconnectedVehicle(NULL)
     , _firmwarePluginManager(NULL)
     , _autopilotPluginManager(NULL)
     , _joystickManager(NULL)
@@ -66,6 +67,8 @@ MultiVehicleManager::MultiVehicleManager(QGCApplication* app)
     if (_gcsHeartbeatEnabled) {
         _gcsHeartbeatTimer.start();
     }
+
+    _disconnectedVehicle = new Vehicle(this);
 }
 
 void MultiVehicleManager::setToolbox(QGCToolbox *toolbox)
@@ -119,6 +122,9 @@ void MultiVehicleManager::_vehicleHeartbeatInfo(LinkInterface* link, int vehicle
     emit vehicleAdded(vehicle);
 
     setActiveVehicle(vehicle);
+
+    // Mark link as active
+    link->setActive(true);
 
 #if defined __android__
     if(_vehicles.count() == 1) {

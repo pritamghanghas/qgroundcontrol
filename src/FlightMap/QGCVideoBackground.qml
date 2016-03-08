@@ -359,6 +359,16 @@ VideoItem {
         }
     }
 
+    MouseArea {
+        id: videoViewClickable
+        anchors.fill: parent
+        onDoubleClicked: {
+            if (videoBackground.receiver.next()) {
+                onModeChange();
+            }
+        }
+    }
+
     Column {
         id:                         toolColumn
         visible:                    !_mainIsMap

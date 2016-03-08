@@ -29,6 +29,7 @@
 
 #include <QObject>
 #include <QGeoCoordinate>
+#include <QElapsedTimer>
 
 #include "FactGroup.h"
 #include "LinkInterface.h"
@@ -36,6 +37,7 @@
 #include "QmlObjectListModel.h"
 #include "MAVLinkProtocol.h"
 #include "UASMessageHandler.h"
+#include "SettingsFact.h"
 
 class UAS;
 class UASInterface;
@@ -66,12 +68,12 @@ public:
     Q_PROPERTY(Fact* clipCount2 READ clipCount2 CONSTANT)
     Q_PROPERTY(Fact* clipCount3 READ clipCount3 CONSTANT)
 
-    Fact* xAxis(void)       { return &_xAxisFact; }
-    Fact* yAxis(void)       { return &_yAxisFact; }
-    Fact* zAxis(void)       { return &_zAxisFact; }
-    Fact* clipCount1(void)  { return &_clipCount1Fact; }
-    Fact* clipCount2(void)  { return &_clipCount2Fact; }
-    Fact* clipCount3(void)  { return &_clipCount3Fact; }
+    Fact* xAxis         (void) { return &_xAxisFact; }
+    Fact* yAxis         (void) { return &_yAxisFact; }
+    Fact* zAxis         (void) { return &_zAxisFact; }
+    Fact* clipCount1    (void) { return &_clipCount1Fact; }
+    Fact* clipCount2    (void) { return &_clipCount2Fact; }
+    Fact* clipCount3    (void) { return &_clipCount3Fact; }
 
     void setVehicle(Vehicle* vehicle);
 
@@ -103,9 +105,9 @@ public:
     Q_PROPERTY(Fact* speed          READ speed          CONSTANT)
     Q_PROPERTY(Fact* verticalSpeed  READ verticalSpeed  CONSTANT)
 
-    Fact* direction(void)       { return &_directionFact; }
-    Fact* speed(void)           { return &_speedFact; }
-    Fact* verticalSpeed(void)   { return &_verticalSpeedFact; }
+    Fact* direction     (void) { return &_directionFact; }
+    Fact* speed         (void) { return &_speedFact; }
+    Fact* verticalSpeed (void) { return &_verticalSpeedFact; }
 
     void setVehicle(Vehicle* vehicle);
 
@@ -133,11 +135,11 @@ public:
     Q_PROPERTY(Fact* count              READ count              CONSTANT)
     Q_PROPERTY(Fact* lock               READ lock               CONSTANT)
 
-    Fact* hdop(void)                { return &_hdopFact; }
-    Fact* vdop(void)                { return &_vdopFact; }
-    Fact* courseOverGround(void)    { return &_courseOverGroundFact; }
-    Fact* count(void)               { return &_countFact; }
-    Fact* lock(void)                { return &_lockFact; }
+    Fact* hdop              (void) { return &_hdopFact; }
+    Fact* vdop              (void) { return &_vdopFact; }
+    Fact* courseOverGround  (void) { return &_courseOverGroundFact; }
+    Fact* count             (void) { return &_countFact; }
+    Fact* lock              (void) { return &_lockFact; }
 
     void setVehicle(Vehicle* vehicle);
 
@@ -175,23 +177,32 @@ public:
     Q_PROPERTY(Fact* mahConsumed        READ mahConsumed        CONSTANT)
     Q_PROPERTY(Fact* current            READ current            CONSTANT)
     Q_PROPERTY(Fact* temperature        READ temperature        CONSTANT)
-    Q_PROPERTY(Fact* cellCount          READ cellCount        CONSTANT)
+    Q_PROPERTY(Fact* cellCount          READ cellCount          CONSTANT)
 
-    Fact* voltage(void)             { return &_voltageFact; }
-    Fact* percentRemaining(void)    { return &_percentRemainingFact; }
-    Fact* mahConsumed(void)         { return &_mahConsumedFact; }
-    Fact* current(void)             { return &_currentFact; }
-    Fact* temperature(void)         { return &_temperatureFact; }
-    Fact* cellCount(void)           { return &_cellCountFact; }
+    /// If percentRemaining falls below this value, warning will be output through speech
+    Q_PROPERTY(Fact* percentRemainingAnnounce READ percentRemainingAnnounce CONSTANT)
+
+    Fact* voltage                   (void) { return &_voltageFact; }
+    Fact* percentRemaining          (void) { return &_percentRemainingFact; }
+    Fact* percentRemainingAnnounce  (void);
+    Fact* mahConsumed               (void) { return &_mahConsumedFact; }
+    Fact* current                   (void) { return &_currentFact; }
+    Fact* temperature               (void) { return &_temperatureFact; }
+    Fact* cellCount                 (void) { return &_cellCountFact; }
+
 
     void setVehicle(Vehicle* vehicle);
 
     static const char* _voltageFactName;
     static const char* _percentRemainingFactName;
+    static const char* _percentRemainingAnnounceFactName;
     static const char* _mahConsumedFactName;
     static const char* _currentFactName;
     static const char* _temperatureFactName;
     static const char* _cellCountFactName;
+
+    static const char* _settingsGroup;
+    static const int   _percentRemainingAnnounceDefault;
 
     static const double _voltageUnavailable;
     static const int    _percentRemainingUnavailable;
@@ -201,13 +212,17 @@ public:
     static const int    _cellCountUnavailable;
 
 private:
-    Vehicle*    _vehicle;
-    Fact        _voltageFact;
-    Fact        _percentRemainingFact;
-    Fact        _mahConsumedFact;
-    Fact        _currentFact;
-    Fact        _temperatureFact;
-    Fact        _cellCountFact;
+    Vehicle*        _vehicle;
+    Fact            _voltageFact;
+    Fact            _percentRemainingFact;
+    Fact            _mahConsumedFact;
+    Fact            _currentFact;
+    Fact            _temperatureFact;
+    Fact            _cellCountFact;
+
+    /// This fact is global to all Vehicles. We must allocated the first time we need it so we don't
+    /// run into QSettings application setup ordering issues.
+    static SettingsFact* _percentRemainingAnnounceFact;
 };
 
 class Vehicle : public FactGroup
@@ -222,6 +237,11 @@ public:
             FirmwarePluginManager*  firmwarePluginManager,
             AutoPilotPluginManager* autopilotPluginManager,
             JoystickManager*        joystickManager);
+
+    // The following is used to create a disconnected Vehicle. A disconnected vehicle is primarily used to access FactGroup information
+    // without needing a real connection.
+    Vehicle(QObject* parent = NULL);
+
     ~Vehicle();
 
     Q_PROPERTY(int                  id                      READ id                                     CONSTANT)
@@ -304,6 +324,8 @@ public:
     Q_INVOKABLE void doChangeAltitude(int height);
     Q_INVOKABLE void doChangeYaw(float angle, float speed, bool relative, int direction); // true relative false absolute
     Q_INVOKABLE void doSweepYaw(float sweepAngle, float sweepSpeed);
+
+    Q_INVOKABLE void clearTrajectoryPoints(void);
 
     // Property accessors
 
@@ -513,6 +535,8 @@ private slots:
     void _addNewMapTrajectoryPoint(void);
     void _parametersReady(bool parametersReady);
     void _remoteControlRSSIChanged(uint8_t rssi);
+    void _announceflightModeChanged(const QString& flightMode);
+    void _announceArmedChanged(bool armed);
 
     void _handleTextMessage                 (int newCount);
     void _handletextMessageReceived         (UASMessage* message);
@@ -550,12 +574,14 @@ private:
     void _mapTrajectoryStart(void);
     void _mapTrajectoryStop(void);
     void _connectionActive(void);
-    void _say(const QString& text, int severity);
     void _checkFlying();
+    void _say(const QString& text);
+    QString _vehicleIdSpeech(void);
 
 private:
     int     _id;            ///< Mavlink system id
     bool    _active;
+    bool    _disconnectedVehicle;   ///< This Vehicle is a "disconnected" vehicle for ui use when no active vehicle is available
 
     MAV_AUTOPILOT       _firmwareType;
     MAV_TYPE            _vehicleType;
@@ -632,6 +658,7 @@ private:
     bool                _mapTrajectoryHaveFirstCoordinate;
     static const int    _mapTrajectoryMsecsBetweenPoints = 1000;
 
+    // Toolbox references
     FirmwarePluginManager*      _firmwarePluginManager;
     AutoPilotPluginManager*     _autopilotPluginManager;
     JoystickManager*            _joystickManager;
@@ -646,6 +673,9 @@ private:
     uint8_t             _messageSeq;
     uint8_t             _compID;
     bool                _heardFrom;
+
+    static const int    _lowBatteryAnnounceRepeatMSecs; // Amount of time in between each low battery announcement
+    QElapsedTimer       _lowBatteryAnnounceTimer;
 
     // FactGroup facts
 

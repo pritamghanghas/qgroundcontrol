@@ -61,7 +61,8 @@
 #include "ViewWidgetController.h"
 #include "ParameterEditorController.h"
 #include "CustomCommandWidgetController.h"
-#include "FlightModesComponentController.h"
+#include "PX4AdvancedFlightModesController.h"
+#include "PX4SimpleFlightModesController.h"
 #include "APMFlightModesComponentController.h"
 #include "AirframeComponentController.h"
 #include "SensorsComponentController.h"
@@ -70,11 +71,11 @@
 #include "RadioComponentController.h"
 #include "ESP8266ComponentController.h"
 #include "ScreenToolsController.h"
+#include "QGCMobileFileDialogController.h"
 #include "AutoPilotPlugin.h"
 #include "VehicleComponent.h"
 #include "FirmwarePluginManager.h"
 #include "MultiVehicleManager.h"
-#include "Generic/GenericFirmwarePlugin.h"
 #include "APM/ArduCopterFirmwarePlugin.h"
 #include "APM/ArduPlaneFirmwarePlugin.h"
 #include "APM/ArduRoverFirmwarePlugin.h"
@@ -124,6 +125,10 @@
 #endif
 
 QGCApplication* QGCApplication::_app = NULL;
+
+const char* QGCApplication::parameterFileExtension =    "params";
+const char* QGCApplication::missionFileExtension =      "mission";
+const char* QGCApplication::telemetryFileExtension =     "tlog";
 
 const char* QGCApplication::_deleteAllSettingsKey           = "DeleteAllSettingsNextBoot";
 const char* QGCApplication::_settingsVersionKey             = "SettingsVersion";
@@ -372,8 +377,7 @@ QGCApplication::QGCApplication(int &argc, char* argv[], bool unitTesting)
         settings.clear();
         settings.setValue(_settingsVersionKey, QGC_SETTINGS_VERSION);
 
-        QFile::remove(PX4AirframeLoader::aiframeMetaDataFile());
-        QFile::remove(PX4ParameterMetaData::parameterMetaDataFile());
+        // Clear parameter cache
         QDir paramDir(ParameterLoader::parameterCacheDir());
         paramDir.removeRecursively();
         paramDir.mkpath(paramDir.absolutePath());
@@ -436,7 +440,8 @@ void QGCApplication::_initCommon(void)
 
     qmlRegisterType<ParameterEditorController>          ("QGroundControl.Controllers", 1, 0, "ParameterEditorController");
     qmlRegisterType<APMFlightModesComponentController>  ("QGroundControl.Controllers", 1, 0, "APMFlightModesComponentController");
-    qmlRegisterType<FlightModesComponentController>     ("QGroundControl.Controllers", 1, 0, "FlightModesComponentController");
+    qmlRegisterType<PX4AdvancedFlightModesController>   ("QGroundControl.Controllers", 1, 0, "PX4AdvancedFlightModesController");
+    qmlRegisterType<PX4SimpleFlightModesController>     ("QGroundControl.Controllers", 1, 0, "PX4SimpleFlightModesController");
     qmlRegisterType<APMAirframeComponentController>     ("QGroundControl.Controllers", 1, 0, "APMAirframeComponentController");
     qmlRegisterType<AirframeComponentController>        ("QGroundControl.Controllers", 1, 0, "AirframeComponentController");
     qmlRegisterType<APMSensorsComponentController>      ("QGroundControl.Controllers", 1, 0, "APMSensorsComponentController");
@@ -449,6 +454,7 @@ void QGCApplication::_initCommon(void)
     qmlRegisterType<MissionController>                  ("QGroundControl.Controllers", 1, 0, "MissionController");
     qmlRegisterType<FlightDisplayViewController>        ("QGroundControl.Controllers", 1, 0, "FlightDisplayViewController");
     qmlRegisterType<ValuesWidgetController>             ("QGroundControl.Controllers", 1, 0, "ValuesWidgetController");
+    qmlRegisterType<QGCMobileFileDialogController>      ("QGroundControl.Controllers", 1, 0, "QGCMobileFileDialogController");
 
 #ifndef __mobile__
     qmlRegisterType<ViewWidgetController>           ("QGroundControl.Controllers", 1, 0, "ViewWidgetController");
@@ -462,28 +468,6 @@ void QGCApplication::_initCommon(void)
     qmlRegisterSingletonType<QGroundControlQmlGlobal>   ("QGroundControl",                          1, 0, "QGroundControl",         qgroundcontrolQmlGlobalSingletonFactory);
     qmlRegisterSingletonType<ScreenToolsController>     ("QGroundControl.ScreenToolsController",    1, 0, "ScreenToolsController",  screenToolsControllerSingletonFactory);
     qmlRegisterSingletonType<MavlinkQmlSingleton>       ("QGroundControl.Mavlink",                  1, 0, "Mavlink",                mavlinkQmlSingletonFactory);
-
-    // Show user an upgrade message if the settings version has been bumped up
-    bool settingsUpgraded = false;
-    if (settings.contains(_settingsVersionKey)) {
-        if (settings.value(_settingsVersionKey).toInt() != QGC_SETTINGS_VERSION) {
-            settingsUpgraded = true;
-        }
-    } else if (settings.allKeys().count()) {
-        // Settings version key is missing and there are settings. This is an upgrade scenario.
-        settingsUpgraded = true;
-    } else {
-        settings.setValue(_settingsVersionKey, QGC_SETTINGS_VERSION);
-    }
-
-    if (settingsUpgraded) {
-        settings.clear();
-        settings.setValue(_settingsVersionKey, QGC_SETTINGS_VERSION);
-        showMessage("The format for QGroundControl saved settings has been modified. "
-                    "Your saved settings have been reset to defaults.");
-    }
-
-    settings.sync();
 }
 
 bool QGCApplication::_initForNormalAppBoot(void)
@@ -514,6 +498,28 @@ bool QGCApplication::_initForNormalAppBoot(void)
 
     // Load known link configurations
     toolbox()->linkManager()->loadLinkConfigurationList();
+
+    // Show user an upgrade message if the settings version has been bumped up
+    bool settingsUpgraded = false;
+    if (settings.contains(_settingsVersionKey)) {
+        if (settings.value(_settingsVersionKey).toInt() != QGC_SETTINGS_VERSION) {
+            settingsUpgraded = true;
+        }
+    } else if (settings.allKeys().count()) {
+        // Settings version key is missing and there are settings. This is an upgrade scenario.
+        settingsUpgraded = true;
+    } else {
+        settings.setValue(_settingsVersionKey, QGC_SETTINGS_VERSION);
+    }
+
+    if (settingsUpgraded) {
+        settings.clear();
+        settings.setValue(_settingsVersionKey, QGC_SETTINGS_VERSION);
+        showMessage("The format for QGroundControl saved settings has been modified. "
+                    "Your saved settings have been reset to defaults.");
+    }
+
+    settings.sync();
 
     return true;
 }

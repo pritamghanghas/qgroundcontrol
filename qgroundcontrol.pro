@@ -92,10 +92,6 @@ QT += \
     bluetooth \
 }
 
-contains(DEFINES, QGC_NOTIFY_TUNES_ENABLED) {
-    QT += multimedia
-}
-
 #  testlib is needed even in release flavor for QSignalSpy support
 QT += testlib
 
@@ -273,6 +269,7 @@ HEADERS += \
     src/QGCGeo.h \
     src/QGCLoggingCategory.h \
     src/QGCMapPalette.h \
+    src/QGCMobileFileDialogController.h \
     src/QGCPalette.h \
     src/QGCQmlWidgetHolder.h \
     src/QGCQuickWidget.h \
@@ -401,6 +398,7 @@ SOURCES += \
     src/QGCFileDownload.cc \
     src/QGCLoggingCategory.cc \
     src/QGCMapPalette.cc \
+    src/QGCMobileFileDialogController.cc \
     src/QGCPalette.cc \
     src/QGCQuickWidget.cc \
     src/QGCQmlWidgetHolder.cpp \
@@ -594,7 +592,8 @@ HEADERS+= \
     src/AutoPilotPlugins/PX4/AirframeComponentAirframes.h \
     src/AutoPilotPlugins/PX4/AirframeComponentController.h \
     src/AutoPilotPlugins/PX4/FlightModesComponent.h \
-    src/AutoPilotPlugins/PX4/FlightModesComponentController.h \
+    src/AutoPilotPlugins/PX4/PX4AdvancedFlightModesController.h \
+    src/AutoPilotPlugins/PX4/PX4SimpleFlightModesController.h \
     src/AutoPilotPlugins/PX4/PowerComponent.h \
     src/AutoPilotPlugins/PX4/PowerComponentController.h \
     src/AutoPilotPlugins/PX4/PX4AutoPilotPlugin.h \
@@ -610,7 +609,6 @@ HEADERS+= \
     src/FirmwarePlugin/APM/ArduCopterFirmwarePlugin.h \
     src/FirmwarePlugin/APM/ArduPlaneFirmwarePlugin.h \
     src/FirmwarePlugin/APM/ArduRoverFirmwarePlugin.h \
-    src/FirmwarePlugin/Generic/GenericFirmwarePlugin.h \
     src/FirmwarePlugin/PX4/PX4FirmwarePlugin.h \
     src/FirmwarePlugin/PX4/PX4ParameterMetaData.h \
     src/Vehicle/MultiVehicleManager.h \
@@ -651,7 +649,8 @@ SOURCES += \
     src/AutoPilotPlugins/PX4/AirframeComponentAirframes.cc \
     src/AutoPilotPlugins/PX4/AirframeComponentController.cc \
     src/AutoPilotPlugins/PX4/FlightModesComponent.cc \
-    src/AutoPilotPlugins/PX4/FlightModesComponentController.cc \
+    src/AutoPilotPlugins/PX4/PX4AdvancedFlightModesController.cc \
+    src/AutoPilotPlugins/PX4/PX4SimpleFlightModesController.cc \
     src/AutoPilotPlugins/PX4/PowerComponent.cc \
     src/AutoPilotPlugins/PX4/PowerComponentController.cc \
     src/AutoPilotPlugins/PX4/PX4AutoPilotPlugin.cc \
@@ -665,8 +664,8 @@ SOURCES += \
     src/FirmwarePlugin/APM/ArduCopterFirmwarePlugin.cc \
     src/FirmwarePlugin/APM/ArduPlaneFirmwarePlugin.cc \
     src/FirmwarePlugin/APM/ArduRoverFirmwarePlugin.cc \
+    src/FirmwarePlugin/FirmwarePlugin.cc \
     src/FirmwarePlugin/FirmwarePluginManager.cc \
-    src/FirmwarePlugin/Generic/GenericFirmwarePlugin.cc \
     src/FirmwarePlugin/PX4/PX4FirmwarePlugin.cc \
     src/FirmwarePlugin/PX4/PX4ParameterMetaData.cc \
     src/Vehicle/MultiVehicleManager.cc \

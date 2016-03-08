@@ -98,27 +98,39 @@ void NodeSelector::terminateMavProxy(const PiNode &node)
 
 
 
-void NodeSelector::selectNext()
+bool NodeSelector::selectNext()
 {
     PiNodeList nodes = m_discoverer->discoveredNodes();
 
     if (!nodes.size()) {
         qDebug() << __FUNCTION__ << "nodes are empty";
-        return;
+        return false;
+    }
+
+    if (nodes.size() < 2) {
+        qDebug() << "only one node";
+        return false;
     }
 
     m_currentIndex = (m_currentIndex+1)%nodes.size();
+    return true;
 }
 
-void NodeSelector::selectPrevious()
+bool NodeSelector::selectPrevious()
 {
     PiNodeList nodes = m_discoverer->discoveredNodes();
 
     if (!nodes.size()) {
-        return;
+        return false;
+    }
+
+    if (nodes.size() < 2) {
+        qDebug() << "only one node";
+        return false;
     }
 
     m_currentIndex = m_currentIndex-1 < 0 ? nodes.size()-1 : m_currentIndex;
+    return true;
 }
 
 PiNode NodeSelector::currentNode() const

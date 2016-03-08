@@ -21,55 +21,29 @@ This file is part of the QGROUNDCONTROL project
 
 ======================================================================*/
 
-/**
- * @file
- *   @brief QGC Video Receiver
- *   @author Gus Grubba <mavlink@grubba.com>
- */
-
-#ifndef VIDEORECEIVER_H
-#define VIDEORECEIVER_H
+#ifndef QGCMobileFileDialogController_H
+#define QGCMobileFileDialogController_H
 
 #include <QObject>
-#if defined(QGC_GST_STREAMING)
-#include <gst/gst.h>
-#include "nodeselector.h"
-#endif
 
-class VideoReceiver : public QObject
+class QGCMobileFileDialogController : public QObject
 {
     Q_OBJECT
+
 public:
-    explicit VideoReceiver(NodeSelector* piNodeSelector, QObject* parent = 0);
-    ~VideoReceiver();
+    /// Return all file in Documents location which match the specified extension
+    Q_INVOKABLE QStringList getFiles(const QString& fileExtension);
 
-#if defined(QGC_GST_STREAMING)
-    void setVideoSink(GstElement* sink);
-#endif
+    /// Return the full path for specified file in the Documents location
+    ///     @param filename File name, not fully qualified, may not have extension
+    ///     @param fileExtension Expected file extension, added if needed
+    Q_INVOKABLE QString fullPath(const QString& filename, const QString& fileExtension);
 
-public Q_SLOTS:
-    void start  (const QString& optionsString);
-    void stop   ();
-    void setUri (const QString& uri);
-    bool next();
-    bool previous();
-
-private:
-
-#if defined(QGC_GST_STREAMING)
-    void            _onBusMessage(GstMessage* message);
-    static gboolean _onBusMessage(GstBus* bus, GstMessage* msg, gpointer data);
-#endif
-
-    QString     _uri;
-
-#if defined(QGC_GST_STREAMING)
-    GstElement* _pipeline;
-    GstElement* _videoSink;
-#endif
-
-    NodeSelector* _nodeSelector;
-
+    /// Check for file existance
+    ///     @param filename File name, not fully qualified, may not have extension
+    ///     @param fileExtension Expected file extension, added if needed
+    /// @return true: File exists at Documents location
+    Q_INVOKABLE bool fileExists(const QString& filename, const QString& fileExtension);
 };
 
-#endif // VIDEORECEIVER_H
+#endif

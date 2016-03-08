@@ -62,16 +62,14 @@ void VideoReceiver::setVideoSink(GstElement* sink)
 }
 #endif
 
-void VideoReceiver::next()
+bool VideoReceiver::next()
 {
     _nodeSelector->selectNext();
-//    start();
 }
 
-void VideoReceiver::previous()
+bool VideoReceiver::previous()
 {
     _nodeSelector->selectPrevious();
-//    start();
 }
 
 void VideoReceiver::start(const QString &optionsString)

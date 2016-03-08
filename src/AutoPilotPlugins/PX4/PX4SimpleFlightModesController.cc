@@ -21,40 +21,41 @@
  
  ======================================================================*/
 
-#include "APMFlightModesComponentController.h"
+#include "PX4SimpleFlightModesController.h"
 #include "QGCMAVLink.h"
 #include "AutoPilotPluginManager.h"
 
 #include <QVariant>
 #include <QQmlProperty>
 
-APMFlightModesComponentController::APMFlightModesComponentController(void)
+PX4SimpleFlightModesController::PX4SimpleFlightModesController(void)
     : _activeFlightMode(0)
     , _channelCount(Vehicle::cMaxRcChannels)
-    , _fixedWing(_vehicle->vehicleType() == MAV_TYPE_FIXED_WING)
+
 {
     QStringList usedParams;
-    usedParams << QStringLiteral("FLTMODE1") << QStringLiteral("FLTMODE2") << QStringLiteral("FLTMODE3")
-               << QStringLiteral("FLTMODE4") << QStringLiteral("FLTMODE5") << QStringLiteral("FLTMODE6");
+    usedParams << QStringLiteral("COM_FLTMODE1") << QStringLiteral("COM_FLTMODE2") << QStringLiteral("COM_FLTMODE3")
+               << QStringLiteral("COM_FLTMODE4") << QStringLiteral("COM_FLTMODE5") << QStringLiteral("COM_FLTMODE6")
+               << QStringLiteral("RC_MAP_FLTMODE");
     if (!_allParametersExists(FactSystem::defaultComponentId, usedParams)) {
         return;
     }
 
-    _rgChannelOptionEnabled << QVariant(false) << QVariant(false) << QVariant(false) << QVariant(false) << QVariant(false) << QVariant(false);
-    
-    connect(_vehicle, &Vehicle::rcChannelsChanged, this, &APMFlightModesComponentController::_rcChannelsChanged);
+    connect(_vehicle, &Vehicle::rcChannelsChanged, this, &PX4SimpleFlightModesController::_rcChannelsChanged);
 }
 
 /// Connected to Vehicle::rcChannelsChanged signal
-void APMFlightModesComponentController::_rcChannelsChanged(int channelCount, int pwmValues[Vehicle::cMaxRcChannels])
+void PX4SimpleFlightModesController::_rcChannelsChanged(int channelCount, int pwmValues[Vehicle::cMaxRcChannels])
 {
-    int flightModeChannel = 4;
-
-    if (parameterExists(FactSystem::defaultComponentId, QStringLiteral("FLTMODE_CH"))) {
-        flightModeChannel = getParameterFact(FactSystem::defaultComponentId, QStringLiteral("FLTMODE_CH"))->rawValue().toInt() - 1;
+    _rcChannelValues.clear();
+    for (int i=0; i<channelCount; i++) {
+        _rcChannelValues.append(pwmValues[i]);
     }
+    emit rcChannelValuesChanged();
 
-    if (flightModeChannel >= channelCount) {
+    int flightModeChannel = getParameterFact(-1, "RC_MAP_FLTMODE")->rawValue().toInt() - 1;
+
+    if (flightModeChannel < 0 || flightModeChannel > channelCount) {
         return;
     }
 
@@ -75,13 +76,4 @@ void APMFlightModesComponentController::_rcChannelsChanged(int channelCount, int
         }
     }
     emit activeFlightModeChanged(_activeFlightMode);
-
-    for (int i=0; i<6; i++) {
-        _rgChannelOptionEnabled[i] = QVariant(false);
-        channelValue = pwmValues[i+6];
-        if (channelValue != -1 && channelValue > 1800) {
-            _rgChannelOptionEnabled[i] = QVariant(true);
-        }
-    }
-    emit channelOptionEnabledChanged();
 }

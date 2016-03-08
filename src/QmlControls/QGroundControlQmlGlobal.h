@@ -58,7 +58,7 @@ public:
     Q_PROPERTY(LinkManager*         linkManager         READ linkManager            CONSTANT)
     Q_PROPERTY(MissionCommands*     missionCommands     READ missionCommands        CONSTANT)
     Q_PROPERTY(MultiVehicleManager* multiVehicleManager READ multiVehicleManager    CONSTANT)
-    Q_PROPERTY(QGCMapEngineManager*  mapEngineManager  READ mapEngineManager     CONSTANT)
+    Q_PROPERTY(QGCMapEngineManager* mapEngineManager    READ mapEngineManager       CONSTANT)
 
     Q_PROPERTY(qreal                zOrderTopMost       READ zOrderTopMost          CONSTANT) ///< z order for top most items, toolbar, main window sub view
     Q_PROPERTY(qreal                zOrderWidgets       READ zOrderWidgets          CONSTANT) ///< z order value to widgets, for example: zoom controls, hud widgetss
@@ -81,8 +81,13 @@ public:
 
     Q_PROPERTY(NodeSelector*        nodeSelector        READ nodeSelector           CONSTANT)
 
-    Q_PROPERTY(QGeoCoordinate lastKnownHomePosition READ lastKnownHomePosition CONSTANT)
-    Q_PROPERTY(QGeoCoordinate flightMapPosition MEMBER _flightMapPosition NOTIFY flightMapPositionChanged)
+    Q_PROPERTY(QGeoCoordinate lastKnownHomePosition READ lastKnownHomePosition  CONSTANT)
+    Q_PROPERTY(QGeoCoordinate flightMapPosition     MEMBER _flightMapPosition   NOTIFY flightMapPositionChanged)
+    Q_PROPERTY(int            flightMapZoom         MEMBER _flightMapZoom       NOTIFY flightMapZoomChanged)
+
+    Q_PROPERTY(QString  parameterFileExtension  READ parameterFileExtension CONSTANT)
+    Q_PROPERTY(QString  missionFileExtension    READ missionFileExtension   CONSTANT)
+    Q_PROPERTY(QString  telemetryFileExtension  READ telemetryFileExtension CONSTANT)
 
     /// @ return: true: experimental survey ip code is turned on
     Q_PROPERTY(bool experimentalSurvey READ experimentalSurvey WRITE setExperimentalSurvey NOTIFY experimentalSurveyChanged)
@@ -147,6 +152,10 @@ public:
     bool experimentalSurvey(void) const;
     void setExperimentalSurvey(bool experimentalSurvey);
 
+    QString parameterFileExtension(void) const  { return QGCApplication::parameterFileExtension; }
+    QString missionFileExtension(void) const    { return QGCApplication::missionFileExtension; }
+    QString telemetryFileExtension(void) const  { return QGCApplication::telemetryFileExtension; }
+
     // Overrides from QGCTool
     virtual void setToolbox(QGCToolbox* toolbox);
 
@@ -160,6 +169,7 @@ signals:
     void isVersionCheckEnabledChanged   (bool enabled);
     void mavlinkSystemIDChanged         (int id);
     void flightMapPositionChanged       (QGeoCoordinate flightMapPosition);
+    void flightMapZoomChanged           (int flightMapZoom);
     void experimentalSurveyChanged      (bool experimentalSurvey);
 
 private:
@@ -169,11 +179,12 @@ private:
     LinkManager*            _linkManager;
     MissionCommands*        _missionCommands;
     MultiVehicleManager*    _multiVehicleManager;
-    QGCMapEngineManager*     _mapEngineManager;
+    QGCMapEngineManager*    _mapEngineManager;
 
     bool _virtualTabletJoystick;
 
-    QGeoCoordinate _flightMapPosition;
+    QGeoCoordinate  _flightMapPosition;
+    int             _flightMapZoom;
 
     SettingsFact    _offlineEditingFirmwareTypeFact;
     FactMetaData    _offlineEditingFirmwareTypeMetaData;

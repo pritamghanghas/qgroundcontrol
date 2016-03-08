@@ -14,7 +14,9 @@
         <file alias="LogDownload.qml">src/ViewWidgets/LogDownload.qml</file>
         <file alias="FirmwareUpgrade.qml">src/VehicleSetup/FirmwareUpgrade.qml</file>
         <file alias="FlightDisplayView.qml">src/FlightDisplay/FlightDisplayView.qml</file>
-        <file alias="FlightModesComponent.qml">src/AutoPilotPlugins/PX4/FlightModesComponent.qml</file>
+        <file alias="PX4FlightModes.qml">src/AutoPilotPlugins/PX4/PX4FlightModes.qml</file>
+        <file alias="PX4AdvancedFlightModes.qml">src/AutoPilotPlugins/PX4/PX4AdvancedFlightModes.qml</file>
+        <file alias="PX4SimpleFlightModes.qml">src/AutoPilotPlugins/PX4/PX4SimpleFlightModes.qml</file>
         <file alias="FlightModesComponentSummary.qml">src/AutoPilotPlugins/PX4/FlightModesComponentSummary.qml</file>
         <file alias="APMFlightModesComponent.qml">src/AutoPilotPlugins/APM/APMFlightModesComponent.qml</file>
         <file alias="APMFlightModesComponentSummary.qml">src/AutoPilotPlugins/APM/APMFlightModesComponentSummary.qml</file>
@@ -62,13 +64,14 @@
         <file alias="QGroundControl/Controls/QGCButton.qml">src/QmlControls/QGCButton.qml</file>
         <file alias="QGroundControl/Controls/QGCCheckBox.qml">src/QmlControls/QGCCheckBox.qml</file>
         <file alias="QGroundControl/Controls/QGCColoredImage.qml">src/QmlControls/QGCColoredImage.qml</file>
+        <file alias="QGroundControl/Controls/QGCComboBox.qml">src/QmlControls/QGCComboBox.qml</file>
         <file alias="QGroundControl/Controls/QGCFlickable.qml">src/QmlControls/QGCFlickable.qml</file>
-        <file alias="QGroundControl/Controls/QGCPipable.qml">src/QmlControls/QGCPipable.qml</file>
         <file alias="QGroundControl/Controls/QGCFlickableVerticalIndicator.qml">src/QmlControls/QGCFlickableVerticalIndicator.qml</file>
         <file alias="QGroundControl/Controls/QGCFlickableHorizontalIndicator.qml">src/QmlControls/QGCFlickableHorizontalIndicator.qml</file>
-        <file alias="QGroundControl/Controls/QGCComboBox.qml">src/QmlControls/QGCComboBox.qml</file>
         <file alias="QGroundControl/Controls/QGCLabel.qml">src/QmlControls/QGCLabel.qml</file>
+        <file alias="QGroundControl/Controls/QGCMobileFileDialog.qml">src/QmlControls/QGCMobileFileDialog.qml</file>
         <file alias="QGroundControl/Controls/QGCMovableItem.qml">src/QmlControls/QGCMovableItem.qml</file>
+        <file alias="QGroundControl/Controls/QGCPipable.qml">src/QmlControls/QGCPipable.qml</file>
         <file alias="QGroundControl/Controls/QGCRadioButton.qml">src/QmlControls/QGCRadioButton.qml</file>
         <file alias="QGroundControl/Controls/QGCTextField.qml">src/QmlControls/QGCTextField.qml</file>
         <file alias="QGroundControl/Controls/QGCToolBarButton.qml">src/QmlControls/QGCToolBarButton.qml</file>

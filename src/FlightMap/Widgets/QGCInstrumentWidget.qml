@@ -132,7 +132,7 @@ Item {
             Rectangle {
                 anchors.fill:   _valuesWidget
                 color:          _backgroundColor
-                visible:        !_showCompass && _activeVehicle
+                visible:        !_showCompass
                 radius:         _spacing
             }
 
@@ -145,7 +145,6 @@ Item {
                 maxHeight:          _availableValueHeight
             }
         }
-
 
         Rectangle {
             id:                 _spacer2

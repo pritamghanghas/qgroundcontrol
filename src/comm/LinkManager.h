@@ -153,14 +153,6 @@ public:
     /// Disconnect the specified link
     Q_INVOKABLE void disconnectLink(LinkInterface* link);
 
-    /// Called to notify that a heartbeat was received with the specified information. Will transition
-    /// a link to active as needed.
-    ///     @param link Heartbeat came through on this link
-    ///     @param vehicleId Mavlink system id for vehicle
-    ///     @param heartbeat Mavlink heartbeat message
-    /// @return true: continue further processing of this message, false: disregard this message
-    bool notifyHeartbeatInfo(LinkInterface* link, int vehicleId, mavlink_heartbeat_t& heartbeat);
-
     // The following APIs are public but should not be called in normal use. The are mainly exposed
     // here for unit test code.
     void _deleteLink(LinkInterface* link);
@@ -210,7 +202,9 @@ signals:
 private slots:
     void _linkConnected(void);
     void _linkDisconnected(void);
+#ifndef __ios__
     void _activeLinkCheck(void);
+#endif
 
 private:
     bool _connectionsSuspendedMsg(void);
@@ -244,9 +238,11 @@ private:
     bool _autoconnect3DRRadio;
     bool _autoconnectPX4Flow;
 
-    QTimer                  _activeLinkCheckTimer;                  ///< Timer which checks for a vehicle showing up on a usb direct link
-    QList<LinkInterface*>   _activeLinkCheckList;                   ///< List of links we are waiting for a vehicle to show up on
-    static const int        _activeLinkCheckTimeoutMSecs = 10000;   ///< Amount of time to wait for a heatbeat. Keep in mind ArduPilot stack heartbeat is slow to come.
+#ifndef __ios__
+    QTimer              _activeLinkCheckTimer;                  ///< Timer which checks for a vehicle showing up on a usb direct link
+    QList<SerialLink*>  _activeLinkCheckList;                   ///< List of links we are waiting for a vehicle to show up on
+    static const int    _activeLinkCheckTimeoutMSecs = 15000;   ///< Amount of time to wait for a heatbeat. Keep in mind ArduPilot stack heartbeat is slow to come.
+#endif
 
     static const char*  _settingsGroup;
     static const char*  _autoconnectUDPKey;

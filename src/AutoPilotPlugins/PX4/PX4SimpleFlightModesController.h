@@ -21,8 +21,8 @@
  
  ======================================================================*/
 
-#ifndef APMFlightModesComponentController_H
-#define APMFlightModesComponentController_H
+#ifndef PX4SimpleFlightModesController_H
+#define PX4SimpleFlightModesController_H
 
 #include <QObject>
 #include <QQuickItem>
@@ -34,25 +34,24 @@
 #include "FactPanelController.h"
 #include "Vehicle.h"
 
-/// MVC Controller for FlightModesComponent.qml.
-class APMFlightModesComponentController : public FactPanelController
+/// MVC Controller for PX4SimpleFlightModes.qml
+class PX4SimpleFlightModesController : public FactPanelController
 {
     Q_OBJECT
     
 public:
-    APMFlightModesComponentController(void);
+    PX4SimpleFlightModesController(void);
     
-    Q_PROPERTY(int      activeFlightMode            READ activeFlightMode       NOTIFY activeFlightModeChanged)
-    Q_PROPERTY(int      channelCount                MEMBER _channelCount        CONSTANT)
-    Q_PROPERTY(QVariantList channelOptionEnabled    READ channelOptionEnabled   NOTIFY channelOptionEnabledChanged)
-    Q_PROPERTY(bool     fixedWing                   MEMBER _fixedWing           CONSTANT)
+    Q_PROPERTY(int          activeFlightMode    READ activeFlightMode       NOTIFY activeFlightModeChanged)
+    Q_PROPERTY(int          channelCount        MEMBER _channelCount        CONSTANT)
+    Q_PROPERTY(QVariantList rcChannelValues     MEMBER _rcChannelValues     NOTIFY rcChannelValuesChanged)
 
     int activeFlightMode(void) const { return _activeFlightMode; }
-    QVariantList channelOptionEnabled(void) const { return _rgChannelOptionEnabled; }
 
 signals:
     void activeFlightModeChanged(int activeFlightMode);
     void channelOptionEnabledChanged(void);
+    void rcChannelValuesChanged(void);
     
 private slots:
     void _rcChannelsChanged(int channelCount, int pwmValues[Vehicle::cMaxRcChannels]);
@@ -60,8 +59,7 @@ private slots:
 private:
     int             _activeFlightMode;
     int             _channelCount;
-    QVariantList    _rgChannelOptionEnabled;
-    bool            _fixedWing;
+    QVariantList    _rcChannelValues;
 };
 
 #endif
