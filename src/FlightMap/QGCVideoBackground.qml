@@ -369,6 +369,139 @@ VideoItem {
         }
     }
 
+    Rectangle {
+        id: thermalCameraView
+        property bool selectionVisibility: false
+        property int  rulersSize:          18
+        color: "red"
+        width:  QGroundControl.hbSettings.value("thermalWidth", 480)
+        height: QGroundControl.hbSettings.value("thermalHeight", 320)
+        x:      QGroundControl.hbSettings.value("thermalPosX", (parent.width - width)/2)
+        y:      QGroundControl.hbSettings.value("thermalPosY", (parent.height - height)/2)
+        opacity: 0.5
+//        visible: true
+        visible: !_mainIsMap
+
+        onXChanged: {
+            QGroundControl.hbSettings.setValue("thermalPosX", x);
+        }
+
+        onYChanged: {
+            QGroundControl.hbSettings.setValue("thermalPosY", y);
+        }
+
+        onWidthChanged: {
+            QGroundControl.hbSettings.setValue("thermalWidth", width);
+        }
+
+        onHeightChanged: {
+            QGroundControl.hbSettings.setValue("thermalHeight", height);
+        }
+
+        MouseArea {
+            id: thermalViewDragItem
+            anchors.fill: parent
+            drag.target: parent
+            onDoubleClicked: {
+                parent.selectionVisibility = !parent.selectionVisibility;
+            }
+        }
+
+        Rectangle {
+            visible: parent.selectionVisibility
+            width: parent.rulersSize
+            height: parent.rulersSize
+            radius: parent.rulersSize
+            color: "steelblue"
+            anchors.horizontalCenter: parent.left
+            anchors.verticalCenter: parent.verticalCenter
+
+            MouseArea {
+                anchors.fill: parent
+                drag{ target: parent; axis: Drag.XAxis }
+                onMouseXChanged: {
+                    if(drag.active){
+                        thermalCameraView.width = thermalCameraView.width - mouseX
+                        thermalCameraView.x = thermalCameraView.x + mouseX
+                        if(thermalCameraView.width < 30)
+                            thermalCameraView.width = 30
+                    }
+                }
+            }
+        }
+
+        Rectangle {
+            visible: parent.selectionVisibility
+            width: parent.rulersSize
+            height: parent.rulersSize
+            radius: parent.rulersSize
+            color: "steelblue"
+            anchors.horizontalCenter: parent.right
+            anchors.verticalCenter: parent.verticalCenter
+
+            MouseArea {
+                anchors.fill: parent
+                drag{ target: parent; axis: Drag.XAxis }
+                onMouseXChanged: {
+                    if(drag.active){
+                        thermalCameraView.width = thermalCameraView.width + mouseX
+                        if(thermalCameraView.width < 50)
+                            thermalCameraView.width = 50
+                    }
+                }
+            }
+        }
+
+        Rectangle {
+            visible: parent.selectionVisibility
+            width: parent.rulersSize
+            height: parent.rulersSize
+            radius: parent.rulersSize
+            x: parent.x / 2
+            y: 0
+            color: "steelblue"
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.verticalCenter: parent.top
+
+            MouseArea {
+                anchors.fill: parent
+                drag{ target: parent; axis: Drag.YAxis }
+                onMouseYChanged: {
+                    if(drag.active){
+                        thermalCameraView.height = thermalCameraView.height - mouseY
+                        thermalCameraView.y = thermalCameraView.y + mouseY
+                        if(thermalCameraView.height < 50)
+                            thermalCameraView.height = 50
+                    }
+                }
+            }
+        }
+
+        Rectangle {
+            visible: parent.selectionVisibility
+            width: parent.rulersSize
+            height: parent.rulersSize
+            radius: parent.rulersSize
+            x: parent.x / 2
+            y: parent.y
+            color: "steelblue"
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.verticalCenter: parent.bottom
+
+            MouseArea {
+                anchors.fill: parent
+                drag{ target: parent; axis: Drag.YAxis }
+                onMouseYChanged: {
+                    if(drag.active){
+                        thermalCameraView.height = thermalCameraView.height + mouseY
+                        if(thermalCameraView.height < 50)
+                            thermalCameraView.height = 50
+                    }
+                }
+            }
+        }
+    }
+
     Column {
         id:                         toolColumn
         visible:                    !_mainIsMap
