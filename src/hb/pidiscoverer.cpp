@@ -66,7 +66,7 @@ void PiDiscoverer::onNodeDiscovered(const PiNode &node)
 {
 //    qDebug() << "node discovered " << node.addressString;
     if (!m_discoveredNodes.contains(node)) {
-        qDebug() << "new unique node adding";
+        qDebug() << "new unique node adding" << node.addressString;
         m_discoveredNodes << node;
         Q_EMIT nodeDiscovered(node);
     }

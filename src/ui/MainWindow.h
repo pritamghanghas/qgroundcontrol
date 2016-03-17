@@ -114,6 +114,8 @@ public slots:
     /** @brief Update the window name */
     void configureWindowName();
 
+    QQmlEngine* qmlEngine();
+
 protected slots:
     /**
      * @brief Enable/Disable Status Bar

@@ -5,8 +5,8 @@
 
 static const QString PLAY_CMD("udpsrc port=$PORT ! application/x-rtp,encoding-name=H264,payload=96 ! rtph264depay ! h264parse ! avdec_h264");
 static const QString PICAM_REMOTE_CMD("raspivid -t 0 -vf -hf $OPT_STRING -o - | gst-launch-1.0 -v fdsrc ! h264parse ! rtph264pay config-interval=1 pt=96 ! udpsink host=$CLIENT_IP port=$UDP_PORT");
-//static const QString MAVPROXY_REMOTE_CMD("screen -S MAVPROXY /usr/local/bin/mavproxy.py --master=127.0.0.1:1440 --baudrate 57600 --out $CLIENT_IP:14550 --aircraft MyCopter");
-static const QString MAVPROXY_REMOTE_CMD("/home/pi/ardupilot/ArduCopter/ArduCopter.elf -A udp:$CLIENT_IP:14550 -B /dev/ttyAMA0 > /home/pi/arducopter.log");
+static const QString MAVPROXY_REMOTE_CMD("screen -S MAVPROXY /usr/local/bin/mavproxy.py --master=127.0.0.1:1440 --baudrate 57600 --out $CLIENT_IP:14550 --aircraft MyCopter");
+//static const QString MAVPROXY_REMOTE_CMD("/home/pi/ardupilot/ArduCopter/ArduCopter.elf -A udp:$CLIENT_IP:14550 -B /dev/ttyAMA0 > /home/pi/arducopter.log");
 
 NodeSelector* NodeSelector::instance(QNetworkAccessManager *nam)
 {
@@ -26,7 +26,7 @@ NodeSelector::NodeSelector(QNetworkAccessManager *nam, QObject *parent) :
         m_nam = nam;
     } else {
         if(!m_nam) {
-            m_nam = new QNetworkAccessManager(this);
+            m_nam = new QNetworkAccessManager;
         }
     }
     Q_ASSERT(m_nam);
@@ -47,6 +47,7 @@ NodeSelector::~NodeSelector()
             terminateThermal(node);
             terminateMavProxy(node);
         }
+    m_nam->deleteLater();
 }
 
 void NodeSelector::terminatePicam(const PiNode &node)
@@ -217,13 +218,14 @@ bool NodeSelector::startThermal(int nodeIndex)
 bool NodeSelector::startThermal(const PiNode &node)
 {
     if (node.caps & PiNode::Thermal) {
+        QUrl mjpegUrl("http://"+ node.addressString + ":5002/cam.mjpg");
         if (!(node.capsRunning & PiNode::Thermal)) {
             QUrl startUrl("http://" + node.addressString + ":8080/thermalcam/?command=start");
             qDebug() << "thermal server start url " << startUrl;
             QVariantMap map;
             map.insert("requestFor", PiNode::Thermal);
             map.insert("nodeIndex", m_currentIndex);
-//                map.insert("camUrl", mjpegUrl);
+            map.insert("camUrl", mjpegUrl);
             sendRequest(startUrl, map);
         }
         return true;
@@ -294,8 +296,8 @@ void NodeSelector::replyFinished()
         case PiNode::Thermal:
             index = reply->property("nodeIndex").toInt();
             nodes[index].capsRunning |= PiNode::Thermal;
-//            url = reply->property("camUrl").toUrl();
-//            Q_EMIT thermalUrl(url);
+            url = reply->property("camUrl").toUrl();
+            Q_EMIT thermalUrl(url);
             qDebug() << "thermal camera started without any error";
             break;
         case PiNode::MAVProxy:

@@ -468,6 +468,7 @@ void QGCApplication::_initCommon(void)
     qmlRegisterSingletonType<QGroundControlQmlGlobal>   ("QGroundControl",                          1, 0, "QGroundControl",         qgroundcontrolQmlGlobalSingletonFactory);
     qmlRegisterSingletonType<ScreenToolsController>     ("QGroundControl.ScreenToolsController",    1, 0, "ScreenToolsController",  screenToolsControllerSingletonFactory);
     qmlRegisterSingletonType<MavlinkQmlSingleton>       ("QGroundControl.Mavlink",                  1, 0, "Mavlink",                mavlinkQmlSingletonFactory);
+
 }
 
 bool QGCApplication::_initForNormalAppBoot(void)
@@ -783,6 +784,24 @@ void QGCApplication::_showSetupVehicleComponent(VehicleComponent* vehicleCompone
     QVariant varComponent = QVariant::fromValue(vehicleComponent);
 
     QMetaObject::invokeMethod(_rootQmlObject(), "showSetupVehicleComponent", Q_RETURN_ARG(QVariant, varReturn), Q_ARG(QVariant, varComponent));
+}
+
+QQmlEngine* QGCApplication::qmlEngine()
+{
+#ifdef __mobile__
+    return _qmlAppEngine;
+#else
+    MainWindow * mainWindow = MainWindow::instance();
+    if (mainWindow) {
+        return mainWindow->qmlEngine();
+    } else if (runningUnitTests()){
+        // Unit test can run without a main window
+        return NULL;
+    } else {
+        qWarning() << "Why is MainWindow missing?";
+        return NULL;
+    }
+#endif
 }
 
 void QGCApplication::setLastKnownHomePosition(QGeoCoordinate& lastKnownHomePosition)

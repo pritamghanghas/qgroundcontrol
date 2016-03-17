@@ -24,7 +24,7 @@ This file is part of the QGROUNDCONTROL project
 #include <QQmlContext>
 #include <QQmlEngine>
 #include <QSettings>
-
+#include <QQmlEngine>
 #include <VideoItem.h>
 
 #include "ScreenToolsController.h"
@@ -64,6 +64,7 @@ FlightDisplayViewController::FlightDisplayViewController(QObject *parent)
      */
     _videoReceiver = new VideoReceiver(NodeSelector::instance(), this);
     _videoSurface = new VideoSurface;
+
 #if defined(QGC_GST_STREAMING)
     _videoReceiver->setVideoSink(_videoSurface->videoSink());
     connect(&_frameTimer, &QTimer::timeout, this, &FlightDisplayViewController::_updateTimer);

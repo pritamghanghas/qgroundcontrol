@@ -129,6 +129,7 @@ public:
     QGeoCoordinate lastKnownHomePosition(void) { return _lastKnownHomePosition; }
     void setLastKnownHomePosition(QGeoCoordinate& lastKnownHomePosition);
 
+    QQmlEngine* qmlEngine();
 public slots:
     /// You can connect to this slot to show an information message box from a different thread.
     void informationMessageBoxOnMainThread(const QString& title, const QString& msg);

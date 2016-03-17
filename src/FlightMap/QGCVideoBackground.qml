@@ -369,18 +369,32 @@ VideoItem {
         }
     }
 
-    Rectangle {
-        id: thermalCameraView
+    Rectangle { // thermal camera view
+        id: thermalCameraViewHolder
         property bool selectionVisibility: false
         property int  rulersSize:          18
-        color: "red"
         width:  QGroundControl.hbSettings.value("thermalWidth", 480)
         height: QGroundControl.hbSettings.value("thermalHeight", 320)
         x:      QGroundControl.hbSettings.value("thermalPosX", (parent.width - width)/2)
         y:      QGroundControl.hbSettings.value("thermalPosY", (parent.height - height)/2)
-        opacity: 0.5
-//        visible: true
-        visible: !_mainIsMap
+        visible: !_mainIsMap && thermalCameraVisbility.checked
+
+        Image {
+            id: thermalCameraView
+            anchors.fill: parent
+            property int imageid: 0
+            source: "image://thermalprovider/pixmap"
+            rotation: 180
+            mirror: false
+            cache: false
+
+            Connections {
+                target: thermal
+                onRefresh: { thermalCameraView.imageid++;
+                             thermalCameraView.source = "image://thermalprovider/"+thermalCameraView.imageid }
+            }
+        }
+
 
         onXChanged: {
             QGroundControl.hbSettings.setValue("thermalPosX", x);
@@ -421,10 +435,10 @@ VideoItem {
                 drag{ target: parent; axis: Drag.XAxis }
                 onMouseXChanged: {
                     if(drag.active){
-                        thermalCameraView.width = thermalCameraView.width - mouseX
-                        thermalCameraView.x = thermalCameraView.x + mouseX
-                        if(thermalCameraView.width < 30)
-                            thermalCameraView.width = 30
+                        thermalCameraViewHolder.width = thermalCameraViewHolder.width - mouseX
+                        thermalCameraViewHolder.x = thermalCameraViewHolder.x + mouseX
+                        if(thermalCameraViewHolder.width < 30)
+                            thermalCameraViewHolder.width = 30
                     }
                 }
             }
@@ -444,9 +458,9 @@ VideoItem {
                 drag{ target: parent; axis: Drag.XAxis }
                 onMouseXChanged: {
                     if(drag.active){
-                        thermalCameraView.width = thermalCameraView.width + mouseX
-                        if(thermalCameraView.width < 50)
-                            thermalCameraView.width = 50
+                        thermalCameraViewHolder.width = thermalCameraViewHolder.width + mouseX
+                        if(thermalCameraViewHolder.width < 50)
+                            thermalCameraViewHolder.width = 50
                     }
                 }
             }
@@ -468,10 +482,10 @@ VideoItem {
                 drag{ target: parent; axis: Drag.YAxis }
                 onMouseYChanged: {
                     if(drag.active){
-                        thermalCameraView.height = thermalCameraView.height - mouseY
-                        thermalCameraView.y = thermalCameraView.y + mouseY
-                        if(thermalCameraView.height < 50)
-                            thermalCameraView.height = 50
+                        thermalCameraViewHolder.height = thermalCameraViewHolder.height - mouseY
+                        thermalCameraViewHolder.y = thermalCameraViewHolder.y + mouseY
+                        if(thermalCameraViewHolder.height < 50)
+                            thermalCameraViewHolder.height = 50
                     }
                 }
             }
@@ -493,14 +507,14 @@ VideoItem {
                 drag{ target: parent; axis: Drag.YAxis }
                 onMouseYChanged: {
                     if(drag.active){
-                        thermalCameraView.height = thermalCameraView.height + mouseY
-                        if(thermalCameraView.height < 50)
-                            thermalCameraView.height = 50
+                        thermalCameraViewHolder.height = thermalCameraViewHolder.height + mouseY
+                        if(thermalCameraViewHolder.height < 50)
+                            thermalCameraViewHolder.height = 50
                     }
                 }
             }
         }
-    }
+    } // END thermal camera view
 
     Column {
         id:                         toolColumn
@@ -537,6 +551,13 @@ VideoItem {
                     multiVehicleManager.activeVehicle.doSweepYaw(0, 0);
                 }
             }
+        }
+
+        RoundButton {
+            id: thermalCameraVisbility
+//            buttonImage: "/qmlimages/rotate.svg"
+            buttonAnchors.margins:  width*0.15
+            z:            QGroundControl.zOrderWidgets
         }
     }
 

@@ -53,6 +53,8 @@ This file is part of the QGROUNDCONTROL project
 #include "LogCompressor.h"
 #include "UAS.h"
 #include "QGCImageProvider.h"
+#include "thermalimageprovider.h"
+#include "nodeselector.h"
 
 #ifndef __mobile__
 #include "SettingsDialog.h"
@@ -170,6 +172,12 @@ MainWindow::MainWindow()
     QQuickImageProvider* pImgProvider = dynamic_cast<QQuickImageProvider*>(qgcApp()->toolbox()->imageProvider());
     _mainQmlWidgetHolder->getEngine()->addImageProvider(QLatin1String("QGCImages"), pImgProvider);
 
+    ThermalImageProvider *thermalImageProvider = new ThermalImageProvider(new QNetworkAccessManager, this);
+    connect(NodeSelector::instance(), SIGNAL(thermalUrl(QUrl)), thermalImageProvider, SLOT(onNewThermalUrl(QUrl)));
+    QQmlEngine *qmlEngine = qgcApp()->qmlEngine();
+    qmlEngine->addImageProvider(QLatin1String("thermalprovider"), thermalImageProvider);
+    qmlEngine->rootContext()->setContextProperty(QLatin1String("thermal"), thermalImageProvider);
+
     // Set dock options
     setDockOptions(0);
     // Setup corners
@@ -281,6 +289,11 @@ MainWindow::MainWindow()
 MainWindow::~MainWindow()
 {
     _instance = NULL;
+}
+
+QQmlEngine* MainWindow::qmlEngine()
+{
+    return _mainQmlWidgetHolder->getEngine();
 }
 
 QString MainWindow::_getWindowGeometryKey()

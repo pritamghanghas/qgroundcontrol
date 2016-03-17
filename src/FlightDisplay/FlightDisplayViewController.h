@@ -40,8 +40,8 @@ public:
 
     Q_PROPERTY(bool hasVideo READ hasVideo CONSTANT)
 
-    Q_PROPERTY(VideoSurface*    videoSurface    MEMBER _videoSurface    CONSTANT);
-    Q_PROPERTY(VideoReceiver*   videoReceiver   MEMBER _videoReceiver   CONSTANT);
+    Q_PROPERTY(VideoSurface*    videoSurface    MEMBER _videoSurface    CONSTANT)
+    Q_PROPERTY(VideoReceiver*   videoReceiver   MEMBER _videoReceiver   CONSTANT)
 
     Q_PROPERTY(bool             videoRunning    READ videoRunning       NOTIFY videoRunningChanged)
 
@@ -60,11 +60,11 @@ private:
     void _updateTimer(void);
 
 private:
-    VideoSurface*   _videoSurface;
-    VideoReceiver*  _videoReceiver;
-    bool            _videoRunning;
+    VideoSurface*           _videoSurface;
+    VideoReceiver*          _videoReceiver;
+    bool                    _videoRunning;
 #if defined(QGC_GST_STREAMING)
-    QTimer          _frameTimer;
+    QTimer                  _frameTimer;
 #endif
 };
 
