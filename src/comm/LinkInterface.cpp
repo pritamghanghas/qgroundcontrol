@@ -81,7 +81,7 @@ uint8_t LinkInterface::getMavlinkChannel(void) const
 
 void LinkInterface::writeBytesSafe(const char *bytes, int length)
 {
-    qDebug() << "called write bytes safe";
+//    qDebug() << "called write bytes safe";
 //    emit _invokeWriteBytes(QByteArray(bytes, length));
 
 //    QMetaObject::invokeMethod(this, SLOT(_writeBytes(QByteArray)), Qt::QueuedConnection, QByteArray(bytes, length));

@@ -177,13 +177,13 @@ void UDPLink::removeHost(const QString& host)
 
 void UDPLink::_writeBytes(const QByteArray data)
 {
-    printf("--------------called _writeData");
+//    printf("--------------called _writeData");
     if (!_socket)
         return;
 
     if(UDP_BROKEN_SIGNAL) {
         QMutexLocker lock(&_mutex);
-        qDebug() << "========enquing " << data;
+//        qDebug() << "========enquing " << data;
         _outQueue.enqueue(data);
     } else {
         _sendBytes(data);
@@ -196,7 +196,7 @@ bool UDPLink::_dequeBytes()
     if(_outQueue.count() > 0) {
         QByteArray qdata = _outQueue.dequeue();
         lock.unlock();
-        qDebug() << "=============sending data " << qdata;
+//        qDebug() << "=============sending data " << qdata;
         _sendBytes(qdata);
         lock.relock();
     }
@@ -351,10 +351,10 @@ void UDPLink::_disconnected()
 {
     printf("socket disconnected\n");
 }
-
 void UDPLink::_error(QAbstractSocket::SocketError socketError)
 {
-    qDebug() << "error on socket" << _socket->errorString();
+    Q_UNUSED(socketError);
+//    qDebug() << "error on socket" << _socket->errorString();
 }
 
 /**
