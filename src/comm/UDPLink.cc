@@ -93,6 +93,7 @@ UDPLink::UDPLink(UDPConfiguration* config)
     // We're doing it wrong - because the Qt folks got the API wrong:
     // http://blog.qt.digia.com/blog/2010/06/17/youre-doing-it-wrong/
     moveToThread(this);
+    enableDataRate(true);
 }
 
 UDPLink::~UDPLink()
@@ -203,6 +204,7 @@ void UDPLink::readBytes()
             databuffer.clear();
         }
         _logInputDataRate(datagram.length(), QDateTime::currentMSecsSinceEpoch());
+//        printf("bytes received %d\n", datagram.length());
         // TODO This doesn't validade the sender. Anything sending UDP packets to this port gets
         // added to the list and will start receiving datagrams from here. Even a port scanner
         // would trigger this.
@@ -273,11 +275,24 @@ bool UDPLink::_hardwareConnect()
 #endif
         _registerZeroconf(_config->localPort(), kZeroconfRegistration);
         QObject::connect(_socket, &QUdpSocket::readyRead, this, &UDPLink::readBytes);
+        QObject::connect(_socket, &QUdpSocket::disconnected, this, &UDPLink::_disconnected);
+//        QObject::connect(_socket, &QUdpSocket::error, this, &UDPLink::_error);
+        QObject::connect(_socket, SIGNAL(error(QAbstractSocket::SocketError)), this, SLOT(_error(QAbstractSocket::SocketError)));
         emit connected();
     } else {
         emit communicationError("UDP Link Error", "Error binding UDP port");
     }
     return _connectState;
+}
+
+void UDPLink::_disconnected()
+{
+    printf("socket disconnected\n");
+}
+
+void UDPLink::_error(QAbstractSocket::SocketError socketError)
+{
+    qDebug() << "error on socket" << _socket->errorString();
 }
 
 /**

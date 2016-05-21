@@ -209,6 +209,8 @@ private slots:
      * @param size The size of the bytes array
      **/
     void _writeBytes(const QByteArray data);
+    void _disconnected();
+    void _error(QAbstractSocket::SocketError socketError);
 
 protected:
 
