@@ -43,12 +43,13 @@ Item {
     property var    _activeVehicle:         QGroundControl.multiVehicleManager.activeVehicle
     property bool   _isSatellite:           _mainIsMap ? (_flightMap ? _flightMap.isSatelliteMap : true) : true
     property bool   _lightWidgetBorders:    _mainIsMap ? (_flightMap ? _flightMap.isSatelliteMap : true) : true
+    property var    _multiVehicleManager:    QGroundControl.multiVehicleManager
 
     readonly property real _margins: ScreenTools.defaultFontPixelHeight / 2
 
-    property bool _flying: multiVehicleManager.activeVehicleAvailable? multiVehicleManager.activeVehicle.flying : false;
+    property bool _flying: _multiVehicleManager.activeVehicleAvailable? _multiVehicleManager.activeVehicle.flying : false;
 
-    property bool _armed: multiVehicleManager.activeVehicleAvailable? multiVehicleManager.activeVehicle.armed : false;
+    property bool _armed: _multiVehicleManager.activeVehicleAvailable? _multiVehicleManager.activeVehicle.armed : false;
 
 //    multiVehicleManager.onActiveVehicleAvailableChanged: checkFlying()
 
@@ -297,8 +298,8 @@ Item {
             visible:                !_flying && _armed
             buttonAnchors.margins:  width*0.15
             onClicked: {
-                if (multiVehicleManager.activeVehicle) {
-                    multiVehicleManager.activeVehicle.doGuidedTakeoff(5)
+                if (_multiVehicleManager.activeVehicle) {
+                    _multiVehicleManager.activeVehicle.doGuidedTakeoff(5)
                 }
             }
         }
@@ -313,8 +314,8 @@ Item {
             buttonAnchors.margins:  width*0.15
 
             onClicked: {
-                if (!checked && multiVehicleManager.activeVehicle) {
-                    multiVehicleManager.activeVehicle.doChangeAltitude(zAxisControl.desiredHeight)
+                if (!checked && _multiVehicleManager.activeVehicle) {
+                    _multiVehicleManager.activeVehicle.doChangeAltitude(zAxisControl.desiredHeight)
                 }
             }
         } // roundbutton button
@@ -331,7 +332,7 @@ Item {
     Column {
         QGCLabel {
             text:           "Rel: " + zheight.value + "m"
-            font.pixelSize: ScreenTools.defaultFontPixelSize
+            font.pointSize: ScreenTools.largeFontPointSize
             font.weight:    Font.DemiBold
             color:          "white"
             horizontalAlignment: TextEdit.AlignHCenter
