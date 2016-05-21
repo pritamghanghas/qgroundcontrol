@@ -25,6 +25,7 @@
 ///     @author Don Gagne <don@thegagnes.com>
 
 #include "QGroundControlQmlGlobal.h"
+#include "hbsettings.h"
 
 #include <QSettings>
 
@@ -42,6 +43,7 @@ const char* QGroundControlQmlGlobal::_baseFontPointSizeKey      = "BaseFontPoint
 
 QGroundControlQmlGlobal::QGroundControlQmlGlobal(QGCApplication* app)
     : QGCTool(app)
+    , _hbSettings(NULL)
     , _flightMapSettings(NULL)
     , _homePositionManager(NULL)
     , _linkManager(NULL)
@@ -68,6 +70,7 @@ QGroundControlQmlGlobal::~QGroundControlQmlGlobal()
 void QGroundControlQmlGlobal::setToolbox(QGCToolbox* toolbox)
 {
     QGCTool::setToolbox(toolbox);
+
     _flightMapSettings      = toolbox->flightMapSettings();
     _homePositionManager    = toolbox->homePositionManager();
     _linkManager            = toolbox->linkManager();
@@ -75,6 +78,7 @@ void QGroundControlQmlGlobal::setToolbox(QGCToolbox* toolbox)
     _multiVehicleManager    = toolbox->multiVehicleManager();
     _mapEngineManager       = toolbox->mapEngineManager();
     _qgcPositionManager      = toolbox->qgcPositionManager();
+    _hbSettings          = toolbox->hbSettings();
 }
 
 
@@ -152,7 +156,7 @@ void QGroundControlQmlGlobal::stopAllMockLinks(void)
         MockLink* mockLink = qobject_cast<MockLink*>(link);
 
         if (mockLink) {
-            linkManager->disconnectLink(mockLink);
+                    linkManager->disconnectLink(mockLink);
         }
     }
 #endif

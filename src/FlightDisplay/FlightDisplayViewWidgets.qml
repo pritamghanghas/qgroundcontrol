@@ -46,6 +46,24 @@ Item {
 
     readonly property real _margins: ScreenTools.defaultFontPixelHeight / 2
 
+    property bool _flying: multiVehicleManager.activeVehicleAvailable? multiVehicleManager.activeVehicle.flying : false;
+
+    property bool _armed: multiVehicleManager.activeVehicleAvailable? multiVehicleManager.activeVehicle.armed : false;
+
+//    multiVehicleManager.onActiveVehicleAvailableChanged: checkFlying()
+
+//    function checkFlying() {
+//        if(!multiVehicleManager.activeVehicleAvailable) {
+//            return false
+//        }
+//        Binding on _flying {
+//            when: multiVehicleManager.activeVehicleAvailable
+//            parent._flying: multiVehicleManager.activeVehicle.flying
+//        }
+
+//        return multiVehicleManager.activeVehicle.flying
+//    }
+
     QGCMapPalette { id: mapPal; lightColors: !isBackgroundDark }
     QGCPalette { id: qgcPal }
 
@@ -194,7 +212,7 @@ Item {
                     }
                 }
             }
-        }
+        } // vertical tool buttons
 
         //-- Map Type Control
         DropButton {
@@ -270,6 +288,66 @@ Item {
                     _flightMap.zoomLevel -= 0.5
                 checked = false
             }
+        }
+
+        // takeoff button
+        RoundButton {
+            id:                     takeoffButton
+            buttonImage:            "/qmlimages/takeoff.svg"
+            visible:                !_flying && _armed
+            buttonAnchors.margins:  width*0.15
+            onClicked: {
+                if (multiVehicleManager.activeVehicle) {
+                    multiVehicleManager.activeVehicle.doGuidedTakeoff(5)
+                }
+            }
+        }
+
+        // z-axis control
+        RoundButton {
+            id:                     zAxisControl
+            property real desiredHeight:    zheight.minimumValue
+
+            visible:                _flying;
+            buttonImage:            "/qmlimages/takeoff.svg"
+            buttonAnchors.margins:  width*0.15
+
+            onClicked: {
+                if (!checked && multiVehicleManager.activeVehicle) {
+                    multiVehicleManager.activeVehicle.doChangeAltitude(zAxisControl.desiredHeight)
+                }
+            }
+        } // roundbutton button
+    }
+
+    Rectangle {
+    id: zAxisControlSlider
+    z:  QGroundControl.zOrderWidgets
+    visible: zAxisControl.checked
+    anchors.left: toolColumn.right
+    anchors.top: toolColumn.top
+    anchors.bottom: parent.bottom
+    anchors.leftMargin: ScreenTools.defaultFontPixelHeight
+    Column {
+        QGCLabel {
+            text:           "Rel: " + zheight.value + "m"
+            font.pixelSize: ScreenTools.defaultFontPixelSize
+            font.weight:    Font.DemiBold
+            color:          "white"
+            horizontalAlignment: TextEdit.AlignHCenter
+        }
+        Slider {
+            id:                 zheight
+            height:             zAxisControlSlider.height * 0.7
+            minimumValue:       QGroundControl.hbSettings.value("wiredMinAltitude", 5);
+            maximumValue:       QGroundControl.hbSettings.value("wiredMaxAltitude", 60);
+            stepSize:           1
+            orientation:        Qt.Vertical
+
+            onValueChanged: {
+                zAxisControl.desiredHeight = value;
+            }
+        }
         }
     }
 

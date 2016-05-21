@@ -42,6 +42,7 @@ QGC_LOGGING_CATEGORY(VehicleLog, "VehicleLog")
 #define UPDATE_TIMER 50
 #define DEFAULT_LAT  38.965767f
 #define DEFAULT_LON -120.083923f
+#define HEADING_MARGIN 1.0f
 
 extern const char* guided_mode_not_supported_by_vehicle;
 
@@ -101,8 +102,8 @@ Vehicle::Vehicle(LinkInterface*             link,
     , _updateCount(0)
     , _rcRSSI(255)
     , _rcRSSIstore(255)
-    , _autoDisconnect(false)
     , _flying(false)
+    , _autoDisconnect(false)
     , _connectionLost(false)
     , _connectionLostEnabled(true)
     , _missionManager(NULL)
@@ -126,6 +127,12 @@ Vehicle::Vehicle(LinkInterface*             link,
     , _firmwareMajorVersion(versionNotSetValue)
     , _firmwareMinorVersion(versionNotSetValue)
     , _firmwarePatchVersion(versionNotSetValue)
+    ,_headingMid(0)
+    ,_sweepAngle(0)
+    ,_sweepSpeed(0)
+    ,_headingLeft(0)
+    ,_headingRight(0)
+    ,_currentDirection(1)
     , _rollFact             (0, _rollFactName,              FactMetaData::valueTypeDouble)
     , _pitchFact            (0, _pitchFactName,             FactMetaData::valueTypeDouble)
     , _headingFact          (0, _headingFactName,           FactMetaData::valueTypeDouble)
@@ -218,6 +225,10 @@ Vehicle::Vehicle(LinkInterface*             link,
 
     // Invalidate the timer to signal first announce
     _lowBatteryAnnounceTimer.invalidate();
+
+    // listen on heading change
+    // FixME:: needs more care, documentation says one shouldn't connect to this.
+    connect(heading(), &Fact::valueChanged, this, &Vehicle::_onHeadingChanged);
 
     // Build FactGroup object model
 
@@ -1162,9 +1173,154 @@ void Vehicle::setArmed(bool armed)
     sendMessage(msg);
 }
 
+void Vehicle::doChangeAltitude(int height)
+{
+    qDebug("setting height to %d", height);
+
+    mavlink_message_t msg;
+    mavlink_set_position_target_global_int_t pos;
+
+    pos.time_boot_ms = QGC::groundTimeUsecs();
+    pos.lat_int = _coordinate.latitude()*1E7;
+    pos.lon_int = _coordinate.longitude()*1E7;
+    pos.alt = height;
+    pos.vx = 0;
+    pos.vy = 0;
+    pos.vz = 0;
+    pos.afx = 0;
+    pos.afy = 0;
+    pos.yaw = _headingFact.cookedValue().toFloat();
+    pos.yaw_rate = 0;
+//    pos.type_mask = 0b0000111111111111;
+    pos.type_mask = 0b1111101111111000;
+    pos.target_system = id();
+    pos.target_component = 0;
+    pos.coordinate_frame = MAV_FRAME_GLOBAL_RELATIVE_ALT_INT;
+
+    mavlink_msg_set_position_target_global_int_encode(_mavlink->getSystemId(), _mavlink->getComponentId(), &msg, &pos);
+
+    sendMessage(msg);
+}
+
+void Vehicle::doChangeYaw(float angle, float speed, bool relative, int direction)
+{
+//    qDebug("moving yaw by angle %f and its %s", angle, relative ? "relative" : "absolute");
+    _currentDirection = direction;
+
+    mavlink_message_t msg;
+    mavlink_command_long_t cmd;
+
+    cmd.command = (uint16_t)MAV_CMD_CONDITION_YAW;
+    cmd.confirmation = 0;
+    cmd.param1 = angle;
+    cmd.param2 = speed;
+    cmd.param3 = direction;
+    cmd.param4 = relative ? 1 : 0;
+    cmd.param5 = 0.0f;
+    cmd.param6 = 0.0f;
+    cmd.param7 = 0.0f;
+    cmd.target_system = id();
+    cmd.target_component = 0;
+
+    mavlink_msg_command_long_encode(_mavlink->getSystemId(), _mavlink->getComponentId(), &msg, &cmd);
+
+    sendMessage(msg);
+
+}
+
+void Vehicle::doSweepYaw(float sweepAngle, float sweepSpeed)
+{
+    if (!sweepAngle) {
+        _headingLeft = 0.0f;
+        _headingRight = 0.0f;
+        _sweepSpeed = 0.0f;
+        return;
+    }
+
+    _sweepAngle = sweepAngle;
+    _headingMid = _headingFact.cookedValue().toFloat();
+    _sweepSpeed = sweepSpeed;
+
+    _headingLeft = _headingMid - sweepAngle/2;
+    if (_headingLeft < 0) {
+        _headingLeft = 360 - fabs(_headingLeft);
+    }
+
+    _headingRight = _headingMid + sweepAngle/2;
+    if (_headingRight >= 360) {
+        _headingRight = _headingRight - 360;
+    }
+
+
+
+    qDebug(" we will sweep from angle %f to %f", _headingLeft, _headingRight);
+
+    // start by sweeping right
+    doChangeYaw(sweepAngle/2, _sweepSpeed, true, 1);
+}
+
+void Vehicle::_onHeadingChanged()
+{
+    if (!_sweepAngle) { // this means user has stopped sweep
+        return;
+    }
+
+    if(_currentDirection == -1) { // ccw
+        if (fabs(_headingFact.cookedValue().toFloat() - _headingLeft) < HEADING_MARGIN) {
+//            qDebug("reached left ccw angel %f, start moving right/cw now", _headingLeft);
+            doChangeYaw(_sweepAngle, _sweepSpeed, true, 1);
+        }
+    } else if ( _currentDirection == 1) {
+        if (fabs(_headingFact.cookedValue().toFloat() - _headingRight) < HEADING_MARGIN) {
+//            qDebug("reached right/cw angel %f, start moving left/ccw now", _headingRight);
+            doChangeYaw(_sweepAngle, _sweepSpeed, true, -1);
+        }
+    }
+}
+
+void Vehicle::doGuidedTakeoff(int height)
+{
+    if (flightMode() != "Guided") {
+        return;
+    }
+    mavlink_message_t msg;
+    mavlink_command_long_t cmd;
+
+    cmd.command = (uint16_t)MAV_CMD_NAV_TAKEOFF;
+    cmd.confirmation = 0;
+    cmd.param1 = 0.0f;
+    cmd.param2 = 0.0f;
+    cmd.param3 = 0.0f;
+    cmd.param4 = _headingFact.cookedValue().toFloat();
+    cmd.param5 = latitude();
+    cmd.param6 = longitude();
+    cmd.param7 = height;
+    cmd.target_system = id();
+    cmd.target_component = 0;
+
+    mavlink_msg_command_long_encode(_mavlink->getSystemId(), _mavlink->getComponentId(), &msg, &cmd);
+
+    sendMessage(msg);
+}
+
 bool Vehicle::flightModeSetAvailable(void)
 {
     return _firmwarePlugin->isCapable(FirmwarePlugin::SetFlightModeCapability);
+}
+
+bool Vehicle::flying()
+{
+    _flying = armed() && (_altitudeRelativeFact.cookedValue() > 0.5f);
+    return _flying;
+}
+
+void Vehicle::_checkFlying()
+{
+    bool oldFlying = _flying;
+    bool newFlying = flying();
+    if (oldFlying != newFlying) {
+        emit flyingChanged(newFlying);
+    }
 }
 
 QStringList Vehicle::flightModes(void)

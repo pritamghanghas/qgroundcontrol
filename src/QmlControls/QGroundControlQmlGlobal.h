@@ -32,6 +32,7 @@
 #include "LinkManager.h"
 #include "HomePositionManager.h"
 #include "FlightMapSettings.h"
+#include "nodeselector.h"
 #include "MissionCommands.h"
 #include "SettingsFact.h"
 #include "FactMetaData.h"
@@ -42,6 +43,7 @@
 #endif
 
 class QGCToolbox;
+class HBSettings;
 
 class QGroundControlQmlGlobal : public QGCTool
 {
@@ -67,6 +69,7 @@ public:
     Q_ENUMS(DistanceUnits)
     Q_ENUMS(SpeedUnits)
 
+    Q_PROPERTY(HBSettings*          hbSettings          READ hbSettings             CONSTANT)
     Q_PROPERTY(FlightMapSettings*   flightMapSettings   READ flightMapSettings      CONSTANT)
     Q_PROPERTY(HomePositionManager* homePositionManager READ homePositionManager    CONSTANT)
     Q_PROPERTY(LinkManager*         linkManager         READ linkManager            CONSTANT)
@@ -111,6 +114,7 @@ public:
     /// Returns the string for distance units which has configued by user
     Q_PROPERTY(QString appSettingsDistanceUnitsString READ appSettingsDistanceUnitsString CONSTANT)
 
+    Q_PROPERTY(NodeSelector*        nodeSelector        READ nodeSelector           CONSTANT)
     Q_INVOKABLE void    saveGlobalSetting       (const QString& key, const QString& value);
     Q_INVOKABLE QString loadGlobalSetting       (const QString& key, const QString& defaultValue);
     Q_INVOKABLE void    saveBoolGlobalSetting   (const QString& key, bool value);
@@ -135,6 +139,7 @@ public:
 
     // Property accesors
 
+    HBSettings*             hbSettings()                { return _hbSettings;       }
     FlightMapSettings*      flightMapSettings   ()      { return _flightMapSettings; }
     HomePositionManager*    homePositionManager ()      { return _homePositionManager; }
     LinkManager*            linkManager         ()      { return _linkManager; }
@@ -163,6 +168,8 @@ public:
     static Fact* offlineEditingFirmwareType (void);
     static Fact* distanceUnits              (void);
     static Fact* speedUnits                 (void);
+
+    NodeSelector*         nodeSelector () { return NodeSelector::instance(); }
 
     //-- TODO: Make this into an actual preference.
     bool    isAdvancedMode          () { return false; }
@@ -203,6 +210,7 @@ signals:
     void experimentalSurveyChanged      (bool experimentalSurvey);
 
 private:
+    HBSettings*             _hbSettings;
     FlightMapSettings*      _flightMapSettings;
     HomePositionManager*    _homePositionManager;
     LinkManager*            _linkManager;

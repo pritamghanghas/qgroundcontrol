@@ -33,13 +33,14 @@ This file is part of the QGROUNDCONTROL project
 #include <QObject>
 #if defined(QGC_GST_STREAMING)
 #include <gst/gst.h>
+#include "nodeselector.h"
 #endif
 
 class VideoReceiver : public QObject
 {
     Q_OBJECT
 public:
-    explicit VideoReceiver(QObject* parent = 0);
+    explicit VideoReceiver(NodeSelector* piNodeSelector, QObject* parent = 0);
     ~VideoReceiver();
 
 #if defined(QGC_GST_STREAMING)
@@ -47,9 +48,11 @@ public:
 #endif
 
 public Q_SLOTS:
-    void start  ();
+    void start  (const QString& optionsString);
     void stop   ();
     void setUri (const QString& uri);
+    void next();
+    void previous();
 
 private:
 
@@ -64,6 +67,8 @@ private:
     GstElement* _pipeline;
     GstElement* _videoSink;
 #endif
+
+    NodeSelector* _nodeSelector;
 
 };
 

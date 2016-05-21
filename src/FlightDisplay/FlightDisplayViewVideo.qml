@@ -53,6 +53,7 @@ Item {
         anchors.fill:   parent
         display:        _controller.videoSurface
         receiver:       _controller.videoReceiver
+//        visible:        true
         visible:        _controller.videoRunning
         runVideo:       true
         /* TODO: Come up with a way to make this an option

@@ -29,6 +29,7 @@ This file is part of the QGROUNDCONTROL project
 
 #include "ScreenToolsController.h"
 #include "FlightDisplayViewController.h"
+#include "nodeselector.h"
 
 const char* kMainFlightDisplayViewControllerGroup = "FlightDisplayViewController";
 
@@ -61,9 +62,10 @@ FlightDisplayViewController::FlightDisplayViewController(QObject *parent)
      * Do not change anything else unless you know what you are doing. Any other change will require a matching change on the receiving end.
      *
      */
+    _videoReceiver = new VideoReceiver(NodeSelector::instance(), this);
     _videoSurface = new VideoSurface;
-    _videoReceiver = new VideoReceiver(this);
-    _videoReceiver->setUri(QLatin1Literal("udp://0.0.0.0:5600"));   // Port 5600=Solo UDP port, if you change you will break Solo video support
+//    _videoReceiver = new VideoReceiver(this);
+//    _videoReceiver->setUri(QLatin1Literal("udp://0.0.0.0:5600"));   // Port 5600=Solo UDP port, if you change you will break Solo video support
 #if defined(QGC_GST_STREAMING)
     _videoReceiver->setVideoSink(_videoSurface->videoSink());
     connect(&_frameTimer, &QTimer::timeout, this, &FlightDisplayViewController::_updateTimer);

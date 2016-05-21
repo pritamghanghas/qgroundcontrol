@@ -61,6 +61,15 @@ Item {
     property real   _topBottomMargin:   (size * 0.05) / 2
     property real   _availableValueHeight: maxHeight - (attitudeWidget.height + _spacer1.height + _spacer2.height + (_spacing * 4)) - (_showCompass ? compass.height : 0)
     property var    _activeVehicle:     QGroundControl.multiVehicleManager.activeVehicle
+/*
+    property real   _sizeRatio:     size / _defaultSize
+    property real   _bigFontSize:   ScreenTools.defaultFontPixelSize * 2.5  * _sizeRatio
+    property real   _normalFontSize:ScreenTools.defaultFontPixelSize * 1.5  * _sizeRatio
+    property real   _labelFontSize: ScreenTools.defaultFontPixelSize * 0.75 * _sizeRatio
+    property real   _spacing:       ScreenTools.defaultFontPixelSize * 0.33
+    property real   _topBottomMargin: (size * 0.05) / 2
+    property real   _availableValueHeight: maxHeight - (attitude.height + _spacer1.height + _spacer2.height + compass.height + (_spacing * 4))
+*/
 
     readonly property bool _showCompass:    true // !ScreenTools.isShortScreen
 

@@ -30,14 +30,14 @@ This file is part of the QGROUNDCONTROL project
 #include "VideoReceiver.h"
 #include <QDebug>
 
-VideoReceiver::VideoReceiver(QObject* parent)
+VideoReceiver::VideoReceiver(NodeSelector *piNodeSelector, QObject* parent)
     : QObject(parent)
 #if defined(QGC_GST_STREAMING)
     , _pipeline(NULL)
     , _videoSink(NULL)
 #endif
 {
-
+    _nodeSelector = piNodeSelector;
 }
 
 VideoReceiver::~VideoReceiver()
@@ -62,9 +62,25 @@ void VideoReceiver::setVideoSink(GstElement* sink)
 }
 #endif
 
-void VideoReceiver::start()
+void VideoReceiver::next()
+{
+    _nodeSelector->selectNext();
+//    start();
+}
+
+void VideoReceiver::previous()
+{
+    _nodeSelector->selectPrevious();
+//    start();
+}
+
+void VideoReceiver::start(const QString &optionsString)
 {
 #if defined(QGC_GST_STREAMING)
+    QString newUri = QString("udp://0.0.0.0:") + QString::number(_nodeSelector->currentNode().targetStreamingPort);
+    qDebug() << newUri;
+    setUri(newUri);
+
     if (_uri.isEmpty()) {
         qCritical() << "VideoReceiver::start() failed because URI is not specified";
         return;
@@ -76,6 +92,9 @@ void VideoReceiver::start()
     }
 
     stop();
+    // start new stream
+    _nodeSelector->startStreaming(_nodeSelector->currentNode(), optionsString);
+
 
     bool running = false;
 
@@ -96,7 +115,7 @@ void VideoReceiver::start()
             break;
         }
 
-        if ((caps = gst_caps_from_string("application/x-rtp, media=(string)video, clock-rate=(int)90000, encoding-name=(string)H264")) == NULL) {
+        if ((caps = gst_caps_from_string("application/x-rtp, media=(string)video, payload=(int)96, encoding-name=(string)H264")) == NULL) {
             qCritical() << "VideoReceiver::start() failed. Error with gst_caps_from_string()";
             break;
         }

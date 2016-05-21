@@ -44,6 +44,7 @@ class QGCApplication;
 class QGCImageProvider;
 class UASMessageHandler;
 class QGCPositionManager;
+class HBSettings;
 
 /// This is used to manage all of our top level services/tools
 class QGCToolbox {
@@ -70,6 +71,7 @@ public:
 #ifndef __mobile__
     GPSManager*                 gpsManager(void)                { return _gpsManager; }
 #endif
+    HBSettings*                 hbSettings(void)                { return _hbSettings; }
 
 private:
     GAudioOutput*               _audioOutput;
@@ -91,6 +93,7 @@ private:
     UASMessageHandler*          _uasMessageHandler;
     FollowMe*                   _followMe;
     QGCPositionManager*         _qgcPositionManager;
+    HBSettings*                 _hbSettings;
 };
 
 /// This is the base class for all tools

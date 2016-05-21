@@ -40,6 +40,7 @@
 #include "QGCMapEngineManager.h"
 #include "FollowMe.h"
 #include "PositionManager.h"
+#include "hbsettings.h"
 
 QGCToolbox::QGCToolbox(QGCApplication* app)
     : _audioOutput(NULL)
@@ -61,6 +62,7 @@ QGCToolbox::QGCToolbox(QGCApplication* app)
     , _uasMessageHandler(NULL)
     , _followMe(NULL)
     , _qgcPositionManager(NULL)
+    , _hbSettings(NULL)
 {
     _audioOutput =              new GAudioOutput(app);
     _autopilotPluginManager =   new AutoPilotPluginManager(app);
@@ -81,6 +83,7 @@ QGCToolbox::QGCToolbox(QGCApplication* app)
     _uasMessageHandler =        new UASMessageHandler(app);
     _qgcPositionManager =       new QGCPositionManager(app);
     _followMe =                 new FollowMe(app);
+    _hbSettings =               new HBSettings(app);
 
     _audioOutput->setToolbox(this);
     _autopilotPluginManager->setToolbox(this);
@@ -101,6 +104,7 @@ QGCToolbox::QGCToolbox(QGCApplication* app)
     _uasMessageHandler->setToolbox(this);
     _followMe->setToolbox(this);
     _qgcPositionManager->setToolbox(this);
+    _hbSettings->setToolbox(this);
 }
 
 QGCToolbox::~QGCToolbox()
@@ -120,6 +124,7 @@ QGCToolbox::~QGCToolbox()
     delete _uasMessageHandler;
     delete _followMe;
     delete _qgcPositionManager;
+    delete _hbSettings;
 }
 
 QGCTool::QGCTool(QGCApplication* app)

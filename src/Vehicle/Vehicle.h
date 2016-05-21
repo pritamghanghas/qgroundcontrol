@@ -251,6 +251,7 @@ public:
     Q_PROPERTY(bool                 homePositionAvailable   READ homePositionAvailable                  NOTIFY homePositionAvailableChanged)
     Q_PROPERTY(QGeoCoordinate       homePosition            READ homePosition                           NOTIFY homePositionChanged)
     Q_PROPERTY(bool                 armed                   READ armed              WRITE setArmed      NOTIFY armedChanged)
+    Q_PROPERTY(bool                 flying                  READ flying                                 NOTIFY flyingChanged)
     Q_PROPERTY(bool                 flightModeSetAvailable  READ flightModeSetAvailable                 CONSTANT)
     Q_PROPERTY(QStringList          flightModes             READ flightModes                            CONSTANT)
     Q_PROPERTY(QString              flightMode              READ flightMode         WRITE setFlightMode NOTIFY flightModeChanged)
@@ -287,9 +288,6 @@ public:
     Q_PROPERTY(bool                 multiRotor              READ multiRotor                             CONSTANT)
     Q_PROPERTY(bool                 autoDisconnect          MEMBER _autoDisconnect                      NOTIFY autoDisconnectChanged)
     Q_PROPERTY(QString              prearmError             READ prearmError        WRITE setPrearmError NOTIFY prearmErrorChanged)
-
-    /// true: Vehicle is flying, false: Vehicle is on ground
-    Q_PROPERTY(bool flying      READ flying     WRITE setFlying     NOTIFY flyingChanged)
 
     /// true: Vehicle is in Guided mode and can respond to guided commands, false: vehicle cannot respond to direct control commands
     Q_PROPERTY(bool guidedMode  READ guidedMode WRITE setGuidedMode NOTIFY guidedModeChanged)
@@ -332,6 +330,10 @@ public:
 
     Q_INVOKABLE void virtualTabletJoystickValue(double roll, double pitch, double yaw, double thrust);
     Q_INVOKABLE void disconnectInactiveVehicle(void);
+    Q_INVOKABLE void doGuidedTakeoff(int height); // height in meters
+    Q_INVOKABLE void doChangeAltitude(int height);
+    Q_INVOKABLE void doChangeYaw(float angle, float speed, bool relative, int direction); // true relative false absolute
+    Q_INVOKABLE void doSweepYaw(float sweepAngle, float sweepSpeed);
 
     Q_INVOKABLE void clearTrajectoryPoints(void);
 
@@ -439,6 +441,7 @@ public:
 
     bool armed(void) { return _armed; }
     void setArmed(bool armed);
+    bool flying();
 
     bool flightModeSetAvailable(void);
     QStringList flightModes(void);
@@ -548,13 +551,13 @@ signals:
     void homePositionAvailableChanged(bool homePositionAvailable);
     void homePositionChanged(const QGeoCoordinate& homePosition);
     void armedChanged(bool armed);
+    void flyingChanged(bool flying);
     void flightModeChanged(const QString& flightMode);
     void hilModeChanged(bool hilMode);
     void missingParametersChanged(bool missingParameters);
     void connectionLostChanged(bool connectionLost);
     void connectionLostEnabledChanged(bool connectionLostEnabled);
     void autoDisconnectChanged(bool autoDisconnectChanged);
-    void flyingChanged(bool flying);
     void guidedModeChanged(bool guidedMode);
     void prearmErrorChanged(const QString& prearmError);
     void commandLongAck(uint8_t compID, uint16_t command, uint8_t result);
@@ -621,6 +624,8 @@ private slots:
     void _connectionLostTimeout(void);
     void _prearmErrorTimeout(void);
 
+    void _onHeadingChanged();
+
 private:
     bool _containsLink(LinkInterface* link);
     void _addLink(LinkInterface* link);
@@ -643,6 +648,7 @@ private:
     void _connectionActive(void);
     void _say(const QString& text);
     QString _vehicleIdSpeech(void);
+    void _checkFlying();
 
 private:
     int     _id;            ///< Mavlink system id
@@ -686,8 +692,8 @@ private:
     QString         _formatedMessage;
     int             _rcRSSI;
     double          _rcRSSIstore;
-    bool            _autoDisconnect;    ///< true: Automatically disconnect vehicle when last connection goes away or lost heartbeat
     bool            _flying;
+    bool            _autoDisconnect;    ///< true: Automatically disconnect vehicle when last connection goes away or lost heartbeat
 
     QString             _prearmError;
     QTimer              _prearmErrorTimer;
@@ -788,5 +794,12 @@ private:
     static const char* _joystickModeSettingsKey;
     static const char* _joystickEnabledSettingsKey;
 
+    // sweep support
+    float _headingMid;
+    float _sweepAngle;
+    float _sweepSpeed;
+    float _headingLeft;
+    float _headingRight;
+    int   _currentDirection;
 };
 #endif

@@ -74,6 +74,7 @@ public:
     Q_PROPERTY(int pitchAxisReversed    READ pitchAxisReversed      NOTIFY pitchAxisReversedChanged)
     Q_PROPERTY(int yawAxisReversed      READ yawAxisReversed        NOTIFY yawAxisReversedChanged)
     Q_PROPERTY(int throttleAxisReversed READ throttleAxisReversed   NOTIFY throttleAxisReversedChanged)
+//    Q_PROPERTY(Fact getRCMode           READ getRCMode)
     
     Q_PROPERTY(QString imageHelp MEMBER _imageHelp NOTIFY imageHelpChanged)
     
@@ -91,6 +92,7 @@ public:
     bool pitchAxisMapped(void);
     bool yawAxisMapped(void);
     bool throttleAxisMapped(void);
+//    Fact* getRCMode(void);
     
     bool rollAxisReversed(void);
     bool pitchAxisReversed(void);
