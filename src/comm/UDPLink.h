@@ -202,13 +202,7 @@ public slots:
     void readBytes();
 
 private slots:
-    /*!
-     * @brief Write a number of bytes to the interface.
-     *
-     * @param data Pointer to the data byte array
-     * @param size The size of the bytes array
-     **/
-    void _writeBytes(const QByteArray data);
+
     void _disconnected();
     void _error(QAbstractSocket::SocketError socketError);
 
@@ -226,6 +220,13 @@ private:
     // From LinkInterface
     virtual bool _connect(void);
     virtual void _disconnect(void);
+    /*!
+     * @brief Write a number of bytes to the interface.
+     *
+     * @param data Pointer to the data byte array
+     * @param size The size of the bytes array
+     **/
+    void _writeBytes(const QByteArray data);
 
     bool _hardwareConnect();
     void _restartConnection();
@@ -238,6 +239,12 @@ private:
 #endif
 
     bool                _running;
+    QMutex              _mutex;
+    QQueue<QByteArray>  _outQueue;
+    bool _dequeBytes    ();
+    void _sendBytes     (const QByteArray data);
+
+
 };
 
 #endif // UDPLINK_H
