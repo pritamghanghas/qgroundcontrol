@@ -29,6 +29,11 @@ This file is part of the QGROUNDCONTROL project
  */
 
 #include <QtGlobal>
+#if QT_VERSION > 0x050401
+#define UDP_BROKEN_SIGNAL 1
+#else
+#define UDP_BROKEN_SIGNAL 0
+#endif
 #include <QTimer>
 #include <QList>
 #include <QDebug>
@@ -106,6 +111,10 @@ UDPLink::~UDPLink()
     quit();
     // Wait for it to exit
     wait();
+    while(_outQueue.count() > 0) {
+        _outQueue.dequeue();
+    }
+
     this->deleteLater();
 }
 
@@ -116,7 +125,25 @@ UDPLink::~UDPLink()
 void UDPLink::run()
 {
     if(_hardwareConnect()) {
-        exec();
+        if(UDP_BROKEN_SIGNAL) {
+            bool loop = false;
+            while(true) {
+            //-- Anything to read?
+            loop = _socket->hasPendingDatagrams();
+            if(loop) {
+                readBytes();
+            }
+            //-- Loop right away if busy
+        if((_dequeBytes() || loop) && _running)
+            continue;
+            if(!_running)
+                break;
+            //-- Settle down (it gets here if there is nothing to read or write)
+            _socket->waitForReadyRead(5);
+            }
+        } else {
+            exec();
+        }
     }
     if (_socket) {
         _deregisterZeroconf();
@@ -150,9 +177,35 @@ void UDPLink::removeHost(const QString& host)
 
 void UDPLink::_writeBytes(const QByteArray data)
 {
+    printf("--------------called _writeData");
     if (!_socket)
         return;
 
+    if(UDP_BROKEN_SIGNAL) {
+        QMutexLocker lock(&_mutex);
+        qDebug() << "========enquing " << data;
+        _outQueue.enqueue(data);
+    } else {
+        _sendBytes(data);
+    }
+}
+
+bool UDPLink::_dequeBytes()
+{
+    QMutexLocker lock(&_mutex);
+    if(_outQueue.count() > 0) {
+        QByteArray qdata = _outQueue.dequeue();
+        lock.unlock();
+        qDebug() << "=============sending data " << qdata;
+        _sendBytes(qdata);
+        lock.relock();
+    }
+    return (_outQueue.count() > 0);
+}
+
+
+void UDPLink::_sendBytes(const QByteArray data)
+{
     QStringList goneHosts;
     // Send to all connected systems
     QString host;
@@ -166,6 +219,7 @@ void UDPLink::_writeBytes(const QByteArray data)
                 // hosts that were added because we heard from them (dynamic). Only
                 // dynamic hosts should be removed and even then, after a few tries, not
                 // the first failure. In the mean time, we don't remove anything.
+                printf("failed to wrtie out data\n");
                 if(REMOVE_GONE_HOSTS) {
                     goneHosts.append(host);
                 }
@@ -210,6 +264,8 @@ void UDPLink::readBytes()
         // would trigger this.
         // Add host to broadcast list if not yet present, or update its port
         _config->addHost(sender.toString(), (int)senderPort);
+        if(UDP_BROKEN_SIGNAL && !_running)
+            break;
     }
     //-- Send whatever is left
     if(databuffer.size()) {
@@ -274,10 +330,16 @@ bool UDPLink::_hardwareConnect()
         _socket->setSocketOption(QAbstractSocket::ReceiveBufferSizeSocketOption, 512 * 1024);
 #endif
         _registerZeroconf(_config->localPort(), kZeroconfRegistration);
+
         QObject::connect(_socket, &QUdpSocket::readyRead, this, &UDPLink::readBytes);
         QObject::connect(_socket, &QUdpSocket::disconnected, this, &UDPLink::_disconnected);
 //        QObject::connect(_socket, &QUdpSocket::error, this, &UDPLink::_error);
         QObject::connect(_socket, SIGNAL(error(QAbstractSocket::SocketError)), this, SLOT(_error(QAbstractSocket::SocketError)));
+
+        if(!UDP_BROKEN_SIGNAL) {
+            QObject::connect(_socket, &QUdpSocket::readyRead, this, &UDPLink::readBytes);
+        }
+
         emit connected();
     } else {
         emit communicationError("UDP Link Error", "Error binding UDP port");
