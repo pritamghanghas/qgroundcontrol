@@ -606,6 +606,7 @@ private slots:
     void _remoteControlRSSIChanged(uint8_t rssi);
     void _handleFlightModeChanged(const QString& flightMode);
     void _announceArmedChanged(bool armed);
+    void flyToLocation(const QGeoCoordinate& coord, double altitudeRel);
 
     void _handleTextMessage                 (int newCount);
     void _handletextMessageReceived         (UASMessage* message);
@@ -625,6 +626,9 @@ private slots:
     void _prearmErrorTimeout(void);
 
     void _onHeadingChanged();
+    void _on1STimerTimeout();
+    void _onArmedChangedActions();
+    void _onGuidedModeChanged(bool isGuided);
 
 private:
     bool _containsLink(LinkInterface* link);
@@ -649,6 +653,8 @@ private:
     void _say(const QString& text);
     QString _vehicleIdSpeech(void);
     void _checkFlying();
+    void _checkDesiredAlitude();
+    void _resetBreachflytoLocationOnModeChange();
 
 private:
     int     _id;            ///< Mavlink system id
@@ -801,5 +807,11 @@ private:
     float _headingLeft;
     float _headingRight;
     int   _currentDirection;
+
+    // takeoff and goto support
+    QGeoCoordinate _flyToCoord;
+    double         _flyToRelAltitude;
+    QTimer         _1STimer;
+    int            _1STimerSecsCount;
 };
 #endif

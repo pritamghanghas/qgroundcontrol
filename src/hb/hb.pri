@@ -17,7 +17,9 @@ SOURCES += \
 }
 
 HEADERS += \
-    $$PWD/hbsettings.h
+    $$PWD/hbsettings.h \
+    $$PWD/sensornotification.h
 
 SOURCES += \
-    $$PWD/hbsettings.cpp
+    $$PWD/hbsettings.cpp \
+    $$PWD/sensornotification.cpp

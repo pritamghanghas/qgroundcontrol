@@ -62,8 +62,9 @@ QGCView {
                 anchors.rightMargin:    _margins
                 anchors.left:           parent.left
                 anchors.top:            piControlLabel.bottom
+                anchors.bottom:        _wireLimitSettings.bottom
                 width:                  shutdownButton.x + shutdownButton.width + _margins
-                height:                 restartButton.y + restartButton.height + _margins
+//                height:                 restartButton.y + restartButton.height + _margins
                 color:                  palette.windowShade
 
                 QGCButton {
@@ -177,7 +178,59 @@ QGCView {
                         QGroundControl.hbSettings.setValue("wiredMaxAltitude", text);
                     }
                 }
+
+
             } // Rectangle altitude control
+
+
+            QGCLabel {
+                id:                 _scountSettingsLabel
+                anchors.margins:    _margins
+                anchors.leftMargin: _margins/2
+                anchors.left:       piControlLabel.left
+                anchors.top:        _wireLimitSettings.bottom
+                text:               qsTr("Scout Settings")
+                font.weight:        Font.DemiBold
+            }
+
+            Rectangle {
+                id:                 _scoutModeSettings
+//                anchors.margins:     _margins
+                anchors.left:       _scountSettingsLabel.left
+                anchors.top:        _scountSettingsLabel.bottom
+                anchors.right:      _wireLimitSettings.right
+                width:              scoutMode.x + scoutMode.width + _margins
+                height:             scoutMode.y + scoutMode.height + _margins
+                color:              palette.windowShade
+                QGCCheckBox {
+                    id:                 scoutMode
+                    anchors.left:       parent.left
+//                    anchors.baseline:   scoutMode.baseline
+                    text:               qsTr("Fence Breach Mode")
+                    checked:            QGroundControl.hbSettings.value("scoutMode", false)
+                    onClicked:  QGroundControl.hbSettings.setValue("scoutMode", checked ? true : false)
+                }
+
+                QGCLabel {
+                    id: scoutAltitude
+                    text : "Scout Alt (meter)";
+                    anchors.right: scoutAltitudeField.left
+                    anchors.baseline: scoutAltitudeField.baseline
+                }
+
+                QGCTextField {
+                    id: scoutAltitudeField
+                    validator: IntValidator { bottom: 5; top: 2000 }
+                    anchors.topMargin: _margins
+                    anchors.right: parent.right
+                    anchors.top: _wireLimitSettings.bottom
+                    enabled: scoutMode.checked
+                    text: QGroundControl.hbSettings.value("scoutAltitude", 60)
+                    onEditingFinished: {
+                        QGroundControl.hbSettings.setValue("scoutAltitude", text);
+                    }
+                }
+            } // scout mode settings
       } // QGCFlickable
     } // QGCViewPanel
 } // QGCView

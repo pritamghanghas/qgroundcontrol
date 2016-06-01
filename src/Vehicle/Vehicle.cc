@@ -37,12 +37,16 @@
 #include "GAudioOutput.h"
 #include "FollowMe.h"
 
+#include "sensornotification.h"
+
 QGC_LOGGING_CATEGORY(VehicleLog, "VehicleLog")
 
 #define UPDATE_TIMER 50
 #define DEFAULT_LAT  38.965767f
 #define DEFAULT_LON -120.083923f
 #define HEADING_MARGIN 1.0f
+
+#define TRIGGER_EXECUTE_DELAY 5
 
 extern const char* guided_mode_not_supported_by_vehicle;
 
@@ -145,6 +149,8 @@ Vehicle::Vehicle(LinkInterface*             link,
     , _batteryFactGroup(this)
     , _windFactGroup(this)
     , _vibrationFactGroup(this)
+    , _flyToRelAltitude(0)
+    , _1STimerSecsCount(0)
 {
     _addLink(link);
 
@@ -250,6 +256,12 @@ Vehicle::Vehicle(LinkInterface*             link,
     _batteryFactGroup.setVehicle(this);
     _windFactGroup.setVehicle(this);
     _vibrationFactGroup.setVehicle(this);
+
+    SensorNotification *sensorNotification = new SensorNotification(this);
+    QObject::connect(sensorNotification, &SensorNotification::newFlyToCoord, this, &Vehicle::flyToLocation);
+
+    _1STimer.setInterval(1000);
+    connect(&_1STimer, &QTimer::timeout, this, &Vehicle::_on1STimerTimeout);
 }
 
 // Disconnected Vehicle
@@ -884,6 +896,7 @@ void Vehicle::_updateAltitude(UASInterface*, double altitudeAMSL, double altitud
     _altitudeAMSLFact.setRawValue(altitudeAMSL);
     _altitudeRelativeFact.setRawValue(altitudeRelative);
     _climbRateFact.setRawValue(climbRate);
+    _checkDesiredAlitude();
 }
 
 void Vehicle::_updateNavigationControllerErrors(UASInterface*, double altitudeError, double speedError, double xtrackError) {
@@ -1259,6 +1272,57 @@ void Vehicle::doSweepYaw(float sweepAngle, float sweepSpeed)
     doChangeYaw(sweepAngle/2, _sweepSpeed, true, 1);
 }
 
+void Vehicle::flyToLocation(const QGeoCoordinate &coord, double altitudeRel)
+{
+    // if already flying. just announce that another fence breach is detected but already flying
+    qDebug() << "fly to relative alitude" << _flyToRelAltitude;
+    if(flying() || _flyToRelAltitude) {
+        _say("fence breach but already flying.");
+        return;
+    }
+
+    // pick max wired altitude if altitude is not given
+    _flyToRelAltitude = altitudeRel;
+    if(!altitudeRel) {
+        _flyToRelAltitude = 40;
+    }
+
+    _flyToCoord = coord;
+
+    _say("ground fence breach. Take off in 5seconds");
+    _1STimerSecsCount = 0; // resetting timer
+    _1STimer.start();
+}
+
+void Vehicle::_on1STimerTimeout()
+{
+    if(!_1STimerSecsCount) {
+        setFlightMode("guided");
+    }
+    ++_1STimerSecsCount;
+
+    // no need to fiddle with couter or timer if we have crossed 10
+    if (_1STimerSecsCount > TRIGGER_EXECUTE_DELAY) {
+        _1STimer.stop();
+        _1STimerSecsCount = 0;
+    }
+
+    _say(QString("%1").arg(TRIGGER_EXECUTE_DELAY -_1STimerSecsCount));
+    if ((_1STimerSecsCount == 1) && (!armed())) {
+        setArmed(true);
+    }
+
+    if(_1STimerSecsCount == TRIGGER_EXECUTE_DELAY) {
+        _say("Takeoff");
+        guidedModeTakeoff(_flyToRelAltitude);
+    }
+}
+
+void Vehicle::_onArmedChangedActions()
+{
+//    if(_1STim)
+}
+
 void Vehicle::_onHeadingChanged()
 {
     if (!_sweepAngle) { // this means user has stopped sweep
@@ -1320,6 +1384,16 @@ void Vehicle::_checkFlying()
     bool newFlying = flying();
     if (oldFlying != newFlying) {
         emit flyingChanged(newFlying);
+    }
+}
+
+void Vehicle::_checkDesiredAlitude()
+{
+    double currentAlitude = _altitudeRelativeFact.cookedValue().toDouble();
+    if ((abs((currentAlitude - _flyToRelAltitude)) < 2) && _flyToRelAltitude) {
+        _say("Desired Altitude reached. Flying to breach location");
+        guidedModeGotoLocation(_flyToCoord);
+        _resetBreachflytoLocationOnModeChange();
     }
 }
 
@@ -1633,6 +1707,22 @@ void Vehicle::_handleFlightModeChanged(const QString& flightMode)
 {
     _say(QString("%1 %2 flight mode").arg(_vehicleIdSpeech()).arg(flightMode));
     emit guidedModeChanged(_firmwarePlugin->isGuidedMode(this));
+}
+
+void Vehicle::_onGuidedModeChanged(bool isGuided)
+{
+    if(!isGuided) {
+        _say("Aborting all pending fence breach fly to missions");
+        _resetBreachflytoLocationOnModeChange();
+    }
+}
+
+void Vehicle::_resetBreachflytoLocationOnModeChange()
+{
+    _1STimer.stop();
+    _1STimerSecsCount = 0;
+    _flyToCoord = QGeoCoordinate();
+    _flyToRelAltitude = 0;
 }
 
 void Vehicle::_announceArmedChanged(bool armed)

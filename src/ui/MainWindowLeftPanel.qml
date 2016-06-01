@@ -262,21 +262,22 @@ Item {
                         checked = true
                     }
                 }
-            }
-            QGCButton {
-                width: parent.width * 0.8
-                height: ScreenTools.defaultFontPixelHeight * 2.5
-                text: "Pi Control"
-                visible: true
-                exclusiveGroup: panelActionGroup
-                anchors.horizontalCenter: parent.horizontalCenter
-                onClicked: {
-                    if(__rightPanel.source != "LinuxControl.qml") {
-                        __rightPanel.source = "LinuxControl.qml"
+                QGCButton {
+                    height: _buttonHeight
+                    anchors.left:   parent.left
+                    anchors.right:  parent.right
+                    text: qsTr("Pi Control")
+                    visible: true
+                    exclusiveGroup: panelActionGroup
+                    onClicked: {
+                        if(__rightPanel.source != "LinuxControl.qml") {
+                            __rightPanel.source = "LinuxControl.qml"
+                        }
+                        checked = true
                     }
-                    checked = true
                 }
             }
+
         }
     }
 
