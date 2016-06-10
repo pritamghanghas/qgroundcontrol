@@ -1,25 +1,12 @@
-/*=====================================================================
+/****************************************************************************
+ *
+ *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
 
-QGroundControl Open Source Ground Control Station
-
-(c) 2009, 2015 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
-
-This file is part of the QGROUNDCONTROL project
-
-QGROUNDCONTROL is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-QGROUNDCONTROL is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with QGROUNDCONTROL. If not, see <http://www.gnu.org/licenses/>.
-
-======================================================================*/
 
 import QtQuick          2.5
 import QtQuick.Controls 1.2
@@ -40,8 +27,9 @@ Item {
 
     signal reallyClose
 
-    readonly property string _planViewSource:   "MissionEditor.qml"
-    readonly property string _setupViewSource:  "SetupView.qml"
+    readonly property string _planViewSource:       "MissionEditor.qml"
+    readonly property string _setupViewSource:      "SetupView.qml"
+    readonly property string _preferencesSource:    "MainWindowLeftPanel.qml"
 
     QGCPalette { id: qgcPal; colorGroupEnabled: true }
 
@@ -68,6 +56,7 @@ Item {
             currentPopUp.close()
         }
         ScreenTools.availableHeight = parent.height - toolBar.height
+        preferencesPanel.visible    = false
         flightView.visible          = true
         setupViewLoader.visible     = false
         planViewLoader.visible      = false
@@ -82,6 +71,7 @@ Item {
             planViewLoader.source   = _planViewSource
         }
         ScreenTools.availableHeight = parent.height - toolBar.height
+        preferencesPanel.visible    = false
         flightView.visible          = false
         setupViewLoader.visible     = false
         planViewLoader.visible      = true
@@ -97,10 +87,26 @@ Item {
         if (setupViewLoader.source  != _setupViewSource) {
             setupViewLoader.source  = _setupViewSource
         }
+        preferencesPanel.visible    = false
         flightView.visible          = false
         setupViewLoader.visible     = true
         planViewLoader.visible      = false
         toolBar.checkSetupButton()
+    }
+
+    function showPreferences() {
+        if(currentPopUp) {
+            currentPopUp.close()
+        }
+        //-- In preferences view, the full height is available. Set to 0 so it is ignored.
+        ScreenTools.availableHeight = 0
+        if (preferencesPanel.source != _preferencesSource) {
+            preferencesPanel.source  = _preferencesSource
+        }
+        flightView.visible          = false
+        setupViewLoader.visible     = false
+        planViewLoader.visible      = false
+        preferencesPanel.visible    = true
     }
 
     // The following are use for unit testing only
@@ -182,11 +188,9 @@ Item {
         }
     }
 
-
     //-- Detect tablet position
     Connections {
         target: QGroundControl.qgcPositionManger
-
         onLastPositionUpdated: {
             if(valid) {
                 if(lastPosition.latitude) {
@@ -210,22 +214,6 @@ Item {
         } else {
             criticalMessageText.text = message
             criticalMmessageArea.visible = true
-        }
-    }
-
-    function showLeftMenu() {
-        if(!leftPanel.visible) {
-            leftPanel.visible = true
-            leftPanel.item.animateShowDialog.start()
-        } else if(leftPanel.visible && !leftPanel.item.animateShowDialog.running) {
-            //-- If open, toggle it closed
-            hideLeftMenu()
-        }
-    }
-
-    function hideLeftMenu() {
-        if(leftPanel.visible && !leftPanel.item.animateHideDialog.running) {
-            leftPanel.item.animateHideDialog.start()
         }
     }
 
@@ -273,12 +261,16 @@ Item {
 
     //-- Left Settings Menu
     Loader {
-        id:                 leftPanel
+        id:                 preferencesPanel
         anchors.fill:       parent
         visible:            false
         z:                  QGroundControl.zOrderTopMost + 100
         active:             visible
-        source:             "MainWindowLeftPanel.qml"
+        onVisibleChanged: {
+            if(!visible) {
+                source = ""
+            }
+        }
     }
 
     //-- Main UI
@@ -290,12 +282,13 @@ Item {
         anchors.right:      parent.right
         anchors.top:        parent.top
         mainWindow:         mainWindow
-        opaqueBackground:   leftPanel.visible
+        opaqueBackground:   preferencesPanel.visible
         isBackgroundDark:   flightView.isBackgroundDark
         z:                  QGroundControl.zOrderTopMost
         onShowSetupView:    mainWindow.showSetupView()
         onShowPlanView:     mainWindow.showPlanView()
         onShowFlyView:      mainWindow.showFlyView()
+        onShowPreferences:  mainWindow.showPreferences()
         Component.onCompleted: {
             ScreenTools.availableHeight = parent.height - toolBar.height
         }

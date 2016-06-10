@@ -1,25 +1,12 @@
-/*=====================================================================
+/****************************************************************************
+ *
+ *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
 
-QGroundControl Open Source Ground Control Station
-
-(c) 2009 - 2015 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
-
-This file is part of the QGROUNDCONTROL project
-
-    QGROUNDCONTROL is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    QGROUNDCONTROL is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with QGROUNDCONTROL. If not, see <http://www.gnu.org/licenses/>.
-
-======================================================================*/
 
 /**
  * @file
@@ -29,11 +16,6 @@ This file is part of the QGROUNDCONTROL project
  */
 
 #include <QtGlobal>
-#if QT_VERSION > 0x050401
-#define UDP_BROKEN_SIGNAL 1
-#else
-#define UDP_BROKEN_SIGNAL 0
-#endif
 #include <QTimer>
 #include <QList>
 #include <QDebug>
@@ -98,7 +80,6 @@ UDPLink::UDPLink(UDPConfiguration* config)
     // We're doing it wrong - because the Qt folks got the API wrong:
     // http://blog.qt.digia.com/blog/2010/06/17/youre-doing-it-wrong/
     moveToThread(this);
-    enableDataRate(true);
 }
 
 UDPLink::~UDPLink()
@@ -111,10 +92,6 @@ UDPLink::~UDPLink()
     quit();
     // Wait for it to exit
     wait();
-    while(_outQueue.count() > 0) {
-        _outQueue.dequeue();
-    }
-
     this->deleteLater();
 }
 
@@ -125,25 +102,7 @@ UDPLink::~UDPLink()
 void UDPLink::run()
 {
     if(_hardwareConnect()) {
-        if(UDP_BROKEN_SIGNAL) {
-            bool loop = false;
-            while(true) {
-            //-- Anything to read?
-            loop = _socket->hasPendingDatagrams();
-            if(loop) {
-                readBytes();
-            }
-            //-- Loop right away if busy
-        if((_dequeBytes() || loop) && _running)
-            continue;
-            if(!_running)
-                break;
-            //-- Settle down (it gets here if there is nothing to read or write)
-            _socket->waitForReadyRead(5);
-            }
-        } else {
-            exec();
-        }
+        exec();
     }
     if (_socket) {
         _deregisterZeroconf();
@@ -177,35 +136,9 @@ void UDPLink::removeHost(const QString& host)
 
 void UDPLink::_writeBytes(const QByteArray data)
 {
-//    printf("--------------called _writeData");
     if (!_socket)
         return;
 
-    if(UDP_BROKEN_SIGNAL) {
-        QMutexLocker lock(&_mutex);
-//        qDebug() << "========enquing " << data;
-        _outQueue.enqueue(data);
-    } else {
-        _sendBytes(data);
-    }
-}
-
-bool UDPLink::_dequeBytes()
-{
-    QMutexLocker lock(&_mutex);
-    if(_outQueue.count() > 0) {
-        QByteArray qdata = _outQueue.dequeue();
-        lock.unlock();
-//        qDebug() << "=============sending data " << qdata;
-        _sendBytes(qdata);
-        lock.relock();
-    }
-    return (_outQueue.count() > 0);
-}
-
-
-void UDPLink::_sendBytes(const QByteArray data)
-{
     QStringList goneHosts;
     // Send to all connected systems
     QString host;
@@ -219,7 +152,6 @@ void UDPLink::_sendBytes(const QByteArray data)
                 // hosts that were added because we heard from them (dynamic). Only
                 // dynamic hosts should be removed and even then, after a few tries, not
                 // the first failure. In the mean time, we don't remove anything.
-                printf("failed to wrtie out data\n");
                 if(REMOVE_GONE_HOSTS) {
                     goneHosts.append(host);
                 }
@@ -258,14 +190,11 @@ void UDPLink::readBytes()
             databuffer.clear();
         }
         _logInputDataRate(datagram.length(), QDateTime::currentMSecsSinceEpoch());
-//        printf("bytes received %d\n", datagram.length());
         // TODO This doesn't validade the sender. Anything sending UDP packets to this port gets
         // added to the list and will start receiving datagrams from here. Even a port scanner
         // would trigger this.
         // Add host to broadcast list if not yet present, or update its port
         _config->addHost(sender.toString(), (int)senderPort);
-        if(UDP_BROKEN_SIGNAL && !_running)
-            break;
     }
     //-- Send whatever is left
     if(databuffer.size()) {
@@ -330,31 +259,12 @@ bool UDPLink::_hardwareConnect()
         _socket->setSocketOption(QAbstractSocket::ReceiveBufferSizeSocketOption, 512 * 1024);
 #endif
         _registerZeroconf(_config->localPort(), kZeroconfRegistration);
-
         QObject::connect(_socket, &QUdpSocket::readyRead, this, &UDPLink::readBytes);
-        QObject::connect(_socket, &QUdpSocket::disconnected, this, &UDPLink::_disconnected);
-//        QObject::connect(_socket, &QUdpSocket::error, this, &UDPLink::_error);
-        QObject::connect(_socket, SIGNAL(error(QAbstractSocket::SocketError)), this, SLOT(_error(QAbstractSocket::SocketError)));
-
-        if(!UDP_BROKEN_SIGNAL) {
-            QObject::connect(_socket, &QUdpSocket::readyRead, this, &UDPLink::readBytes);
-        }
-
         emit connected();
     } else {
         emit communicationError("UDP Link Error", "Error binding UDP port");
     }
     return _connectState;
-}
-
-void UDPLink::_disconnected()
-{
-    printf("socket disconnected\n");
-}
-void UDPLink::_error(QAbstractSocket::SocketError socketError)
-{
-    Q_UNUSED(socketError);
-//    qDebug() << "error on socket" << _socket->errorString();
 }
 
 /**

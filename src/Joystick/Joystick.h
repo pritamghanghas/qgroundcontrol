@@ -1,25 +1,12 @@
-/*=====================================================================
- 
- QGroundControl Open Source Ground Control Station
- 
- (c) 2009 - 2014 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
- 
- This file is part of the QGROUNDCONTROL project
- 
- QGROUNDCONTROL is free software: you can redistribute it and/or modify
- it under the terms of the GNU General Public License as published by
- the Free Software Foundation, either version 3 of the License, or
- (at your option) any later version.
- 
- QGROUNDCONTROL is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU General Public License for more details.
- 
- You should have received a copy of the GNU General Public License
- along with QGROUNDCONTROL. If not, see <http://www.gnu.org/licenses/>.
- 
- ======================================================================*/
+/****************************************************************************
+ *
+ *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
 
 #ifndef Joystick_H
 #define Joystick_H
@@ -39,9 +26,9 @@ class Joystick : public QThread
     Q_OBJECT
     
 public:
-    Joystick(const QString& name, int axisCount, int buttonCount, int sdlIndex, MultiVehicleManager* multiVehicleManager);
+    Joystick(const QString& name, int axisCount, int buttonCount, MultiVehicleManager* multiVehicleManager);
     ~Joystick();
-    
+
     typedef struct {
         int     min;
         int     max;
@@ -63,7 +50,6 @@ public:
         ThrottleModeMax
     } ThrottleMode_t;
     
-#ifndef __mobile__
     Q_PROPERTY(QString name READ name CONSTANT)
     
     Q_PROPERTY(bool calibrated MEMBER _calibrated NOTIFY calibratedChanged)
@@ -137,7 +123,7 @@ signals:
     
     void buttonActionTriggered(int action);
     
-private:
+protected:
     void _saveSettings(void);
     void _loadSettings(void);
     float _adjustRange(int value, Calibration_t calibration);
@@ -145,11 +131,18 @@ private:
     bool _validAxis(int axis);
     bool _validButton(int button);
 
+private:
+    virtual bool _open() = 0;
+    virtual void _close() = 0;
+    virtual bool _update() = 0;
+
+    virtual bool _getButton(int i) = 0;
+    virtual int _getAxis(int i) = 0;
+
     // Override from QThread
     virtual void run(void);
 
-private:
-    int     _sdlIndex;      ///< Index for SDL_JoystickOpen
+protected:
     
     bool    _exitThread;    ///< true: signal thread to exit
     
@@ -174,7 +167,6 @@ private:
     bool                _pollingStartedForCalibration;
 
     MultiVehicleManager*    _multiVehicleManager;
-#endif // __mobile__
     
 private:
     static const char*  _rgFunctionSettingsKey[maxFunction];

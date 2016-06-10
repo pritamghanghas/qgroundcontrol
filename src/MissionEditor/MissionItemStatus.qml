@@ -1,25 +1,12 @@
-/*=====================================================================
+/****************************************************************************
+ *
+ *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
 
-QGroundControl Open Source Ground Control Station
-
-(c) 2009, 2015 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
-
-This file is part of the QGROUNDCONTROL project
-
-    QGROUNDCONTROL is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    QGROUNDCONTROL is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with QGROUNDCONTROL. If not, see <http://www.gnu.org/licenses/>.
-
-======================================================================*/
 
 import QtQuick          2.5
 import QtQuick.Controls 1.3
@@ -87,53 +74,47 @@ Rectangle {
             QGCLabel { text: _azimuthText }
         }
 
-        QGCFlickable {
+        ListView {
+            id:                     statusListView
+            model:                  missionItems
+            highlightMoveDuration:  250
             anchors.leftMargin:     _margins
             anchors.rightMargin:    _margins
             anchors.top:            parent.top
             anchors.bottom:         parent.bottom
-            width:                  parent.width - valueGrid.width - (_margins * 2)
-            contentWidth:           graphRow.width
+            orientation:            ListView.Horizontal
+            spacing:                0
             visible:                _expanded
+            width:                  parent.width - valueGrid.width - (_margins * 2)
             clip:                   true
 
-            Row {
-                id:                 graphRow
-                anchors.top:        parent.top
-                anchors.bottom:     parent.bottom
-                //anchors.margins:    ScreenTools.defaultFontPixelWidth * ScreenTools.smallFontPointRatio
-                spacing:            ScreenTools.defaultFontPixelWidth * ScreenTools.smallFontPointRatio
+            delegate: Item {
+                height:     statusListView.height
+                width:      display ? (indicator.width + spacing)  : 0
+                visible:    display
 
-                Repeater {
-                    model: missionItems
+                property real availableHeight:  height - indicator.height
+                property bool graphAbsolute:    true
+                readonly property bool display: object.specifiesCoordinate && !object.isStandaloneCoordinate
+                readonly property real spacing: ScreenTools.defaultFontPixelWidth * ScreenTools.smallFontPointRatio
 
-                    Item {
-                        height:     graphRow.height
-                        width:      indicator.width
-                        visible:    object.specifiesCoordinate && !object.isStandaloneCoordinate
+                MissionItemIndexLabel {
+                    id:                         indicator
+                    anchors.horizontalCenter:   parent.horizontalCenter
+                    y:                          availableHeight - (availableHeight * object.altPercent)
+                    small:                      true
+                    isCurrentItem:              object.isCurrentItem
+                    label:                      object.abbreviation
+                    visible:                    object.relativeAltitude ? true : (object.homePosition || graphAbsolute)
+                }
 
-                        property real availableHeight:  height - indicator.height
-                        property bool graphAbsolute:    true
+                Connections {
+                    target: object
 
-                        MissionItemIndexLabel {
-                            id:                         indicator
-                            anchors.horizontalCenter:   parent.horizontalCenter
-                            y:                          availableHeight - (availableHeight * object.altPercent)
-                            small:                      true
-                            isCurrentItem:              object.isCurrentItem
-                            label:                      object.abbreviation
-                            visible:                    object.relativeAltitude ? true : (object.homePosition || graphAbsolute)
+                    onIsCurrentItemChanged: {
+                        if (object.isCurrentItem) {
+                            statusListView.currentIndex = index
                         }
-
-                        /*
-                          Taking these off for now since there really isn't room for the numbers
-                        QGCLabel {
-                            anchors.bottom:             parent.bottom
-                            anchors.horizontalCenter:   parent.horizontalCenter
-                            font.pointSize:             ScreenTools.smallFontPointSize
-                            text:                       (object.relativeAltitude ? "" : "=") + object.coordinate.altitude.toFixed(0)
-                        }
-                        */
                     }
                 }
             }

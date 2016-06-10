@@ -1,41 +1,39 @@
 language: cpp
 
 git:
-  depth: 500
+  depth: 1000
 
 env:
   global:
+    - SHADOW_BUILD_DIR=/tmp/shadow_build_dir
     # ANDROID_STOREPASS
-    secure: RGovyUnMw3fp/bHZi058JvANT1rYmNqrsuSYew0cIgirO6YbMHr/rsjwCm1FTYpBl8s1zgr+u2b8ftYnfnCz2YT+Aip4NWrVYpVU0FEmfytGILrnUS0pjlt8m7fU9AKR1ElOSll7yw7e1kftynN39Q321etvwbLZcXon6zz0suE=
+    - secure: RGovyUnMw3fp/bHZi058JvANT1rYmNqrsuSYew0cIgirO6YbMHr/rsjwCm1FTYpBl8s1zgr+u2b8ftYnfnCz2YT+Aip4NWrVYpVU0FEmfytGILrnUS0pjlt8m7fU9AKR1ElOSll7yw7e1kftynN39Q321etvwbLZcXon6zz0suE=
 
 matrix:
     fast_finish: true
     include:
         - os: linux
-          env: SPEC=linux-g++-64 CONFIG=debug SHADOW_BUILD_DIR=/tmp/build_linux_debug
+          env: SPEC=linux-g++-64 CONFIG=debug QT_FATAL_WARNINGS=1
           sudo: required
           dist: trusty
         - os: linux
-          env: SPEC=linux-g++-64 CONFIG=installer SHADOW_BUILD_DIR=/tmp/build_linux_install
+          env: SPEC=linux-g++-64 CONFIG=installer
           sudo: required 
           dist: trusty
         - os: osx
           osx_image: xcode7
-          env: SPEC=macx-clang CONFIG=debug QT_FATAL_WARNINGS=1 SHADOW_BUILD_DIR=/tmp/build_macos_debug
-        - os: osx
-          osx_image: xcode7
-          env: SPEC=macx-clang CONFIG=installer SHADOW_BUILD_DIR=/tmp/build_macos_install
+          env: SPEC=macx-clang CONFIG=debug QT_FATAL_WARNINGS=1
           sudo: required
         - os: osx
           osx_image: xcode7
-          env: SPEC=ios SHADOW_BUILD_DIR=/tmp/build_ios
-#        - os: android
-#          language: android
-#          env: SPEC=android-g++ CONFIG=debug SHADOW_BUILD_DIR=/tmp/build_android_debug
-#          sudo: false
+          env: SPEC=macx-clang CONFIG=installer
+          sudo: required
+        - os: osx
+          osx_image: xcode7
+          env: SPEC=ios
         - os: android
           language: android
-          env: SPEC=android-g++ CONFIG=installer SHADOW_BUILD_DIR=/tmp/build_android_install
+          env: SPEC=android-g++ CONFIG=installer
           sudo: false
         - os: linux
           env: CONFIG=doxygen
@@ -53,7 +51,10 @@ addons:
     - ubuntu-toolchain-r-test
     packages:
     - ccache
+    - debhelper
+    - devscripts
     - doxygen
+    - dput
     - espeak
     - g++-4.8
     - gcc-4.8
@@ -104,6 +105,10 @@ install:
         ;
     fi
   - if [[ "${TRAVIS_OS_NAME}" = "osx" && "${SPEC}" != "ios" ]]; then
+        wget http://gstreamer.freedesktop.org/data/pkg/osx/1.5.2/gstreamer-1.0-devel-1.5.2-x86_64.pkg &&
+        wget http://gstreamer.freedesktop.org/data/pkg/osx/1.5.2/gstreamer-1.0-1.5.2-x86_64.pkg &&
+        sudo installer -verboseR -pkg gstreamer-1.0-devel-1.5.2-x86_64.pkg -target / &&
+        sudo installer -verboseR -pkg gstreamer-1.0-1.5.2-x86_64.pkg -target / &&
         wget https://s3-us-west-2.amazonaws.com/qgroundcontrol/dependencies/Qt5.5.1-mac-clang.tar.bz2 &&
         tar jxf Qt5.5.1-mac-clang.tar.bz2 -C /tmp &&
         wget https://s3-us-west-2.amazonaws.com/qgroundcontrol/dependencies/osx-gstreamer.tar.bz2 &&

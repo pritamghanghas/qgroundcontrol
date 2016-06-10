@@ -1,37 +1,24 @@
-/*=====================================================================
+/****************************************************************************
+ *
+ *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
 
- QGroundControl Open Source Ground Control Station
 
- (c) 2009 - 2015 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+import QtQuick                  2.5
+import QtQuick.Controls         1.2
+import QtQuick.Controls.Styles  1.2
+import QtQuick.Layouts          1.2
+import QtGraphicalEffects       1.0
 
- This file is part of the QGROUNDCONTROL project
-
- QGROUNDCONTROL is free software: you can redistribute it and/or modify
- it under the terms of the GNU General Public License as published by
- the Free Software Foundation, either version 3 of the License, or
- (at your option) any later version.
-
- QGROUNDCONTROL is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU General Public License for more details.
-
- You should have received a copy of the GNU General Public License
- along with QGROUNDCONTROL. If not, see <http://www.gnu.org/licenses/>.
-
- ======================================================================*/
-
-import QtQuick 2.5
-import QtQuick.Controls 1.2
-import QtQuick.Controls.Styles 1.2
-import QtQuick.Layouts 1.2
-import QtGraphicalEffects 1.0
-
-import QGroundControl.FactSystem 1.0
-import QGroundControl.FactControls 1.0
-import QGroundControl.Palette 1.0
-import QGroundControl.Controls 1.0
-import QGroundControl.ScreenTools 1.0
+import QGroundControl.FactSystem    1.0
+import QGroundControl.FactControls  1.0
+import QGroundControl.Palette       1.0
+import QGroundControl.Controls      1.0
+import QGroundControl.ScreenTools   1.0
 
 
 QGCView {
@@ -56,6 +43,8 @@ QGCView {
     property Fact _dlLossAction:    controller.getParameterFact(-1, "NAV_DLL_ACT")
     property Fact _disarmLandDelay: controller.getParameterFact(-1, "COM_DISARM_LAND")
     property Fact _landSpeedMC:     controller.getParameterFact(-1, "MPC_LAND_SPEED", false)
+
+    property bool _showIcons: !ScreenTools.isTinyScreen
 
     QGCViewPanel {
         id:             panel
@@ -94,13 +83,17 @@ QGCView {
                             fillMode:                   Image.PreserveAspectFit
                             source:                     qgcPal.globalTheme === QGCPalette.Light ? "/qmlimages/LowBatteryLight.svg" : "/qmlimages/LowBattery.svg"
                             anchors.verticalCenter:     parent.verticalCenter
+                            visible:                    _showIcons
                         }
-                        Item { width: _margins * 0.5; height: 1; }
+                        Item {
+                            width:      _margins * 0.5
+                            height:     1
+                            visible:    _showIcons
+                        }
                         Column {
                             spacing:                    _margins * 0.5
                             anchors.verticalCenter:     parent.verticalCenter
                             Row {
-                                visible:                !controller.fixedWing
                                 QGCLabel {
                                     anchors.baseline:   lowBattCombo.baseline
                                     width:              _middleRowWidth
@@ -166,8 +159,13 @@ QGCView {
                             fillMode:                   Image.PreserveAspectFit
                             source:                     qgcPal.globalTheme === QGCPalette.Light ? "/qmlimages/RCLossLight.svg" : "/qmlimages/RCLoss.svg"
                             anchors.verticalCenter:     parent.verticalCenter
+                            visible:                    _showIcons
                         }
-                        Item { width: _margins * 0.5; height: 1; }
+                        Item {
+                            width:      _margins * 0.5
+                            height:     1
+                            visible:    _showIcons
+                        }
                         Column {
                             spacing:                    _margins * 0.5
                             anchors.verticalCenter:     parent.verticalCenter
@@ -224,8 +222,13 @@ QGCView {
                             fillMode:                   Image.PreserveAspectFit
                             source:                     qgcPal.globalTheme === QGCPalette.Light ? "/qmlimages/DatalinkLossLight.svg" : "/qmlimages/DatalinkLoss.svg"
                             anchors.verticalCenter:     parent.verticalCenter
+                            visible:                    _showIcons
                         }
-                        Item { width: _margins * 0.5; height: 1; }
+                        Item {
+                            width:      _margins * 0.5
+                            height:     1
+                            visible:    _showIcons
+                        }
                         Column {
                             spacing:                    _margins * 0.5
                             anchors.verticalCenter:     parent.verticalCenter
@@ -282,8 +285,13 @@ QGCView {
                             fillMode:                   Image.PreserveAspectFit
                             source:                     qgcPal.globalTheme === QGCPalette.Light ? "/qmlimages/GeoFenceLight.svg" : "/qmlimages/GeoFence.svg"
                             anchors.verticalCenter:     parent.verticalCenter
+                            visible:                    _showIcons
                         }
-                        Item { width: _margins * 0.5; height: 1; }
+                        Item {
+                            width:      _margins * 0.5
+                            height:     1
+                            visible:    _showIcons
+                        }
                         Column {
                             spacing:                    _margins * 0.5
                             anchors.verticalCenter:     parent.verticalCenter
@@ -364,10 +372,15 @@ QGCView {
                             sourceSize.width:           width
                             mipmap:                     true
                             fillMode:                   Image.PreserveAspectFit
-                            source:                     controller.fixedWing ? "/qmlimages/ReturnToHomeAltitude.svg" : "/qmlimages/ReturnToHomeAltitudeCopter.svg"
+                            source:                     controller.vehicle.fixedWing ? "/qmlimages/ReturnToHomeAltitude.svg" : "/qmlimages/ReturnToHomeAltitudeCopter.svg"
                             anchors.verticalCenter:     parent.verticalCenter
+                            visible:                    _showIcons
                         }
-                        Item { width: _margins * 0.5; height: 1; }
+                        Item {
+                            width:      _margins * 0.5
+                            height:     1
+                            visible:    _showIcons
+                        }
                         Column {
                             spacing:                    _margins * 0.5
                             Row {
@@ -479,18 +492,20 @@ QGCView {
                             sourceSize.width:           width
                             mipmap:                     true
                             fillMode:                   Image.PreserveAspectFit
-                            source:                     controller.fixedWing ? "/qmlimages/LandMode.svg" : "/qmlimages/LandModeCopter.svg"
+                            source:                     controller.vehicle.fixedWing ? "/qmlimages/LandMode.svg" : "/qmlimages/LandModeCopter.svg"
                             anchors.verticalCenter:     parent.verticalCenter
+                            visible:                    _showIcons
                         }
                         Item {
-                            width:                      _margins * 0.5
-                            height:                     1
+                            width:      _margins * 0.5
+                            height:     1
+                            visible:    _showIcons
                         }
                         Column {
                             spacing:                    _margins * 0.5
                             anchors.verticalCenter:     parent.verticalCenter
                             Row {
-                                visible:                _landSpeedMC !== -1
+                                visible:                !controller.vehicle.fixedWing && (_landSpeedMC !== -1)
                                 QGCLabel {
                                     anchors.baseline:   landVelField.baseline
                                     width:              _middleRowWidth

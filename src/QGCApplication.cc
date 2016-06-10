@@ -1,25 +1,12 @@
- /*=====================================================================
+ /****************************************************************************
+ *
+ *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
 
- QGroundControl Open Source Ground Control Station
-
- (c) 2009 - 2015 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
-
- This file is part of the QGROUNDCONTROL project
-
- QGROUNDCONTROL is free software: you can redistribute it and/or modify
- it under the terms of the GNU General Public License as published by
- the Free Software Foundation, either version 3 of the License, or
- (at your option) any later version.
-
- QGROUNDCONTROL is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU General Public License for more details.
-
- You should have received a copy of the GNU General Public License
- along with QGROUNDCONTROL. If not, see <http://www.gnu.org/licenses/>.
-
- ======================================================================*/
 
 /**
  * @file
@@ -85,6 +72,7 @@
 #include "PX4/PX4FirmwarePlugin.h"
 #include "Vehicle.h"
 #include "MavlinkQmlSingleton.h"
+#include "JoystickConfigController.h"
 #include "JoystickManager.h"
 #include "QmlObjectListModel.h"
 #include "MissionManager.h"
@@ -115,7 +103,6 @@
     #include "QGCFileDialog.h"
     #include "QGCMessageBox.h"
     #include "FirmwareUpgradeController.h"
-    #include "JoystickConfigController.h"
     #include "MainWindow.h"
 #endif
 
@@ -268,73 +255,6 @@ QGCApplication::QGCApplication(int &argc, char* argv[], bool unitTesting)
 
     ParseCmdLineOptions(argc, argv, rgCmdLineOptions, sizeof(rgCmdLineOptions)/sizeof(rgCmdLineOptions[0]), false);
 
-#ifdef __mobile__
-    QLoggingCategory::setFilterRules(QStringLiteral("*Log.debug=false"));
-#else
-    QString filterRules;
-
-    // Turn off bogus ssl warning
-    filterRules += "qt.network.ssl.warning=false\n";
-
-    if (logging) {
-        QStringList logList = loggingOptions.split(",");
-
-        if (logList[0] == "full") {
-            filterRules += "*Log.debug=true\n";
-            for(int i=1; i<logList.count(); i++) {
-                filterRules += logList[i];
-                filterRules += ".debug=false\n";
-            }
-        } else {
-            foreach(const QString &rule, logList) {
-                filterRules += rule;
-                filterRules += ".debug=true\n";
-            }
-        }
-    } else {
-        // First thing we want to do is set up the qtlogging.ini file. If it doesn't already exist we copy
-        // it to the correct location. This way default debug builds will have logging turned off.
-
-        static const char* qtProjectDir = "QtProject";
-        static const char* qtLoggingFile = "qtlogging.ini";
-        bool loggingDirectoryOk = false;
-
-        QDir iniFileLocation(QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation));
-        if (!iniFileLocation.cd(qtProjectDir)) {
-            if (!iniFileLocation.mkdir(qtProjectDir)) {
-                qDebug() << "Unable to create qtlogging.ini directory" << iniFileLocation.filePath(qtProjectDir);
-            } else {
-                if (!iniFileLocation.cd(qtProjectDir)) {
-                    qDebug() << "Unable to access qtlogging.ini directory" << iniFileLocation.filePath(qtProjectDir);;
-                }
-                loggingDirectoryOk = true;
-            }
-        } else {
-            loggingDirectoryOk = true;
-        }
-
-        if (loggingDirectoryOk) {
-            qDebug () << "Logging ini file directory" << iniFileLocation.absolutePath();
-            if (!iniFileLocation.exists(qtLoggingFile)) {
-                QFile loggingFile(iniFileLocation.filePath(qtLoggingFile));
-                if (loggingFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
-                    QTextStream out(&loggingFile);
-                    out << "[Rules]\n";
-                    out << "*Log.debug=false\n";
-                    foreach(const QString &category, QGCLoggingCategoryRegister::instance()->registeredCategories()) {
-                        out << category << ".debug=false\n";
-                    }
-                } else {
-                    qDebug() << "Unable to create logging file" << QString(qtLoggingFile) << "in" << iniFileLocation;
-                }
-            }
-        }
-    }
-
-    qDebug() << "Filter rules" << filterRules;
-    QLoggingCategory::setFilterRules(filterRules);
-#endif
-
     // Set up timer for delayed missing fact display
     _missingParamsDelayedDisplayTimer.setSingleShot(true);
     _missingParamsDelayedDisplayTimer.setInterval(_missingParamsDelayedDisplayTimerTimeout);
@@ -388,6 +308,9 @@ QGCApplication::QGCApplication(int &argc, char* argv[], bool unitTesting)
         paramDir.removeRecursively();
         paramDir.mkpath(paramDir.absolutePath());
     }
+
+    // Set up our logging filters
+    QGCLoggingCategoryRegister::instance()->setFilterRulesFromSettings(loggingOptions);
 
     _lastKnownHomePosition.setLatitude(settings.value(_lastKnownHomePositionLatKey, 37.803784).toDouble());
     _lastKnownHomePosition.setLongitude(settings.value(_lastKnownHomePositionLonKey, -122.462276).toDouble());
@@ -463,12 +386,11 @@ void QGCApplication::_initCommon(void)
     qmlRegisterType<ValuesWidgetController>             ("QGroundControl.Controllers", 1, 0, "ValuesWidgetController");
     qmlRegisterType<QGCMobileFileDialogController>      ("QGroundControl.Controllers", 1, 0, "QGCMobileFileDialogController");
     qmlRegisterType<RCChannelMonitorController>         ("QGroundControl.Controllers", 1, 0, "RCChannelMonitorController");
-
+    qmlRegisterType<JoystickConfigController>           ("QGroundControl.Controllers", 1, 0, "JoystickConfigController");
 #ifndef __mobile__
     qmlRegisterType<ViewWidgetController>           ("QGroundControl.Controllers", 1, 0, "ViewWidgetController");
     qmlRegisterType<CustomCommandWidgetController>  ("QGroundControl.Controllers", 1, 0, "CustomCommandWidgetController");
     qmlRegisterType<FirmwareUpgradeController>      ("QGroundControl.Controllers", 1, 0, "FirmwareUpgradeController");
-    qmlRegisterType<JoystickConfigController>       ("QGroundControl.Controllers", 1, 0, "JoystickConfigController");
     qmlRegisterType<LogDownloadController>          ("QGroundControl.Controllers", 1, 0, "LogDownloadController");
 #endif
 

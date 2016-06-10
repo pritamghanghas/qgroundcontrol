@@ -1,25 +1,12 @@
-/*=====================================================================
+/****************************************************************************
+ *
+ *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
 
-QGroundControl Open Source Ground Control Station
-
-(c) 2009, 2015 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
-
-This file is part of the QGROUNDCONTROL project
-
-    QGROUNDCONTROL is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    QGROUNDCONTROL is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with QGROUNDCONTROL. If not, see <http://www.gnu.org/licenses/>.
-
-======================================================================*/
 
 import QtQuick          2.4
 import QtQuick.Controls 1.3
@@ -52,7 +39,6 @@ QGCView {
     readonly property real      _horizontalMargin:  ScreenTools.defaultFontPixelWidth  / 2
     readonly property real      _margin:            ScreenTools.defaultFontPixelHeight * 0.5
     readonly property var       _activeVehicle:     QGroundControl.multiVehicleManager.activeVehicle
-    readonly property real      _editFieldWidth:    ScreenTools.defaultFontPixelWidth * 16
     readonly property real      _rightPanelWidth:   Math.min(parent.width / 3, ScreenTools.defaultFontPixelWidth * 30)
     readonly property real      _rightPanelOpacity: 0.8
     readonly property int       _toolButtonCount:   6
@@ -298,7 +284,6 @@ QGCView {
                             if (addMissionItemsButton.checked) {
                                 var sequenceNumber = controller.insertSimpleMissionItem(coordinate, controller.visualItems.count)
                                 setCurrentItem(sequenceNumber)
-                                editorListView.positionViewAtIndex(editorListView.count - 1, ListView.Contain)
                             } else {
                                 editorMap.mapClicked(coordinate)
                             }
@@ -498,6 +483,7 @@ QGCView {
                         model:          controller.visualItems
                         cacheBuffer:    height * 2
                         clip:           true
+                        highlightMoveDuration: 250
 
                         delegate: MissionItemEditor {
                             missionItem:    object
@@ -512,11 +498,6 @@ QGCView {
                                 controller.removeMissionItem(index)
                             }
 
-                            onInsert: {
-                                var sequenceNumber = controller.insertSimpleMissionItem(editorMap.center, i)
-                                setCurrentItem(sequenceNumber)
-                            }
-
                             onMoveHomeToMapCenter: controller.visualItems.get(0).coordinate = editorMap.center
 
                             Connections {
@@ -524,7 +505,7 @@ QGCView {
 
                                 onIsCurrentItemChanged: {
                                     if (object.isCurrentItem) {
-                                        editorListView.positionViewAtIndex(index, ListView.Contain)
+                                        editorListView.currentIndex = index
                                     }
                                 }
                             }
@@ -551,18 +532,17 @@ QGCView {
                     anchors.left:       parent.left
                     anchors.top:        parent.top
                     spacing:            ScreenTools.defaultFontPixelHeight
+                    z:                  QGroundControl.zOrderWidgets
 
                     RoundButton {
                         id:             addMissionItemsButton
                         buttonImage:    "/qmlimages/MapAddMission.svg"
-                        z:              QGroundControl.zOrderWidgets
                         lightBorders:   _lightWidgetBorders
                     }
 
                     RoundButton {
                         id:             addShapeButton
                         buttonImage:    "/qmlimages/MapDrawShape.svg"
-                        z:              QGroundControl.zOrderWidgets
                         visible:        QGroundControl.experimentalSurvey
                         lightBorders:   _lightWidgetBorders
 
@@ -584,7 +564,6 @@ QGCView {
                         buttonImage:        syncNeeded ? "/qmlimages/MapSyncChanged.svg" : "/qmlimages/MapSync.svg"
                         viewportMargins:    ScreenTools.defaultFontPixelWidth / 2
                         exclusiveGroup:     _dropButtonsExclusiveGroup
-                        z:                  QGroundControl.zOrderWidgets
                         dropDownComponent:  syncDropDownComponent
                         enabled:            !controller.syncInProgress
                         rotateImage:        controller.syncInProgress
@@ -597,7 +576,6 @@ QGCView {
                         buttonImage:        "/qmlimages/MapCenter.svg"
                         viewportMargins:    ScreenTools.defaultFontPixelWidth / 2
                         exclusiveGroup:     _dropButtonsExclusiveGroup
-                        z:                  QGroundControl.zOrderWidgets
                         lightBorders:       _lightWidgetBorders
 
                         dropDownComponent: Component {
@@ -643,7 +621,6 @@ QGCView {
                         buttonImage:        "/qmlimages/MapType.svg"
                         viewportMargins:    ScreenTools.defaultFontPixelWidth / 2
                         exclusiveGroup:     _dropButtonsExclusiveGroup
-                        z:                  QGroundControl.zOrderWidgets
                         lightBorders:       _lightWidgetBorders
 
                         dropDownComponent: Component {
@@ -676,7 +653,6 @@ QGCView {
                         id:             mapZoomPlus
                         visible:        !ScreenTools.isTinyScreen && !ScreenTools.isShortScreen
                         buttonImage:    "/qmlimages/ZoomPlus.svg"
-                        z:              QGroundControl.zOrderWidgets
                         lightBorders:   _lightWidgetBorders
 
                         onClicked: {
@@ -691,7 +667,6 @@ QGCView {
                         id:             mapZoomMinus
                         visible:        !ScreenTools.isTinyScreen && !ScreenTools.isShortScreen
                         buttonImage:    "/qmlimages/ZoomMinus.svg"
-                        z:              QGroundControl.zOrderWidgets
                         lightBorders:   _lightWidgetBorders
                         onClicked: {
                             if(editorMap)
