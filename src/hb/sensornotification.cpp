@@ -19,7 +19,7 @@ void SensorNotification::onFetchTimerExpired()
     _settings->endGroup();
 
     if (!scountEnabled) {
-        qDebug("fence breach scout mode not enabled.. doing nothing");
+//        qDebug("fence breach scout mode not enabled.. doing nothing");
         return;
     }
     qDebug("scout mode is enabled polling server");
