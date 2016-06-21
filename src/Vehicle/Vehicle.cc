@@ -1284,7 +1284,7 @@ void Vehicle::flyToLocation(const QGeoCoordinate &coord, double altitudeRel)
     // if already flying. just announce that another fence breach is detected but already flying
     qDebug() << "fly to relative alitude" << _flyToRelAltitude;
     if(flying() || _flyToRelAltitude) {
-        _say("fence breach but already flying.");
+//       _say("fence breach but already flying.");
         return;
     }
 
