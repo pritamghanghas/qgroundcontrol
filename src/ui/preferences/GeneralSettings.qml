@@ -43,22 +43,6 @@ Rectangle {
             anchors.margins:    ScreenTools.defaultFontPixelWidth
             spacing:            ScreenTools.defaultFontPixelHeight / 2
 
-            QGCLabel {
-                text:   qsTr("General Settings")
-                font.pointSize: ScreenTools.mediumFontPointSize
-            }
-
-            Rectangle {
-                height: 1
-                width:  parent.width
-                color:  qgcPal.text
-            }
-
-            Item {
-                height: ScreenTools.defaultFontPixelHeight / 2
-                width:  parent.width
-            }
-
             //-----------------------------------------------------------------
             //-- Base UI Font Point Size
             Row {
@@ -177,17 +161,6 @@ Rectangle {
             }
 
             //-----------------------------------------------------------------
-            //-- Scale on Flight View
-            QGCCheckBox {
-                text:       qsTr("Show scale on Fly View")
-                onClicked: {
-                    QGroundControl.flightMapSettings.showScaleOnFlyView = checked
-                }
-                Component.onCompleted: {
-                    checked = QGroundControl.flightMapSettings.showScaleOnFlyView
-                }
-            }
-            //-----------------------------------------------------------------
             //-- Audio preferences
             QGCCheckBox {
                 text:       qsTr("Mute all audio output")
@@ -284,7 +257,7 @@ Rectangle {
                 QGCLabel {
                     id:                 mapProvidersLabel
                     anchors.baseline:   mapProviders.baseline
-                    text:               qsTr("Map Providers:")
+                    text:               qsTr("Map Provider:")
                 }
 
                 QGCComboBox {

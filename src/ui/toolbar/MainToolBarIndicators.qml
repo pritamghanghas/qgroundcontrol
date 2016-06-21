@@ -102,19 +102,6 @@ Row {
                 anchors.verticalCenter:   parent.verticalCenter
                 anchors.horizontalCenter: parent.horizontalCenter
             }
-            SequentialAnimation {
-                id:    loopAnimation
-                loops: Animation.Infinite
-                NumberAnimation { target: criticalMessage; property: "opacity"; duration: 1000; from: 0.25; to: 1 }
-                NumberAnimation { target: criticalMessage; property: "opacity"; duration: 1000; from: 1; to: 0.25 }
-            }
-            onVisibleChanged: {
-                if(messages.visible) {
-                    loopAnimation.start()
-                } else {
-                    loopAnimation.stop()
-                }
-            }
         }
         Item {
             anchors.fill:       parent
@@ -173,7 +160,7 @@ Row {
             visible:            activeVehicle && !isNaN(activeVehicle.gps.hdop.value)
             font.pointSize:     ScreenTools.smallFontPointSize
             color:              qgcPal.buttonText
-            text:               activeVehicle ? activeVehicle.gps.hdop.value.toFixed(0) : ""
+            text:               activeVehicle ? activeVehicle.gps.hdop.value.toFixed(1) : ""
         }
         MouseArea {
             anchors.fill:   parent

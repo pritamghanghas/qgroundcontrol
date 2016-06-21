@@ -1,3 +1,5 @@
+# if you update this file, please consider updating Vagrantfile too
+
 language: cpp
 
 git:
@@ -37,7 +39,8 @@ matrix:
           sudo: false
         - os: linux
           env: CONFIG=doxygen
-          sudo: false
+          sudo: required
+          dist: trusty
 
 android:
   components:
@@ -61,6 +64,9 @@ addons:
     - graphviz
     - libc6-i386
     - libespeak-dev
+    - libgstreamer-plugins-base1.0-dev
+    - libgstreamer1.0-0:amd64
+    - libgstreamer1.0-dev
     - libopenscenegraph-dev
     - libsdl1.2-dev
     - libudev-dev
@@ -105,8 +111,8 @@ install:
         ;
     fi
   - if [[ "${TRAVIS_OS_NAME}" = "osx" && "${SPEC}" != "ios" ]]; then
-        wget http://gstreamer.freedesktop.org/data/pkg/osx/1.5.2/gstreamer-1.0-devel-1.5.2-x86_64.pkg &&
-        wget http://gstreamer.freedesktop.org/data/pkg/osx/1.5.2/gstreamer-1.0-1.5.2-x86_64.pkg &&
+        wget https://s3-us-west-2.amazonaws.com/qgroundcontrol/dependencies/gstreamer-1.0-devel-1.5.2-x86_64.pkg &&
+        wget https://s3-us-west-2.amazonaws.com/qgroundcontrol/dependencies/gstreamer-1.0-1.5.2-x86_64.pkg &&
         sudo installer -verboseR -pkg gstreamer-1.0-devel-1.5.2-x86_64.pkg -target / &&
         sudo installer -verboseR -pkg gstreamer-1.0-1.5.2-x86_64.pkg -target / &&
         wget https://s3-us-west-2.amazonaws.com/qgroundcontrol/dependencies/Qt5.5.1-mac-clang.tar.bz2 &&
@@ -172,7 +178,6 @@ script:
         ./tools/update_android_version.sh
         ;
     fi
-  - echo 'Building QGroundControl'
   - if [[ "${CONFIG}" != "doxygen" && "${SPEC}" != "ios" ]]; then
         cd ${SHADOW_BUILD_DIR} &&
         make -j4 | sed 's/${TRAVIS_BUILD_DIR}/-/'
@@ -199,15 +204,16 @@ script:
 
 after_success:
   - if [[ "${TRAVIS_OS_NAME}" = "linux" && "${CONFIG}" = "installer" ]]; then
-        ${TRAVIS_BUILD_DIR}/deploy/create_linux_appimage.sh
-        ;
+        ${TRAVIS_BUILD_DIR}/deploy/create_linux_appimage.sh ${TRAVIS_BUILD_DIR} ${SHADOW_BUILD_DIR}/release ${SHADOW_BUILD_DIR}/release/package;
     fi
   - if [ "${TRAVIS_TAG}" ]; then
         export GOOGLE_PLAY_TRACK=production;
-    else
+    elif [ "${TRAVIS_BRANCH}" = "master" ]; then
         export GOOGLE_PLAY_TRACK=beta;
+    else
+        export GOOGLE_PLAY_TRACK=none;
     fi
-  - if [[ "${TRAVIS_OS_NAME}" = "android" && "${TRAVIS_PULL_REQUEST}" = "false" && "${TRAVIS_BRANCH}" = "master" ]]; then
+  - if [[ "${TRAVIS_OS_NAME}" = "android" && "${TRAVIS_PULL_REQUEST}" = "false" && "${GOOGLE_PLAY_TRACK}" != "none" ]]; then
         pip install --user google-api-python-client PyOpenSSL &&
         cd ${TRAVIS_BUILD_DIR} &&
         openssl aes-256-cbc -K $encrypted_25db6eb7c3fd_key -iv $encrypted_25db6eb7c3fd_iv -in ${TRAVIS_BUILD_DIR}/android/Google_Play_Android_Developer-4432a3c4f5d1.json.enc -out android/Google_Play_Android_Developer-4432a3c4f5d1.json -d &&
@@ -225,7 +231,7 @@ deploy:
       secure: BsLXeXUPsCJdX4tawrDnO8OFK5Hk4kzlDTiyH93En6TbjUargVAWDMcHVj7TUhr7+3Tao1W1zb0G4SJe9kHv+jrky0yE72KvoG3YAON0VXWKizxBAKkgHE2RxSTNAwDeKbi2G6YJfNDescBBfX7zEohShdXglQu7CGaUQKRaiI4=
     bucket: qgroundcontrol
     local_dir: ${SHADOW_BUILD_DIR}/release/package
-    upload-dir: ${TRAVIS_BRANCH}
+    upload-dir: builds/${TRAVIS_BRANCH}
     acl: public_read
     region: us-west-2
     skip_cleanup: true
@@ -238,6 +244,7 @@ deploy:
     file_glob: true
     file:
       - ${SHADOW_BUILD_DIR}/release/package/qgroundcontrol.*
+      - ${SHADOW_BUILD_DIR}/release/package/QGroundControl.*
     skip_cleanup: true
     on:
       tags: true

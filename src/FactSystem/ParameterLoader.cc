@@ -44,9 +44,10 @@ ParameterLoader::ParameterLoader(Vehicle* vehicle)
     , _initialLoadComplete(false)
     , _waitingForDefaultComponent(false)
     , _saveRequired(false)
-    , _defaultComponentId(FactSystem::defaultComponentId)
+    , _defaultComponentId(MAV_COMP_ID_ALL)
     , _parameterSetMajorVersion(-1)
     , _parameterMetaData(NULL)
+    , _initialRequestRetryCount(0)
     , _totalParamCount(0)
 {
     Q_ASSERT(_vehicle);
@@ -203,7 +204,7 @@ void ParameterLoader::_parameterUpdate(int uasId, int componentId, QString param
     int waitingParamCount = waitingReadParamIndexCount + waitingReadParamNameCount + waitingWriteParamNameCount;
     if (waitingParamCount) {
         qCDebug(ParameterLoaderLog) << "waitingParamCount:" << waitingParamCount;
-    } else if (_defaultComponentId != FactSystem::defaultComponentId) {
+    } else if (_defaultComponentId != MAV_COMP_ID_ALL) {
         // No more parameters to wait for, stop the timeout. Be careful to not stop timer if we don't have the default
         // component yet.
         _waitingParamTimeoutTimer.stop();
@@ -358,12 +359,11 @@ void ParameterLoader::refreshAllParameters(uint8_t componentID)
 
 void ParameterLoader::_determineDefaultComponentId(void)
 {
-    if (_defaultComponentId == FactSystem::defaultComponentId) {
+    if (_defaultComponentId == MAV_COMP_ID_ALL) {
         // We don't have a default component id yet. That means the plugin can't provide
         // the param to trigger off of. Instead we use the most prominent component id in
         // the set of parameters. Better than nothing!
 
-        _defaultComponentId = -1;
         int largestCompParamCount = 0;
         foreach(int componentId, _mapParameterName2Variant.keys()) {
             int compParamCount = _mapParameterName2Variant[componentId].count();
@@ -373,7 +373,7 @@ void ParameterLoader::_determineDefaultComponentId(void)
             }
         }
 
-        if (_defaultComponentId == -1) {
+        if (_defaultComponentId == MAV_COMP_ID_ALL) {
             qWarning() << "All parameters missing, unable to determine default componet id";
         }
     }
@@ -491,7 +491,7 @@ void ParameterLoader::_waitingParamTimeout(void)
     foreach(int componentId, _waitingReadParamIndexMap.keys()) {
         foreach(int paramIndex, _waitingReadParamIndexMap[componentId].keys()) {
             _waitingReadParamIndexMap[componentId][paramIndex]++;   // Bump retry count
-            if (_waitingReadParamIndexMap[componentId][paramIndex] > _maxInitialLoadRetry) {
+            if (_waitingReadParamIndexMap[componentId][paramIndex] > _maxInitialLoadRetrySingleParam) {
                 // Give up on this index
                 _failedReadParamIndexMap[componentId] << paramIndex;
                 qCDebug(ParameterLoaderLog) << "Giving up on (componentId:" << componentId << "paramIndex:" << paramIndex << "retryCount:" << _waitingReadParamIndexMap[componentId][paramIndex] << ")";
@@ -509,7 +509,7 @@ void ParameterLoader::_waitingParamTimeout(void)
         }
     }
 
-    if (!paramsRequested && _defaultComponentId == FactSystem::defaultComponentId && !_waitingForDefaultComponent) {
+    if (!paramsRequested && _defaultComponentId == MAV_COMP_ID_ALL && !_waitingForDefaultComponent) {
         // Initial load is complete but we still don't have default component params. Wait one more cycle to see if the
         // default component finally shows up.
         _waitingParamTimeoutTimer.start();
@@ -883,7 +883,7 @@ void ParameterLoader::_restartWaitingParamTimer(void)
 
 void ParameterLoader::_addMetaDataToDefaultComponent(void)
 {
-     if (_defaultComponentId == FactSystem::defaultComponentId) {
+     if (_defaultComponentId == MAV_COMP_ID_ALL) {
          // We don't know what the default component is so we can't support meta data
          return;
      }
@@ -929,7 +929,7 @@ void ParameterLoader::_checkInitialLoadComplete(bool failIfNoDefaultComponent)
         }
     }
 
-    if (!failIfNoDefaultComponent && _defaultComponentId == FactSystem::defaultComponentId) {
+    if (!failIfNoDefaultComponent && _defaultComponentId == MAV_COMP_ID_ALL) {
         // We are still waiting for default component to show up
         return;
     }
@@ -979,9 +979,14 @@ void ParameterLoader::_checkInitialLoadComplete(bool failIfNoDefaultComponent)
 
 void ParameterLoader::_initialRequestTimeout(void)
 {
-    qgcApp()->showMessage("Vehicle did not respond to request for parameters, retrying");
-    refreshAllParameters();
-    _initialRequestTimeoutTimer.start();
+    if (!_vehicle->genericFirmware()) {
+        // Generic vehicles (like BeBop) may not have any parameters, so don't annoy the user
+        qgcApp()->showMessage("Vehicle did not respond to request for parameters, retrying");
+    }
+    if (++_initialRequestRetryCount <= _maxInitialRequestListRetry) {
+        refreshAllParameters();
+        _initialRequestTimeoutTimer.start();
+    }
 }
 
 QString ParameterLoader::parameterMetaDataFile(MAV_AUTOPILOT firmwareType, int wantedMajorVersion, int& majorVersion, int& minorVersion)

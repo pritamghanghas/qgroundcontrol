@@ -79,7 +79,6 @@
 #include "QGroundControlQmlGlobal.h"
 #include "HomePositionManager.h"
 #include "FlightMapSettings.h"
-#include "QGCQGeoCoordinate.h"
 #include "CoordinateVector.h"
 #include "MainToolBarController.h"
 #include "MissionController.h"
@@ -181,6 +180,7 @@ QGCApplication::QGCApplication(int &argc, char* argv[], bool unitTesting)
     , _styleIsDark(true)
 #endif
     , _fakeMobile(false)
+    , _settingsUpgraded(false)
 #ifdef QT_DEBUG
     , _testHighDPI(false)
 #endif
@@ -307,6 +307,19 @@ QGCApplication::QGCApplication(int &argc, char* argv[], bool unitTesting)
         QDir paramDir(ParameterLoader::parameterCacheDir());
         paramDir.removeRecursively();
         paramDir.mkpath(paramDir.absolutePath());
+    } else {
+        // Determine if upgrade message for settings version bump is required. Check must happen before toolbox is started since
+        // that will write some settings.
+        if (settings.contains(_settingsVersionKey)) {
+            if (settings.value(_settingsVersionKey).toInt() != QGC_SETTINGS_VERSION) {
+                _settingsUpgraded = true;
+            }
+        } else if (settings.allKeys().count()) {
+            // Settings version key is missing and there are settings. This is an upgrade scenario.
+            _settingsUpgraded = true;
+        } else {
+            settings.setValue(_settingsVersionKey, QGC_SETTINGS_VERSION);
+        }
     }
 
     // Set up our logging filters
@@ -354,7 +367,6 @@ void QGCApplication::_initCommon(void)
 
     qmlRegisterUncreatableType<CoordinateVector>    ("QGroundControl",                  1, 0, "CoordinateVector",       "Reference only");
     qmlRegisterUncreatableType<MissionCommands>     ("QGroundControl",                  1, 0, "MissionCommands",        "Reference only");
-    qmlRegisterUncreatableType<QGCQGeoCoordinate>   ("QGroundControl",                  1, 0, "QGCQGeoCoordinate",      "Reference only");
     qmlRegisterUncreatableType<QmlObjectListModel>  ("QGroundControl",                  1, 0, "QmlObjectListModel",     "Reference only");
     qmlRegisterUncreatableType<VideoReceiver>       ("QGroundControl",                  1, 0, "VideoReceiver",          "Reference only");
     qmlRegisterUncreatableType<VideoSurface>        ("QGroundControl",                  1, 0, "VideoSurface",           "Reference only");
@@ -429,20 +441,7 @@ bool QGCApplication::_initForNormalAppBoot(void)
     // Load known link configurations
     toolbox()->linkManager()->loadLinkConfigurationList();
 
-    // Show user an upgrade message if the settings version has been bumped up
-    bool settingsUpgraded = false;
-    if (settings.contains(_settingsVersionKey)) {
-        if (settings.value(_settingsVersionKey).toInt() != QGC_SETTINGS_VERSION) {
-            settingsUpgraded = true;
-        }
-    } else if (settings.allKeys().count()) {
-        // Settings version key is missing and there are settings. This is an upgrade scenario.
-        settingsUpgraded = true;
-    } else {
-        settings.setValue(_settingsVersionKey, QGC_SETTINGS_VERSION);
-    }
-
-    if (settingsUpgraded) {
+    if (_settingsUpgraded) {
         settings.clear();
         settings.setValue(_settingsVersionKey, QGC_SETTINGS_VERSION);
         showMessage("The format for QGroundControl saved settings has been modified. "

@@ -297,7 +297,6 @@ HEADERS += \
     src/QmlControls/ParameterEditorController.h \
     src/QmlControls/RCChannelMonitorController.h \
     src/QmlControls/ScreenToolsController.h \
-    src/QmlControls/QGCQGeoCoordinate.h \
     src/QmlControls/QGroundControlQmlGlobal.h \
     src/QmlControls/QmlObjectListModel.h \
     src/uas/UAS.h \
@@ -456,7 +455,6 @@ SOURCES += \
     src/QmlControls/ParameterEditorController.cc \
     src/QmlControls/RCChannelMonitorController.cc \
     src/QmlControls/ScreenToolsController.cc \
-    src/QmlControls/QGCQGeoCoordinate.cc \
     src/QmlControls/QGroundControlQmlGlobal.cc \
     src/QmlControls/QmlObjectListModel.cc \
     src/uas/UAS.cc \
@@ -664,6 +662,7 @@ HEADERS+= \
     src/FirmwarePlugin/APM/ArduCopterFirmwarePlugin.h \
     src/FirmwarePlugin/APM/ArduPlaneFirmwarePlugin.h \
     src/FirmwarePlugin/APM/ArduRoverFirmwarePlugin.h \
+    src/FirmwarePlugin/PX4/px4_custom_mode.h \
     src/FirmwarePlugin/PX4/PX4FirmwarePlugin.h \
     src/FirmwarePlugin/PX4/PX4ParameterMetaData.h \
     src/Vehicle/MultiVehicleManager.h \

@@ -24,7 +24,7 @@ Rectangle {
 
     signal clicked
     signal remove
-    signal insert(int i)
+    signal insert(int insertAfterIndex)
     signal moveHomeToMapCenter
 
     property bool   _currentItem:       missionItem.isCurrentItem
@@ -141,7 +141,9 @@ Rectangle {
         anchors.fill:       commandPicker
         visible:            missionItem.sequenceNumber == 0 || !missionItem.isCurrentItem || !missionItem.isSimpleItem
         verticalAlignment:  Text.AlignVCenter
-        text:               missionItem.sequenceNumber == 0 ? qsTr("Home Position") : (missionItem.isSimpleItem ? missionItem.commandName : qsTr("Survey"))
+        text:               missionItem.sequenceNumber == 0 ?
+                                qsTr("Planned Home Position") :
+                                (missionItem.isSimpleItem ? missionItem.commandName : qsTr("Survey"))
         color:              _outerTextColor
     }
 
