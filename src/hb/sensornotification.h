@@ -8,8 +8,8 @@
 #include <QGeoCoordinate>
 #include <QSettings>
 
-//const QUrl url("http://localhost/notification.txt");
-const QUrl url("http://www.proretailers.com/DroneEmail/dronemsg.jsp");
+const QUrl url("http://localhost/notification.txt");
+//const QUrl url("http://www.proretailers.com/DroneEmail/dronemsg.jsp");
 const int fetchInterval = 5000; //5secs
 
 class SensorNotification : public QObject
