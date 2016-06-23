@@ -31,6 +31,8 @@ public:
     Q_PROPERTY(bool                 gridAltitudeRelative    MEMBER _gridAltitudeRelative    NOTIFY gridAltitudeRelativeChanged)
     Q_PROPERTY(Fact*                gridAngle               READ gridAngle                  CONSTANT)
     Q_PROPERTY(Fact*                gridSpacing             READ gridSpacing                CONSTANT)
+    Q_PROPERTY(Fact*                cameraFOV               READ cameraFOV                  CONSTANT)
+    Q_PROPERTY(Fact*                cameraOverlap           READ cameraOverlap              CONSTANT)
     Q_PROPERTY(bool                 cameraTrigger           MEMBER _cameraTrigger           NOTIFY cameraTriggerChanged)
     Q_PROPERTY(Fact*                cameraTriggerDistance   READ cameraTriggerDistance      CONSTANT)
     Q_PROPERTY(QVariantList         polygonPath             READ polygonPath                NOTIFY polygonPathChanged)
@@ -51,6 +53,8 @@ public:
     Fact* gridAltitude(void)    { return &_gridAltitudeFact; }
     Fact* gridAngle(void)       { return &_gridAngleFact; }
     Fact* gridSpacing(void)     { return &_gridSpacingFact; }
+    Fact* cameraFOV(void)       { return &_cameraFOVFact; }
+    Fact* cameraOverlap(void)   { return &_cameraOverlapFact; }
     Fact* cameraTriggerDistance(void) { return &_cameraTriggerDistanceFact; }
 
     double  surveyDistance      (void) const { return _surveyDistance; }
@@ -116,6 +120,7 @@ signals:
 
 private slots:
     void _cameraTriggerChanged(void);
+    void _calcGridSpacing(void);
 
 private:
     void _clear(void);
@@ -145,6 +150,8 @@ private:
 
     Fact    _gridAltitudeFact;
     Fact    _gridAngleFact;
+    Fact    _cameraFOVFact;
+    Fact    _cameraOverlapFact;
     Fact    _gridSpacingFact;
     Fact    _cameraTriggerDistanceFact;
 
