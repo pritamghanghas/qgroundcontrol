@@ -48,7 +48,7 @@ Rectangle {
         }
 
         Repeater {
-            model: [ missionItem.gridAltitude, missionItem.gridAngle, missionItem.gridSpacing ]
+            model: [ missionItem.gridAltitude, missionItem.gridAngle, missionItem.cameraFOV, missionItem.cameraOverlap, missionItem.gridSpacing ]
 
             Item {
                 anchors.left:   parent.left

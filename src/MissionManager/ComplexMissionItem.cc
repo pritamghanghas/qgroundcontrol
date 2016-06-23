@@ -38,15 +38,23 @@ ComplexMissionItem::ComplexMissionItem(Vehicle* vehicle, QObject* parent)
     , _gridAltitudeRelative(true)
     , _gridAltitudeFact (0, "Altitude:",        FactMetaData::valueTypeDouble)
     , _gridAngleFact    (0, "Grid angle:",      FactMetaData::valueTypeDouble)
+    , _cameraFOVFact    (0, "Camera FOV:",      FactMetaData::valueTypeDouble)
+    , _cameraOverlapFact (0, "Camera Overlay (%):", FactMetaData::valueTypeUint8)
     , _gridSpacingFact  (0, "Grid spacing:",    FactMetaData::valueTypeDouble)
     , _cameraTriggerDistanceFact(0, "Camera trigger distance", FactMetaData::valueTypeDouble)
 {
     _gridAltitudeFact.setRawValue(25);
+    _cameraFOVFact.setRawValue(40);
+    _cameraOverlapFact.setRawValue(20);
     _gridSpacingFact.setRawValue(10);
     _cameraTriggerDistanceFact.setRawValue(25);
+    _calcGridSpacing();
 
-    connect(&_gridSpacingFact,  &Fact::valueChanged, this, &ComplexMissionItem::_generateGrid);
-    connect(&_gridAngleFact,    &Fact::valueChanged, this, &ComplexMissionItem::_generateGrid);
+    connect(&_gridSpacingFact,   &Fact::valueChanged, this, &ComplexMissionItem::_generateGrid);
+    connect(&_gridAngleFact,     &Fact::valueChanged, this, &ComplexMissionItem::_generateGrid);
+    connect(&_gridAltitudeFact,  &Fact::valueChanged, this, &ComplexMissionItem::_calcGridSpacing);
+    connect(&_cameraFOVFact,     &Fact::valueChanged, this, &ComplexMissionItem::_calcGridSpacing);
+    connect(&_cameraOverlapFact, &Fact::valueChanged, this, &ComplexMissionItem::_calcGridSpacing);
 
     connect(this, &ComplexMissionItem::cameraTriggerChanged, this, &ComplexMissionItem::_cameraTriggerChanged);
 }
@@ -505,4 +513,19 @@ void ComplexMissionItem::_cameraTriggerChanged(void)
         // If we have grid turn on/off camera trigger will add/remove two camera trigger mission items
         emit lastSequenceNumberChanged(lastSequenceNumber());
     }
+}
+
+void ComplexMissionItem::_calcGridSpacing()
+{
+    double fovRadians = (M_PI / 180.0) * _cameraFOVFact.rawValue().toDouble();
+    quint8 overlapPercentage = _cameraOverlapFact.rawValue().toUInt();
+    double gridAlt = _gridAltitudeFact.rawValue().toDouble();
+
+    double cameraViewRadius = gridAlt*tan(fovRadians/2);
+    // take into account the overlap
+    cameraViewRadius = cameraViewRadius - cameraViewRadius*overlapPercentage/100;
+
+    _gridSpacingFact.setRawValue(cameraViewRadius*2);
+    _cameraTriggerDistanceFact.setRawValue(cameraViewRadius);
+    qDebug() << "values are " << fovRadians << overlapPercentage << gridAlt << cameraViewRadius;
 }
