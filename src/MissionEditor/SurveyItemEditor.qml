@@ -108,6 +108,25 @@ Rectangle {
             }
         }
 
+        Item {
+            anchors.left:   parent.left
+            anchors.right:  parent.right
+            height:         fltTextField.height
+
+            QGCLabel {
+                anchors.baseline:   fltTextField.baseline
+                anchors.left:       parent.left
+                text:               qsTr("Est. Flt. Time:")
+            }
+
+            QGCLabel {
+                id:             fltTextField
+                anchors.right:  parent.right
+                width:          _editFieldWidth
+                text:           new Date(missionItem.gridApproxFlightTime * 1000).toISOString().substr(11, 8);
+            }
+        }
+
         QGCButton {
             text: _addPointsMode ? qsTr("Finish Polygon") : qsTr("Draw Polygon")
             onClicked: {

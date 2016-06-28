@@ -11,7 +11,9 @@
 #include "ComplexMissionItem.h"
 #include "JsonHelper.h"
 #include "MissionController.h"
+#include "ParameterLoader.h"
 #include "QGCGeo.h"
+#include <QGeoRoute>
 
 #include <QPolygonF>
 
@@ -36,11 +38,12 @@ ComplexMissionItem::ComplexMissionItem(Vehicle* vehicle, QObject* parent)
     , _dirty(false)
     , _cameraTrigger(false)
     , _gridAltitudeRelative(true)
+    , _gridApproxFlightTime(0)
     , _gridAltitudeFact (0, "Altitude:",        FactMetaData::valueTypeDouble)
     , _gridAngleFact    (0, "Grid angle:",      FactMetaData::valueTypeDouble)
-    , _cameraFOVFact    (0, "Camera FOV:",      FactMetaData::valueTypeDouble)
+    , _cameraFOVFact    (0, " Camera FOV:",      FactMetaData::valueTypeDouble)
     , _cameraOverlapFact (0, "Camera Overlay (%):", FactMetaData::valueTypeUint8)
-    , _gridSpacingFact  (0, "Grid spacing:",    FactMetaData::valueTypeDouble)
+    , _gridSpacingFact   (0, "Grid spacing:",    FactMetaData::valueTypeDouble)
     , _cameraTriggerDistanceFact(0, "Camera trigger distance", FactMetaData::valueTypeDouble)
 {
     _gridAltitudeFact.setRawValue(25);
@@ -283,6 +286,7 @@ void ComplexMissionItem::_generateGrid(void)
     // Generate grid
     _gridGenerator(polygonPoints, gridPoints);
 
+
     // Convert to Geo and set altitude
     for (int i=0; i<gridPoints.count(); i++) {
         QPointF& point = gridPoints[i];
@@ -298,6 +302,9 @@ void ComplexMissionItem::_generateGrid(void)
         setCoordinate(_gridPoints.first().value<QGeoCoordinate>());
         _setExitCoordinate(_gridPoints.last().value<QGeoCoordinate>());
     }
+
+    // calculate estimated flight time
+    _calcuateFlightTime(_gridPoints);
 }
 
 QPointF ComplexMissionItem::_rotatePoint(const QPointF& point, const QPointF& origin, double angle)
@@ -457,7 +464,7 @@ void ComplexMissionItem::_gridGenerator(const QList<QPointF>& polygonPoints,  QL
     }
 }
 
-QmlObjectListModel* ComplexMissionItem::getMissionItems(void) const
+QmlObjectListModel* ComplexMissionItem::getMissionItems(void)
 {
     QmlObjectListModel* pMissionItems = new QmlObjectListModel;
 
@@ -528,4 +535,45 @@ void ComplexMissionItem::_calcGridSpacing()
     _gridSpacingFact.setRawValue(cameraViewRadius*2);
     _cameraTriggerDistanceFact.setRawValue(cameraViewRadius);
     qDebug() << "values are " << fovRadians << overlapPercentage << gridAlt << cameraViewRadius;
+}
+
+void ComplexMissionItem::_calcuateFlightTime(const QVariantList &gridPoints)
+{
+    if (!gridPoints.count()) {
+        return;
+    }
+
+    double totalTravelDistance = 0;
+    double approxFlightTime = 0;
+
+    ParameterLoader *parameterLoader = _vehicle->getParameterLoader();
+    double topSpeed    = parameterLoader->getFact(-1, "WPNAV_SPEED")->rawValue().toDouble()/100; // m/s
+    double accelration = parameterLoader->getFact(-1, "WPNAV_ACCEL")->rawValue().toDouble()/100; // m/s/s
+
+    QGeoCoordinate lastCoord;
+    for (int i=0; i<gridPoints.count(); i++) {
+        QGeoCoordinate coord = _gridPoints[i].value<QGeoCoordinate>();
+
+        // accumulate distance
+        if(lastCoord.isValid()) {
+            double travelDistance = lastCoord.distanceTo(coord);
+            totalTravelDistance += travelDistance;
+            double timeToMaxSpeed = topSpeed/accelration;
+            double distanceToMaxSpeed = (accelration*timeToMaxSpeed*timeToMaxSpeed)/2;
+            double timeForTravel = 0;
+            if(distanceToMaxSpeed <= travelDistance/2) {
+                timeForTravel += 2*sqrt(distanceToMaxSpeed*2/accelration); // first and last covered
+                timeForTravel += (travelDistance-(distanceToMaxSpeed*2))/topSpeed; // mid segment
+            } else {
+                timeForTravel += 2*sqrt(travelDistance/accelration); // first and last covered
+            }
+            approxFlightTime += timeForTravel;
+        }
+
+        lastCoord = coord;
+    }
+
+    // reduce 5% as copter will always be slightly faster than our calculation
+    _gridApproxFlightTime = approxFlightTime*0.95;
+    emit gridApproxFlightTimeChanged();
 }
