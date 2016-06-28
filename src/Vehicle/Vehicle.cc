@@ -67,6 +67,8 @@ Vehicle::Vehicle(LinkInterface*             link,
     , _vehicleType(vehicleType)
     , _firmwarePlugin(NULL)
     , _autopilotPlugin(NULL)
+    , _mavlink(NULL)
+    , _soloFirmware(false)
     , _joystickMode(JoystickModeRC)
     , _joystickEnabled(false)
     , _uas(NULL)
@@ -792,7 +794,7 @@ void Vehicle::_sendMessageOnLink(LinkInterface* link, mavlink_message_t message)
     _firmwarePlugin->adjustOutgoingMavlinkMessage(this, &message);
 
     static const uint8_t messageKeys[256] = MAVLINK_MESSAGE_CRCS;
-    mavlink_finalize_message_chan(&message, _mavlink->getSystemId(), _mavlink->getComponentId(), link->getMavlinkChannel(), message.len, messageKeys[message.msgid]);
+    mavlink_finalize_message_chan(&message, _mavlink->getSystemId(), _mavlink->getComponentId(), link->getMavlinkChannel(), message.len, message.len, messageKeys[message.msgid]);
 
     // Write message into buffer, prepending start sign
     uint8_t buffer[MAVLINK_MAX_PACKET_LEN];
@@ -1405,6 +1407,11 @@ bool Vehicle::fixedWing(void) const
     return vehicleType() == MAV_TYPE_FIXED_WING;
 }
 
+bool Vehicle::rover(void) const
+{
+    return vehicleType() == MAV_TYPE_GROUND_ROVER;
+}
+
 bool Vehicle::multiRotor(void) const
 {
     switch (vehicleType()) {
@@ -1690,6 +1697,14 @@ void Vehicle::rebootVehicle()
 int Vehicle::defaultComponentId(void)
 {
     return _parameterLoader->defaultComponenentId();
+}
+
+void Vehicle::setSoloFirmware(bool soloFirmware)
+{
+    if (soloFirmware != _soloFirmware) {
+        _soloFirmware = soloFirmware;
+        emit soloFirmwareChanged(soloFirmware);
+    }
 }
 
 const char* VehicleGPSFactGroup::_hdopFactName =                "hdop";
