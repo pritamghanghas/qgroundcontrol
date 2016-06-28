@@ -35,6 +35,7 @@ public:
     Q_PROPERTY(Fact*                cameraOverlap           READ cameraOverlap              CONSTANT)
     Q_PROPERTY(bool                 cameraTrigger           MEMBER _cameraTrigger           NOTIFY cameraTriggerChanged)
     Q_PROPERTY(Fact*                cameraTriggerDistance   READ cameraTriggerDistance      CONSTANT)
+    Q_PROPERTY(double               gridApproxFlightTime    READ gridApproxFlightTime       NOTIFY gridApproxFlightTimeChanged)
     Q_PROPERTY(QVariantList         polygonPath             READ polygonPath                NOTIFY polygonPathChanged)
     Q_PROPERTY(int                  lastSequenceNumber      READ lastSequenceNumber         NOTIFY lastSequenceNumberChanged)
     Q_PROPERTY(QVariantList         gridPoints              READ gridPoints                 NOTIFY gridPointsChanged)
@@ -56,6 +57,7 @@ public:
     Fact* cameraFOV(void)       { return &_cameraFOVFact; }
     Fact* cameraOverlap(void)   { return &_cameraOverlapFact; }
     Fact* cameraTriggerDistance(void) { return &_cameraTriggerDistanceFact; }
+    double gridApproxFlightTime(void)  { return _gridApproxFlightTime; }
 
     double  surveyDistance      (void) const { return _surveyDistance; }
     int     cameraShots         (void) const { return _cameraShots; }
@@ -70,7 +72,7 @@ public:
 
     /// Returns the mission items associated with the complex item. Caller is responsible for freeing. Calling
     /// delete on returned QmlObjectListModel will free all memory including internal items.
-    QmlObjectListModel* getMissionItems(void) const;
+    QmlObjectListModel* getMissionItems(void);
 
     /// Load the complex mission item from Json
     ///     @param complexObject Complex mission item json object
@@ -113,6 +115,7 @@ signals:
     void gridPointsChanged              (void);
     void cameraTriggerChanged           (bool cameraTrigger);
     void gridAltitudeRelativeChanged    (bool gridAltitudeRelative);
+    void gridApproxFlightTimeChanged    (void);
 
     void surveyDistanceChanged          (double surveyDistance);
     void cameraShotsChanged             (int cameraShots);
@@ -132,6 +135,7 @@ private:
     void _intersectLinesWithRect(const QList<QLineF>& lineList, const QRectF& boundRect, QList<QLineF>& resultLines);
     void _intersectLinesWithPolygon(const QList<QLineF>& lineList, const QPolygonF& polygon, QList<QLineF>& resultLines);
     void _adjustLineDirection(const QList<QLineF>& lineList, QList<QLineF>& resultLines);
+    void _calcuateFlightTime(const QVariantList& gridPoints);
 
     int                 _sequenceNumber;
     bool                _dirty;
@@ -147,6 +151,7 @@ private:
     double              _surveyDistance;
     int                 _cameraShots;
     double              _coveredArea;
+    double              _gridApproxFlightTime;
 
     Fact    _gridAltitudeFact;
     Fact    _gridAngleFact;
