@@ -111,6 +111,7 @@ private:
     void _intersectLinesWithRect(const QList<QLineF>& lineList, const QRectF& boundRect, QList<QLineF>& resultLines);
     void _intersectLinesWithPolygon(const QList<QLineF>& lineList, const QPolygonF& polygon, QList<QLineF>& resultLines);
     void _calcuateFlightTime(const QVariantList& gridPoints);
+    QList<QPointF> boundingPolygon(const QList<QPointF>& polygon);
 
     int                 _sequenceNumber;
     bool                _dirty;

@@ -14,8 +14,15 @@
 #include "ParameterLoader.h"
 #include "QGCGeo.h"
 #include <QGeoRoute>
-
 #include <QPolygonF>
+
+#include <boost/geometry.hpp>
+#include <boost/geometry/geometries/polygon.hpp>
+#include <boost/geometry/geometries/adapted/boost_tuple.hpp>
+#include <boost/geometry/geometries/register/point.hpp>
+
+using namespace std;
+BOOST_GEOMETRY_REGISTER_BOOST_TUPLE_CS(cs::cartesian)
 
 QGC_LOGGING_CATEGORY(ComplexMissionItemLog, "ComplexMissionItemLog")
 
@@ -86,6 +93,7 @@ void ComplexMissionItem::clearPolygon(void)
 void ComplexMissionItem::addPolygonCoordinate(const QGeoCoordinate coordinate)
 {
     _polygonPath << QVariant::fromValue(coordinate);
+
     emit polygonPathChanged();
 
     int pointCount = _polygonPath.count();
@@ -283,6 +291,10 @@ void ComplexMissionItem::_generateGrid(void)
         qCDebug(ComplexMissionItemLog) << _polygonPath[i].value<QGeoCoordinate>() << polygonPoints.last().x() << polygonPoints.last().y();
     }
 
+    if (polygonPoints.count() >= 4) {
+        polygonPoints = boundingPolygon(polygonPoints);
+    }
+
     // Generate grid
     _gridGenerator(polygonPoints, gridPoints);
 
@@ -303,12 +315,28 @@ void ComplexMissionItem::_generateGrid(void)
         _setExitCoordinate(_gridPoints.last().value<QGeoCoordinate>());
     }
 
+    // make sure that poygon path also has only the bounding polygon
+    QVariantList bondingPolygonPath;
+    for (int i=0; i<polygonPoints.count(); i++) {
+        QPointF& point = polygonPoints[i];
+
+        QGeoCoordinate geoCoord;
+        convertNedToGeo(-point.y(), point.x(), 0, tangentOrigin, &geoCoord);
+        bondingPolygonPath += QVariant::fromValue(geoCoord);
+    }
+    _polygonPath = bondingPolygonPath;
+    emit polygonPathChanged();
+
     // calculate estimated flight time
     _calcuateFlightTime(_gridPoints);
 }
 
 QPointF ComplexMissionItem::_rotatePoint(const QPointF& point, const QPointF& origin, double angle)
 {
+    if (!angle) {
+        return point;
+    }
+
     QPointF rotated;
     double radians = (M_PI / 180.0) * angle;
 
@@ -409,8 +437,6 @@ void ComplexMissionItem::_gridGenerator(const QList<QPointF>& polygonPoints,  QL
 
     gridPoints.clear();
 
-    // Convert polygon to bounding rect
-
     qCDebug(ComplexMissionItemLog) << "Polygon";
     QPolygonF polygon;
     for (int i=0; i<polygonPoints.count(); i++) {
@@ -422,14 +448,17 @@ void ComplexMissionItem::_gridGenerator(const QList<QPointF>& polygonPoints,  QL
     QPointF center = smallBoundRect.center();
     qCDebug(ComplexMissionItemLog) << "Bounding rect" << smallBoundRect.topLeft().x() << smallBoundRect.topLeft().y() << smallBoundRect.bottomRight().x() << smallBoundRect.bottomRight().y();
 
-    // Rotate the bounding rect around it's center to generate the larger bounding rect
-    QPolygonF boundPolygon;
-    boundPolygon << _rotatePoint(smallBoundRect.topLeft(),       center, gridAngle);
-    boundPolygon << _rotatePoint(smallBoundRect.topRight(),      center, gridAngle);
-    boundPolygon << _rotatePoint(smallBoundRect.bottomRight(),   center, gridAngle);
-    boundPolygon << _rotatePoint(smallBoundRect.bottomLeft(),    center, gridAngle);
-    boundPolygon << boundPolygon[0];
-    QRectF largeBoundRect = boundPolygon.boundingRect();
+    QRectF largeBoundRect = smallBoundRect;
+    if (gridAngle) {
+        // Rotate the bounding rect around it's center to generate the larger bounding rect
+        QPolygonF boundPolygon;
+        boundPolygon << _rotatePoint(smallBoundRect.topLeft(),       center, gridAngle);
+        boundPolygon << _rotatePoint(smallBoundRect.topRight(),      center, gridAngle);
+        boundPolygon << _rotatePoint(smallBoundRect.bottomRight(),   center, gridAngle);
+        boundPolygon << _rotatePoint(smallBoundRect.bottomLeft(),    center, gridAngle);
+        boundPolygon << boundPolygon[0];
+        largeBoundRect = boundPolygon.boundingRect();
+    }
     qCDebug(ComplexMissionItemLog) << "Rotated bounding rect" << largeBoundRect.topLeft().x() << largeBoundRect.topLeft().y() << largeBoundRect.bottomRight().x() << largeBoundRect.bottomRight().y();
 
     // Create set of rotated parallel lines within the expanded bounding rect. Make the lines larger than the
@@ -573,7 +602,27 @@ void ComplexMissionItem::_calcuateFlightTime(const QVariantList &gridPoints)
         lastCoord = coord;
     }
 
-    // reduce 5% as copter will always be slightly faster than our calculation
+    // reduce 5% as copter will always be slightly faster than our rough calculation
     _gridApproxFlightTime = approxFlightTime*0.95;
     emit gridApproxFlightTimeChanged();
+}
+
+QList<QPointF> ComplexMissionItem::boundingPolygon(const QList<QPointF>& polygon)
+{
+    typedef boost::tuple<float, float> Point;
+    typedef boost::geometry::model::polygon<Point> BoostPoly;
+
+    BoostPoly poly;
+    foreach(const QPointF& point, polygon) {
+        boost::geometry::append(poly, Point(point.x(), point.y()));
+    }
+    BoostPoly hull;
+    boost::geometry::convex_hull(poly, hull);
+
+    QList<QPointF> hullList;
+    std::vector<boost::tuples::tuple<float, float> >::iterator it;
+    for( it = hull.outer().begin(); it != hull.outer().end(); ++it ) {
+          hullList << QPointF(boost::geometry::get<0>(*it), boost::geometry::get<1>(*it));
+    }
+    return hullList;
 }
