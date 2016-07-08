@@ -198,7 +198,18 @@ Vehicle::Vehicle(LinkInterface*             link,
     connect(_parameterLoader, &ParameterLoader::parameterListProgress, _autopilotPlugin, &AutoPilotPlugin::parameterListProgress);
 
     // Ask the vehicle for firmware version info. This must be MAV_COMP_ID_ALL since we don't know default component id yet.
-    doCommandLong(MAV_COMP_ID_ALL, MAV_CMD_REQUEST_AUTOPILOT_CAPABILITIES, 1 /* request firmware version */);
+
+    mavlink_message_t       versionMsg;
+    mavlink_command_long_t  versionCmd;
+
+    versionCmd.command = MAV_CMD_REQUEST_AUTOPILOT_CAPABILITIES;
+    versionCmd.confirmation = 0;
+    versionCmd.param1 = 1; // Request firmware version
+    versionCmd.param2 = versionCmd.param3 = versionCmd.param4 = versionCmd.param5 = versionCmd.param6 = versionCmd.param7 = 0;
+    versionCmd.target_system = id();
+    versionCmd.target_component = MAV_COMP_ID_ALL;
+    mavlink_msg_command_long_encode(_mavlink->getSystemId(), _mavlink->getComponentId(), &versionMsg, &versionCmd);
+    sendMessageMultiple(versionMsg);
 
     _firmwarePlugin->initializeVehicle(this);
 
@@ -432,6 +443,9 @@ void Vehicle::_mavlinkMessageReceived(LinkInterface* link, mavlink_message_t mes
     case MAVLINK_MSG_ID_AUTOPILOT_VERSION:
         _handleAutopilotVersion(message);
         break;
+    case MAVLINK_MSG_ID_WIND_COV:
+        _handleWindCov(message);
+        break;
 
     // Following are ArduPilot dialect messages
 
@@ -507,7 +521,7 @@ void Vehicle::_handleExtendedSysState(mavlink_message_t& message)
     mavlink_msg_extended_sys_state_decode(&message, &extendedState);
 
     switch (extendedState.landed_state) {
-        case MAV_LANDED_STATE_UNDEFINED:
+    case MAV_LANDED_STATE_UNDEFINED:
         break;
     case MAV_LANDED_STATE_ON_GROUND:
         setFlying(false);
@@ -529,6 +543,19 @@ void Vehicle::_handleVibration(mavlink_message_t& message)
     _vibrationFactGroup.clipCount1()->setRawValue(vibration.clipping_0);
     _vibrationFactGroup.clipCount2()->setRawValue(vibration.clipping_1);
     _vibrationFactGroup.clipCount3()->setRawValue(vibration.clipping_2);
+}
+
+void Vehicle::_handleWindCov(mavlink_message_t& message)
+{
+    mavlink_wind_cov_t wind;
+    mavlink_msg_wind_cov_decode(&message, &wind);
+
+    float direction = qRadiansToDegrees(qAtan2(wind.wind_y, wind.wind_x));
+    float speed = qSqrt(qPow(wind.wind_x, 2) + qPow(wind.wind_y, 2));
+
+    _windFactGroup.direction()->setRawValue(direction);
+    _windFactGroup.speed()->setRawValue(speed);
+    _windFactGroup.verticalSpeed()->setRawValue(0);
 }
 
 void Vehicle::_handleWind(mavlink_message_t& message)
@@ -1279,6 +1306,10 @@ void Vehicle::_missionManagerError(int errorCode, const QString& errorMsg)
 void Vehicle::_addNewMapTrajectoryPoint(void)
 {
     if (_mapTrajectoryHaveFirstCoordinate) {
+        // Keep three minutes of trajectory
+        if (_mapTrajectoryList.count() * _mapTrajectoryMsecsBetweenPoints > 3 * 1000 * 60) {
+            _mapTrajectoryList.removeAt(0)->deleteLater();
+        }
         _mapTrajectoryList.append(new CoordinateVector(_mapTrajectoryLastCoordinate, _coordinate, this));
     }
     _mapTrajectoryHaveFirstCoordinate = true;
