@@ -29,8 +29,11 @@ public:
     Q_PROPERTY(bool                 gridAltitudeRelative    MEMBER _gridAltitudeRelative    NOTIFY gridAltitudeRelativeChanged)
     Q_PROPERTY(Fact*                gridAngle               READ gridAngle                  CONSTANT)
     Q_PROPERTY(Fact*                gridSpacing             READ gridSpacing                CONSTANT)
+    Q_PROPERTY(Fact*                cameraFOV               READ cameraFOV                  CONSTANT)
+    Q_PROPERTY(Fact*                cameraOverlap           READ cameraOverlap              CONSTANT)
     Q_PROPERTY(bool                 cameraTrigger           MEMBER _cameraTrigger           NOTIFY cameraTriggerChanged)
     Q_PROPERTY(Fact*                cameraTriggerDistance   READ cameraTriggerDistance      CONSTANT)
+    Q_PROPERTY(double               gridApproxFlightTime    READ gridApproxFlightTime       NOTIFY gridApproxFlightTimeChanged)
     Q_PROPERTY(QVariantList         polygonPath             READ polygonPath                NOTIFY polygonPathChanged)
     Q_PROPERTY(int                  lastSequenceNumber      READ lastSequenceNumber         NOTIFY lastSequenceNumberChanged)
     Q_PROPERTY(QVariantList         gridPoints              READ gridPoints                 NOTIFY gridPointsChanged)
@@ -44,14 +47,17 @@ public:
     Fact* gridAltitude(void)    { return &_gridAltitudeFact; }
     Fact* gridAngle(void)       { return &_gridAngleFact; }
     Fact* gridSpacing(void)     { return &_gridSpacingFact; }
+    Fact* cameraFOV(void)       { return &_cameraFOVFact; }
+    Fact* cameraOverlap(void)   { return &_cameraOverlapFact; }
     Fact* cameraTriggerDistance(void) { return &_cameraTriggerDistanceFact; }
+    double gridApproxFlightTime(void)  { return _gridApproxFlightTime; }
 
     /// @return The last sequence number used by this item. Takes into account child items of the complex item
     int lastSequenceNumber(void) const;
 
     /// Returns the mission items associated with the complex item. Caller is responsible for freeing. Calling
     /// delete on returned QmlObjectListModel will free all memory including internal items.
-    QmlObjectListModel* getMissionItems(void) const;
+    QmlObjectListModel* getMissionItems(void);
 
     /// Load the complex mission item from Json
     ///     @param complexObject Complex mission item json object
@@ -89,9 +95,11 @@ signals:
     void gridPointsChanged              (void);
     void cameraTriggerChanged           (bool cameraTrigger);
     void gridAltitudeRelativeChanged    (bool gridAltitudeRelative);
+    void gridApproxFlightTimeChanged    (void);
 
 private slots:
     void _cameraTriggerChanged(void);
+    void _calcGridSpacing(void);
 
 private:
     void _clear(void);
@@ -102,6 +110,8 @@ private:
     QPointF _rotatePoint(const QPointF& point, const QPointF& origin, double angle);
     void _intersectLinesWithRect(const QList<QLineF>& lineList, const QRectF& boundRect, QList<QLineF>& resultLines);
     void _intersectLinesWithPolygon(const QList<QLineF>& lineList, const QPolygonF& polygon, QList<QLineF>& resultLines);
+    void _calcuateFlightTime(const QVariantList& gridPoints);
+    QList<QPointF> boundingPolygon(const QList<QPointF>& polygon);
 
     int                 _sequenceNumber;
     bool                _dirty;
@@ -113,9 +123,12 @@ private:
     double              _gridAngle;
     bool                _cameraTrigger;
     bool                _gridAltitudeRelative;
+    double              _gridApproxFlightTime;
 
     Fact    _gridAltitudeFact;
     Fact    _gridAngleFact;
+    Fact    _cameraFOVFact;
+    Fact    _cameraOverlapFact;
     Fact    _gridSpacingFact;
     Fact    _cameraTriggerDistanceFact;
 

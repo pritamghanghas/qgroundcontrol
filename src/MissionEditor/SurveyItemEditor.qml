@@ -48,7 +48,7 @@ Rectangle {
         }
 
         Repeater {
-            model: [ missionItem.gridAltitude, missionItem.gridAngle, missionItem.gridSpacing ]
+            model: [ missionItem.gridAltitude, missionItem.gridAngle, missionItem.cameraFOV, missionItem.cameraOverlap, missionItem.gridSpacing ]
 
             Item {
                 anchors.left:   parent.left
@@ -105,6 +105,25 @@ Rectangle {
                 width:          _editFieldWidth
                 showUnits:      true
                 fact:           missionItem.cameraTriggerDistance
+            }
+        }
+
+        Item {
+            anchors.left:   parent.left
+            anchors.right:  parent.right
+            height:         fltTextField.height
+
+            QGCLabel {
+                anchors.baseline:   fltTextField.baseline
+                anchors.left:       parent.left
+                text:               qsTr("Est. Flt. Time:")
+            }
+
+            QGCLabel {
+                id:             fltTextField
+                anchors.right:  parent.right
+                width:          _editFieldWidth
+                text:           new Date(missionItem.gridApproxFlightTime * 1000).toISOString().substr(11, 8);
             }
         }
 
