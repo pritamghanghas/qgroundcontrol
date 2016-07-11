@@ -196,6 +196,9 @@ QGCApplication::QGCApplication(int &argc, char* argv[], bool unitTesting)
     setAttribute(Qt::AA_DontCreateNativeWidgetSiblings);
 #endif
 
+    // Setup for network proxy support
+    QNetworkProxyFactory::setUseSystemConfiguration(true);
+
 #ifdef Q_OS_LINUX
 #ifndef __mobile__
     if (!_runningUnitTests) {
@@ -271,13 +274,7 @@ QGCApplication::QGCApplication(int &argc, char* argv[], bool unitTesting)
     setOrganizationName(QGC_ORG_NAME);
     setOrganizationDomain(QGC_ORG_DOMAIN);
 
-    QString versionString(GIT_TAG);
-    // stable versions are on tags (v1.2.3)
-    // development versions are full git describe versions (v1.2.3-18-g879e8b3)
-    if (versionString.length() > 8) {
-        versionString.append(" (Development)");
-    }
-    this->setApplicationVersion(versionString);
+    this->setApplicationVersion(QString(GIT_VERSION));
 
     // Set settings format
     QSettings::setDefaultFormat(QSettings::IniFormat);

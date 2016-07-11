@@ -34,14 +34,14 @@ Rectangle {
     property bool   _expanded:          true
     property real   _distance:          _statusValid ? _currentMissionItem.distance : 0
     property real   _altDifference:     _statusValid ? _currentMissionItem.altDifference : 0
-    property real   _gradient:          _statusValid ? Math.atan(_currentMissionItem.altDifference / _currentMissionItem.distance) : 0
+    property real   _gradient:          _statusValid || _currentMissionItem.distance == 0 ? Math.atan(_currentMissionItem.altDifference / _currentMissionItem.distance) : 0
     property real   _gradientPercent:   isNaN(_gradient) ? 0 : _gradient * 100
     property real   _azimuth:           _statusValid ? _currentMissionItem.azimuth : -1
     property bool   _statusValid:       currentMissionItem != undefined
-    property string _distanceText:      _statusValid ? QGroundControl.metersToAppSettingsDistanceUnits(_distance).toFixed(2) + " " + QGroundControl.appSettingsDistanceUnitsString : ""
-    property string _altText:           _statusValid ? QGroundControl.metersToAppSettingsDistanceUnits(_altDifference).toFixed(2) + " " + QGroundControl.appSettingsDistanceUnitsString : ""
-    property string _gradientText:      _statusValid ? _gradientPercent.toFixed(0) + "%" : ""
-    property string _azimuthText:       _statusValid ? Math.round(_azimuth) : ""
+    property string _distanceText:      _statusValid ? QGroundControl.metersToAppSettingsDistanceUnits(_distance).toFixed(2) + " " + QGroundControl.appSettingsDistanceUnitsString : " "
+    property string _altText:           _statusValid ? QGroundControl.metersToAppSettingsDistanceUnits(_altDifference).toFixed(2) + " " + QGroundControl.appSettingsDistanceUnitsString : " "
+    property string _gradientText:      _statusValid ? _gradientPercent.toFixed(0) + "%" : " "
+    property string _azimuthText:       _statusValid ? Math.round(_azimuth) : " "
 
     readonly property real _margins:    ScreenTools.defaultFontPixelWidth
 

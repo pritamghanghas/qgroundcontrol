@@ -129,19 +129,18 @@ LogDownloadController::_processDownload()
 void
 LogDownloadController::_setActiveVehicle(Vehicle* vehicle)
 {
-    if((_uas && vehicle && _uas == vehicle->uas()) || !vehicle ) {
-        return;
-    }
-    _vehicle = vehicle;
-    if (_uas) {
+    if(_uas) {
         _logEntriesModel.clear();
         disconnect(_uas, &UASInterface::logEntry, this, &LogDownloadController::_logEntry);
         disconnect(_uas, &UASInterface::logData,  this, &LogDownloadController::_logData);
         _uas = NULL;
     }
-    _uas = vehicle->uas();
-    connect(_uas, &UASInterface::logEntry, this, &LogDownloadController::_logEntry);
-    connect(_uas, &UASInterface::logData,  this, &LogDownloadController::_logData);
+    _vehicle = vehicle;
+    if(_vehicle) {
+        _uas = vehicle->uas();
+        connect(_uas, &UASInterface::logEntry, this, &LogDownloadController::_logEntry);
+        connect(_uas, &UASInterface::logData,  this, &LogDownloadController::_logData);
+    }
 }
 
 //----------------------------------------------------------------------------------------
@@ -675,6 +674,7 @@ void
 QGCLogModel::append(QGCLogEntry* object)
 {
     beginInsertRows(QModelIndex(), rowCount(), rowCount());
+    QQmlEngine::setObjectOwnership(object, QQmlEngine::CppOwnership);
     _logEntries.append(object);
     endInsertRows();
     emit countChanged();
@@ -688,7 +688,7 @@ QGCLogModel::clear(void)
         beginRemoveRows(QModelIndex(), 0, _logEntries.count());
         while (_logEntries.count()) {
             QGCLogEntry* entry = _logEntries.last();
-            if(entry) delete entry;
+            if(entry) entry->deleteLater();
             _logEntries.removeLast();
         }
         endRemoveRows();

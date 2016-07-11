@@ -19,7 +19,7 @@ message(Qt version $$[QT_VERSION])
 
 include(QGCCommon.pri)
 
-TARGET   = qgroundcontrol
+TARGET   = QGroundControl
 TEMPLATE = app
 
 DebugBuild {
@@ -140,7 +140,7 @@ RC_ICONS = resources/icons/qgroundcontrol.ico
 QMAKE_TARGET_COMPANY = "qgroundcontrol.org"
 QMAKE_TARGET_DESCRIPTION = "Open source ground control app provided by QGroundControl dev team"
 QMAKE_TARGET_COPYRIGHT = "Copyright (C) 2016 QGroundControl Development Team. All rights reserved."
-QMAKE_TARGET_PRODUCT = "qgroundcontrol"
+QMAKE_TARGET_PRODUCT = "QGroundControl"
 
 #
 # Build-specific settings
@@ -571,6 +571,7 @@ HEADERS += \
     src/qgcunittest/MavlinkLogTest.h \
     src/qgcunittest/MessageBoxTest.h \
     src/qgcunittest/MultiSignalSpy.h \
+    src/qgcunittest/ParameterLoaderTest.h \
     src/qgcunittest/RadioConfigTest.h \
     src/qgcunittest/TCPLinkTest.h \
     src/qgcunittest/TCPLoopBackServer.h \
@@ -596,6 +597,7 @@ SOURCES += \
     src/qgcunittest/MavlinkLogTest.cc \
     src/qgcunittest/MessageBoxTest.cc \
     src/qgcunittest/MultiSignalSpy.cc \
+    src/qgcunittest/ParameterLoaderTest.cc \
     src/qgcunittest/RadioConfigTest.cc \
     src/qgcunittest/TCPLinkTest.cc \
     src/qgcunittest/TCPLoopBackServer.cc \
@@ -781,9 +783,8 @@ SOURCES += \
     src/VideoStreaming/VideoStreaming.cc \
     src/VideoStreaming/VideoSurface.cc \
 
-contains (DEFINES, DISABLE_VIDEOSTREAMING) {
+contains (CONFIG, DISABLE_VIDEOSTREAMING) {
     message("Skipping support for video streaming (manual override from command line)")
-    DEFINES -= DISABLE_VIDEOSTREAMING
 # Otherwise the user can still disable this feature in the user_config.pri file.
 } else:exists(user_config.pri):infile(user_config.pri, DEFINES, DISABLE_VIDEOSTREAMING) {
     message("Skipping support for video streaming (manual override from user_config.pri)")
