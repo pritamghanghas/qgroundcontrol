@@ -403,8 +403,6 @@ void RadioComponentController::_inputStickDetect(enum rcCalFunctions function, i
         if (_stickSettleComplete(value)) {
             ChannelInfo* info = &_rgChannelInfo[channel];
             
-            qCDebug(RadioComponentControllerLog) << "_inputStickDetect settle complete, function:channel:value" << function << channel << value;
-            
             // Stick detection is complete. Stick should be at max position.
             // Map the channel to the function
             _rgFunctionChannelMapping[function] = channel;
@@ -413,6 +411,8 @@ void RadioComponentController::_inputStickDetect(enum rcCalFunctions function, i
             // Channel should be at max value, if it is below initial set point the the channel is reversed.
             info->reversed = value < _rcValueSave[channel];
             
+            qCDebug(RadioComponentControllerLog) << "_inputStickDetect settle complete, function:channel:value:reversed" << function << channel << value << info->reversed;
+
             if (info->reversed) {
                 _rgChannelInfo[channel].rcMin = value;
             } else {
@@ -752,7 +752,7 @@ void RadioComponentController::_writeCalibration(void)
         _uas->stopCalibration();
     }
 
-    if (!_px4Vehicle() && _rgChannelInfo[_rgFunctionChannelMapping[rcCalFunctionThrottle]].reversed) {
+    if (!_px4Vehicle() && (_vehicle->vehicleType() == MAV_TYPE_HELICOPTER || _vehicle->multiRotor()) &&  _rgChannelInfo[_rgFunctionChannelMapping[rcCalFunctionThrottle]].reversed) {
         // A reversed throttle could lead to dangerous power up issues if the firmware doesn't handle it absolutely correctly in all places.
         // So in this case fail the calibration for anything other than PX4 which is known to be able to handle this correctly.
         emit throttleReversedCalFailure();
@@ -885,9 +885,9 @@ void RadioComponentController::_stopCalibration(void)
 /// @brief Saves the current channel values, so that we can detect when the use moves an input.
 void RadioComponentController::_rcCalSaveCurrentValues(void)
 {
-	qCDebug(RadioComponentControllerLog) << "_rcCalSaveCurrentValues";
     for (int i = 0; i < _chanMax(); i++) {
         _rcValueSave[i] = _rcRawValue[i];
+        qCDebug(RadioComponentControllerLog) << "_rcCalSaveCurrentValues channel:value" << i << _rcValueSave[i];
     }
 }
 
