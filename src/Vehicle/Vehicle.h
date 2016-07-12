@@ -277,6 +277,9 @@ public:
     Q_PROPERTY(bool                 rover                   READ rover                                                  CONSTANT)
     Q_PROPERTY(bool                 autoDisconnect          MEMBER _autoDisconnect                                      NOTIFY autoDisconnectChanged)
     Q_PROPERTY(QString              prearmError             READ prearmError            WRITE setPrearmError            NOTIFY prearmErrorChanged)
+    Q_PROPERTY(int                  motorCount              READ motorCount                                             CONSTANT)
+    Q_PROPERTY(bool                 coaxialMotors           READ coaxialMotors                                          CONSTANT)
+    Q_PROPERTY(bool                 xConfigMotors           READ xConfigMotors                                          CONSTANT)
 
 
     /// true: Vehicle is flying, false: Vehicle is on ground
@@ -367,6 +370,12 @@ public:
     /// Clear Messages
     Q_INVOKABLE void clearMessages();
 
+    /// Test motor
+    ///     @param motor Motor number, 1-based
+    ///     @param percent 0-no power, 100-full power
+    ///     @param timeoutSecs Number of seconds for motor to run
+    Q_INVOKABLE void motorTest(int motor, int percent, int timeoutSecs);
+
     bool guidedModeSupported(void) const;
     bool pauseVehicleSupported(void) const;
 
@@ -443,7 +452,6 @@ public:
     QStringList flightModes(void);
     QString flightMode(void) const;
     void setFlightMode(const QString& flightMode);
-
 
     bool hilMode(void);
     void setHilMode(bool hilMode);
@@ -540,6 +548,15 @@ public:
     void setSoloFirmware(bool soloFirmware);
 
     int defaultComponentId(void);
+
+    /// @return -1 = Unknown, Number of motors on vehicle
+    int motorCount(void);
+
+    /// @return true: Motors are coaxial like an X8 config, false: Quadcopter for example
+    bool coaxialMotors(void);
+
+    /// @return true: X confiuration, false: Plus configuration
+    bool xConfigMotors(void);
 
 public slots:
     void setLatitude(double latitude);
