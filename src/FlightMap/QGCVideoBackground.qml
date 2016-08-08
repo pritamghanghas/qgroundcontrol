@@ -205,6 +205,10 @@ VideoItem {
             bitrate:        30000;
             fps:            8;
         }
+
+        ListElement {
+            text: "photo";
+        }
     }
 
     ListModel {
@@ -259,6 +263,10 @@ VideoItem {
             var fps = resolutionList.get(resolutionSelectionComboBox.currentIndex).fps;
             var bitrate = resolutionList.get(resolutionSelectionComboBox.currentIndex).bitrate;
             var optString = "-mm " + metringMode + " -awb " + awbMode + " -ex " + exposureMode + " -w " + width + " -h " + height + " -fps " + fps + " -b " + bitrate;
+            if(vflipCheckBox.checked) {
+                optString += " -vf"
+            }
+
             console.log("lets start the video with following optons: " + optString);
             videoBackground.receiver.start(optString)
         }
@@ -583,6 +591,13 @@ VideoItem {
                 onCurrentIndexChanged: {
                     onModeChange();
                 }
+            }
+            QGCCheckBox {
+                id:                 vflipCheckBox
+                text:               qsTr("vflip")
+                checked:            false
+
+                onClicked: onModeChange();
             }
         }
     }
