@@ -275,8 +275,15 @@ public:
     Q_PROPERTY(bool                 multiRotor              READ multiRotor                                             CONSTANT)
     Q_PROPERTY(bool                 vtol                    READ vtol                                                   CONSTANT)
     Q_PROPERTY(bool                 rover                   READ rover                                                  CONSTANT)
+    Q_PROPERTY(bool                 supportsManualControl   READ supportsManualControl                                  CONSTANT)
+    Q_PROPERTY(bool        supportsThrottleModeCenterZero   READ supportsThrottleModeCenterZero                         CONSTANT)
+    Q_PROPERTY(bool                 supportsJSButton        READ supportsJSButton                                       CONSTANT)
+    Q_PROPERTY(bool                 sub                     READ sub                                                    CONSTANT)
     Q_PROPERTY(bool                 autoDisconnect          MEMBER _autoDisconnect                                      NOTIFY autoDisconnectChanged)
     Q_PROPERTY(QString              prearmError             READ prearmError            WRITE setPrearmError            NOTIFY prearmErrorChanged)
+    Q_PROPERTY(int                  motorCount              READ motorCount                                             CONSTANT)
+    Q_PROPERTY(bool                 coaxialMotors           READ coaxialMotors                                          CONSTANT)
+    Q_PROPERTY(bool                 xConfigMotors           READ xConfigMotors                                          CONSTANT)
 
     /// true: Vehicle is flying, false: Vehicle is on ground
     Q_PROPERTY(bool flying      READ flying     WRITE setFlying     NOTIFY flyingChanged)
@@ -289,6 +296,9 @@ public:
 
     /// true: pauseVehicle command is supported
     Q_PROPERTY(bool pauseVehicleSupported READ pauseVehicleSupported CONSTANT)
+
+    /// true: Orbit mode is supported by this vehicle
+    Q_PROPERTY(bool orbitModeSupported READ orbitModeSupported CONSTANT)
 
     // FactGroup object model properties
 
@@ -346,6 +356,13 @@ public:
     /// Command vehicle to change to the specified relatice altitude
     Q_INVOKABLE void guidedModeChangeAltitude(double altitudeRel);
 
+    /// Command vehicle to orbit given center point
+    ///     @param centerCoord Center Coordinates
+    ///     @param radius Distance from vehicle to centerCoord
+    ///     @param velocity Orbit velocity (positive CW, negative CCW)
+    ///     @param altitude Desired Vehicle Altitude
+    Q_INVOKABLE void guidedModeOrbit(const QGeoCoordinate& centerCoord = QGeoCoordinate(), double radius = NAN, double velocity = NAN, double altitude = NAN);
+
     /// Command vehicle to pause at current location. If vehicle supports guide mode, vehicle will be left
     /// in guided mode after pause.
     Q_INVOKABLE void pauseVehicle(void);
@@ -362,8 +379,18 @@ public:
     /// Clear Messages
     Q_INVOKABLE void clearMessages();
 
+#if 0
+    // Temporarily removed, waiting for new command implementation
+    /// Test motor
+    ///     @param motor Motor number, 1-based
+    ///     @param percent 0-no power, 100-full power
+    ///     @param timeoutSecs Number of seconds for motor to run
+    Q_INVOKABLE void motorTest(int motor, int percent, int timeoutSecs);
+#endif
+
     bool guidedModeSupported(void) const;
     bool pauseVehicleSupported(void) const;
+    bool orbitModeSupported(void) const;
 
     // Property accessors
 
@@ -438,7 +465,6 @@ public:
     QString flightMode(void) const;
     void setFlightMode(const QString& flightMode);
 
-
     bool hilMode(void);
     void setHilMode(bool hilMode);
 
@@ -446,6 +472,12 @@ public:
     bool multiRotor(void) const;
     bool vtol(void) const;
     bool rover(void) const;
+    bool sub(void) const;
+
+    bool supportsManualControl(void) const;
+    bool supportsThrottleModeCenterZero(void) const;
+    bool supportsRadio(void) const;
+    bool supportsJSButton(void) const;
 
     void setFlying(bool flying);
     void setGuidedMode(bool guidedMode);
@@ -534,6 +566,15 @@ public:
     void setSoloFirmware(bool soloFirmware);
 
     int defaultComponentId(void);
+
+    /// @return -1 = Unknown, Number of motors on vehicle
+    int motorCount(void);
+
+    /// @return true: Motors are coaxial like an X8 config, false: Quadcopter for example
+    bool coaxialMotors(void);
+
+    /// @return true: X confiuration, false: Plus configuration
+    bool xConfigMotors(void);
 
 public slots:
     void setLatitude(double latitude);
