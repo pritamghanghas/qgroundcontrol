@@ -15,8 +15,9 @@
 
 const char* guided_mode_not_supported_by_vehicle = "Guided mode not supported by Vehicle.";
 
-bool FirmwarePlugin::isCapable(FirmwareCapabilities capabilities)
+bool FirmwarePlugin::isCapable(const Vehicle *vehicle, FirmwareCapabilities capabilities)
 {
+    Q_UNUSED(vehicle);
     Q_UNUSED(capabilities);
     return false;
 }
@@ -80,6 +81,27 @@ int FirmwarePlugin::manualControlReservedButtonCount(void)
     // We don't know whether the firmware is going to used any of these buttons.
     // So reserve them all.
     return -1;
+}
+
+bool FirmwarePlugin::supportsThrottleModeCenterZero(void)
+{
+    // By default, this is supported
+    return true;
+}
+
+bool FirmwarePlugin::supportsManualControl(void)
+{
+    return false;
+}
+
+bool FirmwarePlugin::supportsRadio(void)
+{
+    return true;
+}
+
+bool FirmwarePlugin::supportsJSButton(void)
+{
+    return false;
 }
 
 bool FirmwarePlugin::adjustIncomingMavlinkMessage(Vehicle* vehicle, mavlink_message_t* message)
@@ -180,6 +202,12 @@ void FirmwarePlugin::guidedModeTakeoff(Vehicle* vehicle, double altitudeRel)
     // Not supported by generic vehicle
     Q_UNUSED(vehicle);
     Q_UNUSED(altitudeRel);
+    qgcApp()->showMessage(guided_mode_not_supported_by_vehicle);
+}
+
+void FirmwarePlugin::guidedModeOrbit(Vehicle* /*vehicle*/, const QGeoCoordinate& /*centerCoord*/, double /*radius*/, double /*velocity*/, double /*altitude*/)
+{
+    // Not supported by generic vehicle
     qgcApp()->showMessage(guided_mode_not_supported_by_vehicle);
 }
 

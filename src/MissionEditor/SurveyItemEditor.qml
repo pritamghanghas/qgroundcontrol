@@ -19,10 +19,25 @@ Rectangle {
     //property real   availableWidth    ///< Width for control
     //property var    missionItem       ///< Mission Item for editor
 
-    property bool _addPointsMode:   false
-    property real _margin:          ScreenTools.defaultFontPixelWidth / 2
+    property real _margin: ScreenTools.defaultFontPixelWidth / 2
 
     QGCPalette { id: qgcPal; colorGroupEnabled: true }
+
+    function reset()
+    {
+        missionItem.clearPolygon();
+
+        if (editorMap.polygonDraw.drawingPolygon) {
+            editorMap.polygonDraw.finishCapturePolygon()
+        }
+
+        if (editorMap.polygonDraw.adjustingPolygon) {
+            editorMap.polygonDraw.finishAdjustPolygon()
+        }
+
+//        editorMap.polygonDraw.startCapturePolygon();
+//        editorMap.polygonDraw.finishCapturePolygon();
+    }
 
     Column {
         id:                 editorColumn
@@ -32,19 +47,10 @@ Rectangle {
         anchors.right:      parent.right
         spacing:            _margin
 
-        Connections {
-            target: editorMap
-
-            onMapClicked: {
-                if (_addPointsMode) {
-                    missionItem.addPolygonCoordinate(coordinate)
-                }
-            }
-        }
-
         QGCLabel {
-            text:       qsTr("Fly a grid pattern over a defined area.")
-            wrapMode:   Text.WordWrap
+            wrapMode:       Text.WordWrap
+            font.pointSize: ScreenTools.smallFontPointSize
+            text:           qsTr("Work in progress, be careful!")
         }
 
         Repeater {
@@ -108,14 +114,45 @@ Rectangle {
             }
         }
 
+        Connections {
+            target: editorMap.polygonDraw
+
+            onPolygonCaptureStarted: {
+                missionItem.clearPolygon()
+            }
+
+            onPolygonCaptureFinished: {
+                for (var i=0; i<coordinates.length; i++) {
+                    missionItem.addPolygonCoordinate(coordinates[i])
+                }
+            }
+
+            onPolygonAdjustVertex: missionItem.adjustPolygonCoordinate(vertexIndex, vertexCoordinate)
+        }
+
         QGCButton {
-            text: _addPointsMode ? qsTr("Finish Polygon") : qsTr("Draw Polygon")
+            text:       editorMap.polygonDraw.drawingPolygon ? qsTr("Finish Draw") : qsTr("Draw Polygon")
+            enabled:    ((editorMap.polygonDraw.drawingPolygon && editorMap.polygonDraw.polygonReady) || !editorMap.polygonDraw.drawingPolygon) &&
+                        !editorMap.polygonDraw.adjustingPolygon
+
             onClicked: {
-                if (_addPointsMode) {
-                    _addPointsMode = false
+                if (editorMap.polygonDraw.drawingPolygon) {
+                    editorMap.polygonDraw.finishCapturePolygon()
                 } else {
-                    missionItem.clearPolygon()
-                    _addPointsMode = true
+                    editorMap.polygonDraw.startCapturePolygon()
+                }
+            }
+        }
+
+        QGCButton {
+            text:       editorMap.polygonDraw.adjustingPolygon ? qsTr("Finish Adjust") : qsTr("Adjust Polygon")
+            enabled:    !editorMap.polygonDraw.drawingPolygon
+
+            onClicked: {
+                if (editorMap.polygonDraw.adjustingPolygon) {
+                    editorMap.polygonDraw.finishAdjustPolygon()
+                } else {
+                    editorMap.polygonDraw.startAdjustPolygon(missionItem.polygonPath)
                 }
             }
         }

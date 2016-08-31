@@ -36,6 +36,9 @@ ComplexMissionItem::ComplexMissionItem(Vehicle* vehicle, QObject* parent)
     , _dirty(false)
     , _cameraTrigger(false)
     , _gridAltitudeRelative(true)
+    , _surveyDistance(0.0)
+    , _cameraShots(0)
+    , _coveredArea(0.0)
     , _gridAltitudeFact (0, "Altitude:",        FactMetaData::valueTypeDouble)
     , _gridAngleFact    (0, "Grid angle:",      FactMetaData::valueTypeDouble)
     , _gridSpacingFact  (0, "Grid spacing:",    FactMetaData::valueTypeDouble)
@@ -47,9 +50,52 @@ ComplexMissionItem::ComplexMissionItem(Vehicle* vehicle, QObject* parent)
 
     connect(&_gridSpacingFact,  &Fact::valueChanged, this, &ComplexMissionItem::_generateGrid);
     connect(&_gridAngleFact,    &Fact::valueChanged, this, &ComplexMissionItem::_generateGrid);
+    connect(&_cameraTriggerDistanceFact,    &Fact::valueChanged, this, &ComplexMissionItem::_generateGrid);
 
     connect(this, &ComplexMissionItem::cameraTriggerChanged, this, &ComplexMissionItem::_cameraTriggerChanged);
 }
+
+const ComplexMissionItem& ComplexMissionItem::operator=(const ComplexMissionItem& other)
+{
+    _vehicle = other._vehicle;
+
+    setIsCurrentItem(other._isCurrentItem);
+    setDirty(other._dirty);
+    setAltDifference(other._altDifference);
+    setAltPercent(other._altPercent);
+    setAzimuth(other._azimuth);
+    setDistance(other._distance);
+    setSurveyDistance(other._surveyDistance);
+    setCameraShots(other._cameraShots);
+    setCoveredArea(other._coveredArea);
+
+    return *this;
+}
+
+void ComplexMissionItem::setSurveyDistance(double surveyDistance)
+{
+    if (!qFuzzyCompare(_surveyDistance, surveyDistance)) {
+        _surveyDistance = surveyDistance;
+        emit surveyDistanceChanged(_surveyDistance);
+    }
+}
+
+void ComplexMissionItem::setCameraShots(int cameraShots)
+{
+    if (_cameraShots != cameraShots) {
+        _cameraShots = cameraShots;
+        emit cameraShotsChanged(_cameraShots);
+    }
+}
+
+void ComplexMissionItem::setCoveredArea(double coveredArea)
+{
+    if (!qFuzzyCompare(_coveredArea, coveredArea)) {
+        _coveredArea = coveredArea;
+        emit coveredAreaChanged(_coveredArea);
+    }
+}
+
 
 void ComplexMissionItem::clearPolygon(void)
 {
@@ -84,6 +130,14 @@ void ComplexMissionItem::addPolygonCoordinate(const QGeoCoordinate coordinate)
         }
         _generateGrid();
     }
+    setDirty(true);
+}
+
+void ComplexMissionItem::adjustPolygonCoordinate(int vertexIndex, const QGeoCoordinate coordinate)
+{
+    _polygonPath[vertexIndex] = QVariant::fromValue(coordinate);
+    emit polygonPathChanged();
+    _generateGrid();
     setDirty(true);
 }
 
@@ -227,6 +281,19 @@ bool ComplexMissionItem::load(const QJsonObject& complexObject, QString& errorSt
     return true;
 }
 
+double ComplexMissionItem::greatestDistanceTo(const QGeoCoordinate &other) const
+{
+    double greatestDistance = 0.0;
+    for (int i=0; i<_gridPoints.count(); i++) {
+        QGeoCoordinate currentCoord = _gridPoints[i].value<QGeoCoordinate>();
+        double distance = currentCoord.distanceTo(other);
+        if (distance > greatestDistance) {
+            greatestDistance = distance;
+        }
+    }
+    return greatestDistance;
+}
+
 void ComplexMissionItem::_setExitCoordinate(const QGeoCoordinate& coordinate)
 {
     if (_exitCoordinate != coordinate) {
@@ -272,17 +339,35 @@ void ComplexMissionItem::_generateGrid(void)
         qCDebug(ComplexMissionItemLog) << _polygonPath[i].value<QGeoCoordinate>() << polygonPoints.last().x() << polygonPoints.last().y();
     }
 
+    double coveredArea = 0.0;
+    for (int i=0; i<polygonPoints.count(); i++) {
+        if (i != 0) {
+            coveredArea += polygonPoints[i - 1].x() * polygonPoints[i].y() - polygonPoints[i].x() * polygonPoints[i -1].y();
+        } else {
+            coveredArea += polygonPoints.last().x() * polygonPoints[i].y() - polygonPoints[i].x() * polygonPoints.last().y();
+        }
+    }
+    setCoveredArea(0.5 * fabs(coveredArea));
+
     // Generate grid
     _gridGenerator(polygonPoints, gridPoints);
 
+    double surveyDistance = 0.0;
     // Convert to Geo and set altitude
     for (int i=0; i<gridPoints.count(); i++) {
         QPointF& point = gridPoints[i];
+
+        if (i != 0) {
+            surveyDistance += sqrt(pow((gridPoints[i] - gridPoints[i - 1]).x(),2.0) + pow((gridPoints[i] - gridPoints[i - 1]).y(),2.0));
+        }
 
         QGeoCoordinate geoCoord;
         convertNedToGeo(-point.y(), point.x(), 0, tangentOrigin, &geoCoord);
         _gridPoints += QVariant::fromValue(geoCoord);
     }
+    setSurveyDistance(surveyDistance);
+    setCameraShots((int)floor(surveyDistance / _cameraTriggerDistanceFact.rawValue().toDouble()));
+
     emit gridPointsChanged();
     emit lastSequenceNumberChanged(lastSequenceNumber());
 
@@ -388,6 +473,24 @@ void ComplexMissionItem::_intersectLinesWithPolygon(const QList<QLineF>& lineLis
     }
 }
 
+/// Adjust the line segments such that they are all going the same direction with respect to going from P1->P2
+void ComplexMissionItem::_adjustLineDirection(const QList<QLineF>& lineList, QList<QLineF>& resultLines)
+{
+    for (int i=0; i<lineList.count(); i++) {
+        const QLineF& line = lineList[i];
+        QLineF adjustedLine;
+
+        if (line.angle() > 180.0) {
+            adjustedLine.setP1(line.p2());
+            adjustedLine.setP2(line.p1());
+        } else {
+            adjustedLine = line;
+        }
+
+        resultLines += adjustedLine;
+    }
+}
+
 void ComplexMissionItem::_gridGenerator(const QList<QPointF>& polygonPoints,  QList<QPointF>& gridPoints)
 {
     double gridAngle = _gridAngleFact.rawValue().toDouble();
@@ -427,15 +530,24 @@ void ComplexMissionItem::_gridGenerator(const QList<QPointF>& polygonPoints,  QL
         float yBottom = largeBoundRect.bottomRight().y() + 100.0;
 
         lineList += QLineF(_rotatePoint(QPointF(x, yTop), center, gridAngle), _rotatePoint(QPointF(x, yBottom), center, gridAngle));
-        qCDebug(ComplexMissionItemLog) << "line" << lineList.last().x1() << lineList.last().y1() << lineList.last().x2() << lineList.last().y2();
+        qCDebug(ComplexMissionItemLog) << "line(" << lineList.last().x1() << ", " << lineList.last().y1() << ")-(" << lineList.last().x2() <<", " << lineList.last().y2() << ")";
 
         x += gridSpacing;
     }
 
-    // Now intesect the lines with the smaller bounding rect
+    // Now intersect the lines with the polygon
+    QList<QLineF> intersectLines;
+#if 1
+    _intersectLinesWithPolygon(lineList, polygon, intersectLines);
+#else
+    // This is handy for debugging grid problems, not for release
+    intersectLines = lineList;
+#endif
+
+    // Make sure all lines are going to same direction. Polygon intersection leads to line which
+    // can be in varied directions depending on the order of the intesecting sides.
     QList<QLineF> resultLines;
-    //_intersectLinesWithRect(lineList, smallBoundRect, resultLines);
-    _intersectLinesWithPolygon(lineList, polygon, resultLines);
+    _adjustLineDirection(intersectLines, resultLines);
 
     // Turn into a path
     for (int i=0; i<resultLines.count(); i++) {

@@ -80,7 +80,13 @@ Rectangle {
 
                 MenuItem {
                     text:           qsTr("Delete")
-                    onTriggered:    remove()
+                    onTriggered:
+                    {
+                        if (!missionItem.isSimpleItem) {
+                            editorLoader.item.reset();
+                        }
+                        remove();
+                    }
                 }
 
                 MenuItem {
@@ -143,7 +149,7 @@ Rectangle {
         verticalAlignment:  Text.AlignVCenter
         text:               missionItem.sequenceNumber == 0 ?
                                 qsTr("Planned Home Position") :
-                                (missionItem.isSimpleItem ? missionItem.commandName : qsTr("Survey"))
+                                (missionItem.isSimpleItem ? missionItem.commandName : qsTr("Survey (WIP)"))
         color:              _outerTextColor
     }
 

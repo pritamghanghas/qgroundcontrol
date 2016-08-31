@@ -238,7 +238,6 @@ FORMS += \
     src/ui/QGCTabbedInfoView.ui \
     src/ui/QGCUASFileView.ui \
     src/ui/QGCUASFileViewMulti.ui \
-    src/ui/SettingsDialog.ui \
     src/ui/uas/UASQuickView.ui \
     src/ui/uas/UASQuickViewItemSelect.ui \
     src/ui/UASInfo.ui \
@@ -363,7 +362,6 @@ HEADERS += \
     src/ui/MultiVehicleDockWidget.h \
     src/ui/QGCMAVLinkLogPlayer.h \
     src/ui/QGCMapRCToParamDialog.h \
-    src/ui/SettingsDialog.h \
     src/ui/uas/UASMessageView.h \
     src/ui/uas/QGCUnconnectedInfoWidget.h \
     src/ui/QGCDataPlot2D.h \
@@ -490,7 +488,6 @@ SOURCES += \
     src/ui/uas/UASMessageView.cc \
     src/uas/FileManager.cc \
     src/ui/uas/QGCUnconnectedInfoWidget.cc \
-    src/ui/SettingsDialog.cc \
     src/ui/MAVLinkDecoder.cc \
     src/ui/MAVLinkSettingsWidget.cc \
     src/ui/QGCMapRCToParamDialog.cpp \
@@ -638,6 +635,7 @@ HEADERS+= \
     src/AutoPilotPlugins/APM/APMSensorsComponent.h \
     src/AutoPilotPlugins/APM/APMSensorsComponentController.h \
     src/AutoPilotPlugins/APM/APMTuningComponent.h \
+    src/AutoPilotPlugins/Common/MotorComponent.h \
     src/AutoPilotPlugins/Common/RadioComponentController.h \
     src/AutoPilotPlugins/Common/ESP8266ComponentController.h \
     src/AutoPilotPlugins/Common/ESP8266Component.h \
@@ -664,6 +662,7 @@ HEADERS+= \
     src/FirmwarePlugin/APM/ArduCopterFirmwarePlugin.h \
     src/FirmwarePlugin/APM/ArduPlaneFirmwarePlugin.h \
     src/FirmwarePlugin/APM/ArduRoverFirmwarePlugin.h \
+    src/FirmwarePlugin/APM/ArduSubFirmwarePlugin.h \
     src/FirmwarePlugin/PX4/px4_custom_mode.h \
     src/FirmwarePlugin/PX4/PX4FirmwarePlugin.h \
     src/FirmwarePlugin/PX4/PX4ParameterMetaData.h \
@@ -696,6 +695,7 @@ SOURCES += \
     src/AutoPilotPlugins/APM/APMSensorsComponent.cc \
     src/AutoPilotPlugins/APM/APMSensorsComponentController.cc \
     src/AutoPilotPlugins/APM/APMTuningComponent.cc \
+    src/AutoPilotPlugins/Common/MotorComponent.cc \
     src/AutoPilotPlugins/Common/RadioComponentController.cc \
     src/AutoPilotPlugins/Common/ESP8266ComponentController.cc \
     src/AutoPilotPlugins/Common/ESP8266Component.cc \
@@ -721,6 +721,7 @@ SOURCES += \
     src/FirmwarePlugin/APM/ArduCopterFirmwarePlugin.cc \
     src/FirmwarePlugin/APM/ArduPlaneFirmwarePlugin.cc \
     src/FirmwarePlugin/APM/ArduRoverFirmwarePlugin.cc \
+    src/FirmwarePlugin/APM/ArduSubFirmwarePlugin.cc \
     src/FirmwarePlugin/FirmwarePlugin.cc \
     src/FirmwarePlugin/FirmwarePluginManager.cc \
     src/FirmwarePlugin/PX4/PX4FirmwarePlugin.cc \

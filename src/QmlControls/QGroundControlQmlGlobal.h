@@ -46,6 +46,15 @@ public:
         DistanceUnitsMeters
     };
 
+    enum AreaUnits {
+        AreaUnitsSquareFeet = 0,
+        AreaUnitsSquareMeters,
+        AreaUnitsSquareKilometers,
+        AreaUnitsHectares,
+        AreaUnitsAcres,
+        AreaUnitsSquareMiles,
+    };
+
     enum SpeedUnits {
         SpeedUnitsFeetPerSecond = 0,
         SpeedUnitsMetersPerSecond,
@@ -55,6 +64,7 @@ public:
     };
 
     Q_ENUMS(DistanceUnits)
+    Q_ENUMS(AreaUnits)
     Q_ENUMS(SpeedUnits)
 
     Q_PROPERTY(HBSettings*          hbSettings          READ hbSettings             CONSTANT)
@@ -85,7 +95,11 @@ public:
     Q_PROPERTY(int      mavlinkSystemID         READ mavlinkSystemID            WRITE setMavlinkSystemID            NOTIFY mavlinkSystemIDChanged)
 
     Q_PROPERTY(Fact*    offlineEditingFirmwareType  READ offlineEditingFirmwareType CONSTANT)
+    Q_PROPERTY(Fact*    offlineEditingVehicleType   READ offlineEditingVehicleType  CONSTANT)
+    Q_PROPERTY(Fact*    offlineEditingCruiseSpeed   READ offlineEditingCruiseSpeed  CONSTANT)
+    Q_PROPERTY(Fact*    offlineEditingHoverSpeed    READ offlineEditingHoverSpeed   CONSTANT)
     Q_PROPERTY(Fact*    distanceUnits               READ distanceUnits              CONSTANT)
+    Q_PROPERTY(Fact*    areaUnits                   READ areaUnits                  CONSTANT)
     Q_PROPERTY(Fact*    speedUnits                  READ speedUnits                 CONSTANT)
 
     Q_PROPERTY(QGeoCoordinate lastKnownHomePosition READ lastKnownHomePosition  CONSTANT)
@@ -96,11 +110,9 @@ public:
     Q_PROPERTY(QString  missionFileExtension    READ missionFileExtension   CONSTANT)
     Q_PROPERTY(QString  telemetryFileExtension  READ telemetryFileExtension CONSTANT)
 
-    /// @ return: true: experimental survey ip code is turned on
-    Q_PROPERTY(bool experimentalSurvey READ experimentalSurvey WRITE setExperimentalSurvey NOTIFY experimentalSurveyChanged)
-
     /// Returns the string for distance units which has configued by user
     Q_PROPERTY(QString appSettingsDistanceUnitsString READ appSettingsDistanceUnitsString CONSTANT)
+    Q_PROPERTY(QString appSettingsAreaUnitsString READ appSettingsAreaUnitsString CONSTANT)
 
     Q_PROPERTY(NodeSelector*        nodeSelector        READ nodeSelector           CONSTANT)
     Q_INVOKABLE void    saveGlobalSetting       (const QString& key, const QString& value);
@@ -115,6 +127,7 @@ public:
     Q_INVOKABLE void    startGenericMockLink        (bool sendStatusText);
     Q_INVOKABLE void    startAPMArduCopterMockLink  (bool sendStatusText);
     Q_INVOKABLE void    startAPMArduPlaneMockLink   (bool sendStatusText);
+    Q_INVOKABLE void    startAPMArduSubMockLink     (bool sendStatusText);
     Q_INVOKABLE void    stopAllMockLinks            (void);
 
     /// Converts from meters to the user specified distance unit
@@ -124,6 +137,14 @@ public:
     Q_INVOKABLE QVariant appSettingsDistanceUnitsToMeters(const QVariant& distance) const { return FactMetaData::appSettingsDistanceUnitsToMeters(distance); }
 
     QString appSettingsDistanceUnitsString(void) const { return FactMetaData::appSettingsDistanceUnitsString(); }
+
+    /// Converts from square meters to the user specified area unit
+    Q_INVOKABLE QVariant squareMetersToAppSettingsAreaUnits(const QVariant& meters) const { return FactMetaData::squareMetersToAppSettingsAreaUnits(meters); }
+
+    /// Converts from user specified area unit to square meters
+    Q_INVOKABLE QVariant appSettingsAreaUnitsToSquareMeters(const QVariant& area) const { return FactMetaData::appSettingsAreaUnitsToSquareMeters(area); }
+
+    QString appSettingsAreaUnitsString(void) const { return FactMetaData::appSettingsAreaUnitsString(); }
 
     /// Returns the list of available logging category names.
     Q_INVOKABLE QStringList loggingCategories(void) const { return QGCLoggingCategoryRegister::instance()->registeredCategories(); }
@@ -136,6 +157,8 @@ public:
 
     /// Updates the logging filter rules after settings have changed
     Q_INVOKABLE void updateLoggingFilterRules(void) { QGCLoggingCategoryRegister::instance()->setFilterRulesFromSettings(QString()); }
+
+    Q_INVOKABLE bool linesIntersect(QPointF xLine1, QPointF yLine1, QPointF xLine2, QPointF yLine2);
 
     // Property accesors
 
@@ -166,7 +189,11 @@ public:
     QGeoCoordinate lastKnownHomePosition() { return qgcApp()->lastKnownHomePosition(); }
 
     static Fact* offlineEditingFirmwareType (void);
+    static Fact* offlineEditingVehicleType  (void);
+    static Fact* offlineEditingCruiseSpeed  (void);
+    static Fact* offlineEditingHoverSpeed   (void);
     static Fact* distanceUnits              (void);
+    static Fact* areaUnits                  (void);
     static Fact* speedUnits                 (void);
 
     NodeSelector*         nodeSelector () { return NodeSelector::instance(); }
@@ -184,9 +211,6 @@ public:
     void    setIsMultiplexingEnabled    (bool enable);
     void    setIsVersionCheckEnabled    (bool enable);
     void    setMavlinkSystemID          (int  id);
-
-    bool experimentalSurvey(void) const;
-    void setExperimentalSurvey(bool experimentalSurvey);
 
     QString parameterFileExtension(void) const  { return QGCApplication::parameterFileExtension; }
     QString missionFileExtension(void) const    { return QGCApplication::missionFileExtension; }
@@ -207,7 +231,6 @@ signals:
     void mavlinkSystemIDChanged         (int id);
     void flightMapPositionChanged       (QGeoCoordinate flightMapPosition);
     void flightMapZoomChanged           (double flightMapZoom);
-    void experimentalSurveyChanged      (bool experimentalSurvey);
 
 private:
     HBSettings*             _hbSettings;
@@ -227,8 +250,14 @@ private:
     // These are static so they are available to C++ code as well as Qml
     static SettingsFact*    _offlineEditingFirmwareTypeFact;
     static FactMetaData*    _offlineEditingFirmwareTypeMetaData;
+    static SettingsFact*    _offlineEditingVehicleTypeFact;
+    static FactMetaData*    _offlineEditingVehicleTypeMetaData;
+    static SettingsFact*    _offlineEditingCruiseSpeedFact;
+    static SettingsFact*    _offlineEditingHoverSpeedFact;
     static SettingsFact*    _distanceUnitsFact;
     static FactMetaData*    _distanceUnitsMetaData;
+    static SettingsFact*    _areaUnitsFact;
+    static FactMetaData*    _areaUnitsMetaData;
     static SettingsFact*    _speedUnitsFact;
     static FactMetaData*    _speedUnitsMetaData;
 

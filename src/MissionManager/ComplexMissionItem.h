@@ -25,6 +25,8 @@ class ComplexMissionItem : public VisualMissionItem
 public:
     ComplexMissionItem(Vehicle* vehicle, QObject* parent = NULL);
 
+    const ComplexMissionItem& operator=(const ComplexMissionItem& other);
+
     Q_PROPERTY(Fact*                gridAltitude            READ gridAltitude               CONSTANT)
     Q_PROPERTY(bool                 gridAltitudeRelative    MEMBER _gridAltitudeRelative    NOTIFY gridAltitudeRelativeChanged)
     Q_PROPERTY(Fact*                gridAngle               READ gridAngle                  CONSTANT)
@@ -35,8 +37,13 @@ public:
     Q_PROPERTY(int                  lastSequenceNumber      READ lastSequenceNumber         NOTIFY lastSequenceNumberChanged)
     Q_PROPERTY(QVariantList         gridPoints              READ gridPoints                 NOTIFY gridPointsChanged)
 
+    Q_PROPERTY(double               surveyDistance          READ surveyDistance             NOTIFY surveyDistanceChanged)
+    Q_PROPERTY(int                  cameraShots             READ cameraShots                NOTIFY cameraShotsChanged)
+    Q_PROPERTY(double               coveredArea             READ coveredArea                NOTIFY coveredAreaChanged)
+
     Q_INVOKABLE void clearPolygon(void);
     Q_INVOKABLE void addPolygonCoordinate(const QGeoCoordinate coordinate);
+    Q_INVOKABLE void adjustPolygonCoordinate(int vertexIndex, const QGeoCoordinate coordinate);
 
     QVariantList polygonPath(void) { return _polygonPath; }
     QVariantList gridPoints (void) { return _gridPoints; }
@@ -45,6 +52,14 @@ public:
     Fact* gridAngle(void)       { return &_gridAngleFact; }
     Fact* gridSpacing(void)     { return &_gridSpacingFact; }
     Fact* cameraTriggerDistance(void) { return &_cameraTriggerDistanceFact; }
+
+    double  surveyDistance      (void) const { return _surveyDistance; }
+    int     cameraShots         (void) const { return _cameraShots; }
+    double  coveredArea         (void) const { return _coveredArea; }
+
+    void setSurveyDistance      (double surveyDistance);
+    void setCameraShots         (int cameraShots);
+    void setCoveredArea         (double coveredArea);
 
     /// @return The last sequence number used by this item. Takes into account child items of the complex item
     int lastSequenceNumber(void) const;
@@ -58,6 +73,11 @@ public:
     ///     @param[out] errorString Error if load fails
     /// @return true: load success, false: load failed, errorString set
     bool load(const QJsonObject& complexObject, QString& errorString);
+
+    /// Get the point of complex mission item furthest away from a coordinate
+    ///     @param other QGeoCoordinate to which distance is calculated
+    /// @return the greatest distance from any point of the complex item to some coordinate
+    double greatestDistanceTo(const QGeoCoordinate &other) const;
 
     // Overrides from VisualMissionItem
 
@@ -90,6 +110,10 @@ signals:
     void cameraTriggerChanged           (bool cameraTrigger);
     void gridAltitudeRelativeChanged    (bool gridAltitudeRelative);
 
+    void surveyDistanceChanged          (double surveyDistance);
+    void cameraShotsChanged             (int cameraShots);
+    void coveredAreaChanged             (double coveredArea);
+
 private slots:
     void _cameraTriggerChanged(void);
 
@@ -102,6 +126,7 @@ private:
     QPointF _rotatePoint(const QPointF& point, const QPointF& origin, double angle);
     void _intersectLinesWithRect(const QList<QLineF>& lineList, const QRectF& boundRect, QList<QLineF>& resultLines);
     void _intersectLinesWithPolygon(const QList<QLineF>& lineList, const QPolygonF& polygon, QList<QLineF>& resultLines);
+    void _adjustLineDirection(const QList<QLineF>& lineList, QList<QLineF>& resultLines);
 
     int                 _sequenceNumber;
     bool                _dirty;
@@ -113,6 +138,10 @@ private:
     double              _gridAngle;
     bool                _cameraTrigger;
     bool                _gridAltitudeRelative;
+
+    double              _surveyDistance;
+    int                 _cameraShots;
+    double              _coveredArea;
 
     Fact    _gridAltitudeFact;
     Fact    _gridAngleFact;

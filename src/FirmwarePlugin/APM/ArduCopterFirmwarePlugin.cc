@@ -98,7 +98,7 @@ int ArduCopterFirmwarePlugin::remapParamNameHigestMinorVersionNumber(int majorVe
     return majorVersionNumber == 3 ? 4: Vehicle::versionNotSetValue;
 }
 
-bool ArduCopterFirmwarePlugin::isCapable(FirmwareCapabilities capabilities)
+bool ArduCopterFirmwarePlugin::isCapable(const Vehicle* /*vehicle*/, FirmwareCapabilities capabilities)
 {
     return (capabilities & (SetFlightModeCapability | GuidedModeCapability | PauseVehicleCapability)) == capabilities;
 }
@@ -196,4 +196,15 @@ void ArduCopterFirmwarePlugin::setGuidedMode(Vehicle* vehicle, bool guidedMode)
     } else {
         pauseVehicle(vehicle);
     }
+}
+
+bool ArduCopterFirmwarePlugin::multiRotorCoaxialMotors(Vehicle* vehicle)
+{
+    Q_UNUSED(vehicle);
+    return _coaxialMotors;
+}
+
+bool ArduCopterFirmwarePlugin::multiRotorXConfig(Vehicle* vehicle)
+{
+    return vehicle->autopilotPlugin()->getParameterFact(FactSystem::defaultComponentId, "FRAME")->rawValue().toInt() != 0;
 }

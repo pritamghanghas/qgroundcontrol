@@ -66,20 +66,20 @@ private:
 class APMFirmwarePlugin : public FirmwarePlugin
 {
     Q_OBJECT
-    
+
 public:
     // Overrides from FirmwarePlugin
 
     QList<VehicleComponent*> componentsForVehicle(AutoPilotPlugin* vehicle) final;
     QList<MAV_CMD> supportedMissionCommands(void) final;
 
-    bool        isCapable(FirmwareCapabilities capabilities);
+    bool        isCapable(const Vehicle *vehicle, FirmwareCapabilities capabilities);
     QStringList flightModes(Vehicle* vehicle) final;
     QString     flightMode(uint8_t base_mode, uint32_t custom_mode) const final;
     bool        setFlightMode(const QString& flightMode, uint8_t* base_mode, uint32_t* custom_mode) final;
     bool        isGuidedMode(const Vehicle* vehicle) const final;
     void        pauseVehicle(Vehicle* vehicle);
-    int         manualControlReservedButtonCount(void) final;
+    int         manualControlReservedButtonCount(void);
     bool        adjustIncomingMavlinkMessage(Vehicle* vehicle, mavlink_message_t* message) final;
     void        adjustOutgoingMavlinkMessage(Vehicle* vehicle, mavlink_message_t* message) final;
     void        initializeVehicle(Vehicle* vehicle) final;
@@ -99,9 +99,11 @@ protected:
     APMFirmwarePlugin(void);
     void setSupportedModes(QList<APMCustomMode> supportedModes);
 
+    bool _coaxialMotors;
+
 private slots:
     void _artooSocketError(QAbstractSocket::SocketError socketError);
-    
+
 private:
     void _adjustSeverity(mavlink_message_t* message) const;
     void _adjustCalibrationMessageSeverity(mavlink_message_t* message) const;

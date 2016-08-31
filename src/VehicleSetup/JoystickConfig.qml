@@ -18,6 +18,7 @@ import QGroundControl.Controls      1.0
 import QGroundControl.ScreenTools   1.0
 import QGroundControl.Controllers   1.0
 import QGroundControl.FactSystem    1.0
+import QGroundControl.FactControls  1.0
 
 /// Joystick Config
 QGCView {
@@ -380,6 +381,7 @@ QGCView {
 
                         Column {
                             spacing: ScreenTools.defaultFontPixelHeight / 3
+                            visible: _activeVehicle.supportsThrottleModeCenterZero
 
                             ExclusiveGroup { id: throttleModeExclusiveGroup }
 
@@ -397,6 +399,18 @@ QGCView {
                                 checked:        _activeJoystick.throttleMode == 1
 
                                 onClicked: _activeJoystick.throttleMode = 1
+                            }
+                        }
+
+                        Column {
+                            spacing: ScreenTools.defaultFontPixelHeight / 3
+
+                            QGCCheckBox {
+                                id:         exponential
+                                checked:    _activeJoystick.exponential
+                                text:       qsTr("Use exponential curve on roll, pitch, yaw")
+
+                                onClicked:  _activeJoystick.exponential = checked
                             }
                         }
 
@@ -447,6 +461,9 @@ QGCView {
                             if (buttonActionRepeater.itemAt(index)) {
                                 buttonActionRepeater.itemAt(index).pressed = pressed
                             }
+                            if (jsButtonActionRepeater.itemAt(index)) {
+                                jsButtonActionRepeater.itemAt(index).pressed = pressed
+                            }
                         }
                     }
 
@@ -469,7 +486,7 @@ QGCView {
 
                             Row {
                                 spacing: ScreenTools.defaultFontPixelWidth
-                                visible: _activeVehicle.manualControlReservedButtonCount == -1 ? false : modelData >= _activeVehicle.manualControlReservedButtonCount
+                                visible: (_activeVehicle.manualControlReservedButtonCount == -1 ? false : modelData >= _activeVehicle.manualControlReservedButtonCount) && !_activeVehicle.supportsJSButton
 
                                 property bool pressed
 
@@ -507,6 +524,71 @@ QGCView {
                                     Component.onCompleted:  currentIndex = find(_activeJoystick.buttonActions[modelData])
                                 }
                             }
+                        } // Repeater
+
+                        Row {
+                            spacing: ScreenTools.defaultFontPixelWidth
+                            visible: _activeVehicle.supportsJSButton
+
+                            QGCLabel {
+                                horizontalAlignment:    Text.AlignHCenter
+                                width:                  ScreenTools.defaultFontPixelHeight * 1.5
+                                text:                   qsTr("#")
+                            }
+
+                            QGCLabel {
+                                width:                  ScreenTools.defaultFontPixelWidth * 15
+                                text:                   qsTr("Function: ")
+                            }
+
+                            QGCLabel {
+                                width:                  ScreenTools.defaultFontPixelWidth * 15
+                                text:                   qsTr("Shift Function: ")
+                            }
+                        } // Row
+
+                        Repeater {
+                            id:     jsButtonActionRepeater
+                            model:  _activeJoystick.totalButtonCount
+
+                            Row {
+                                spacing: ScreenTools.defaultFontPixelWidth
+                                visible: _activeVehicle.supportsJSButton
+
+                                property bool pressed
+
+                                Rectangle {
+                                    anchors.verticalCenter:     parent.verticalCenter
+                                    width:                      ScreenTools.defaultFontPixelHeight * 1.5
+                                    height:                     width
+                                    border.width:               1
+                                    border.color:               qgcPal.text
+                                    color:                      pressed ? qgcPal.buttonHighlight : qgcPal.button
+
+
+                                    QGCLabel {
+                                        anchors.fill:           parent
+                                        color:                  pressed ? qgcPal.buttonHighlightText : qgcPal.buttonText
+                                        horizontalAlignment:    Text.AlignHCenter
+                                        verticalAlignment:      Text.AlignVCenter
+                                        text:                   modelData
+                                    }
+                                }
+
+                                FactComboBox {
+                                    id:         mainJSButtonActionCombo
+                                    width:      ScreenTools.defaultFontPixelWidth * 15
+                                    fact:       controller.parameterExists(-1, "BTN"+index+"_FUNCTION") ? controller.getParameterFact(-1, "BTN" + index + "_FUNCTION") : null;
+                                    indexModel: false
+                                }
+
+                                FactComboBox {
+                                    id:         shiftJSButtonActionCombo
+                                    width:      ScreenTools.defaultFontPixelWidth * 15
+                                    fact:       controller.parameterExists(-1, "BTN"+index+"_SFUNCTION") ? controller.getParameterFact(-1, "BTN" + index + "_SFUNCTION") : null;
+                                    indexModel: false
+                                }
+                            } // Row
                         } // Repeater
                     } // Column
                 } // Column - right setting column

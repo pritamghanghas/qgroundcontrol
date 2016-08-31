@@ -30,31 +30,18 @@ Item {
 
     property var    _activeVehicle:             QGroundControl.multiVehicleManager.activeVehicle
     property bool   _isSatellite:               _mainIsMap ? (_flightMap ? _flightMap.isSatelliteMap : true) : true
-    property bool   _lightWidgetBorders:        _mainIsMap ? (_flightMap ? _flightMap.isSatelliteMap : true) : true
+    property bool   _lightWidgetBorders:        _isSatellite
     property bool   _useAlternateInstruments:   QGroundControl.virtualTabletJoystick || ScreenTools.isTinyScreen
 
+    readonly property real _margins:                ScreenTools.defaultFontPixelHeight / 2
+    readonly property real _toolButtonTopMargin:    parent.height - ScreenTools.availableHeight + (ScreenTools.defaultFontPixelHeight / 2)
 
-    readonly property real _margins: ScreenTools.defaultFontPixelHeight / 2
+    property bool _flying: _activeVehicle? _activeVehicle.flying : false;
 
-    property bool _flying: _multiVehicleManager.activeVehicleAvailable? _multiVehicleManager.activeVehicle.flying : false;
+    property bool _armed: _activeVehicle? _activeVehicle.armed : false;
 
-    property bool _armed: _multiVehicleManager.activeVehicleAvailable? _multiVehicleManager.activeVehicle.armed : false;
+    QGCMapPalette { id: mapPal; lightColors: isBackgroundDark }
 
-//    multiVehicleManager.onActiveVehicleAvailableChanged: checkFlying()
-
-//    function checkFlying() {
-//        if(!multiVehicleManager.activeVehicleAvailable) {
-//            return false
-//        }
-//        Binding on _flying {
-//            when: multiVehicleManager.activeVehicleAvailable
-//            parent._flying: multiVehicleManager.activeVehicle.flying
-//        }
-
-//        return multiVehicleManager.activeVehicle.flying
-//    }
-
-    QGCMapPalette { id: mapPal; lightColors: !isBackgroundDark }
     QGCPalette { id: qgcPal }
 
     function getGadgetWidth() {
@@ -157,14 +144,25 @@ Item {
         maxHeight:                  virtualJoystickMultiTouch.visible ? virtualJoystickMultiTouch.y - y : parent.height - anchors.margins - y
     }
 
+    QGCLabel {
+        id:         flyLabel
+        text:       qsTr("Fly")
+        color:      mapPal.text
+        visible:    !ScreenTools.isShortScreen
+        anchors.topMargin:          _toolButtonTopMargin
+        anchors.horizontalCenter:   toolColumn.horizontalCenter
+        anchors.top:                parent.top
+    }
+
     //-- Vertical Tool Buttons
     Column {
-        id:                         toolColumn
-        visible:                    _mainIsMap
-        anchors.margins:            ScreenTools.defaultFontPixelHeight
-        anchors.left:               parent.left
-        anchors.top:                parent.top
-        spacing:                    ScreenTools.defaultFontPixelHeight
+        id:                 toolColumn
+        anchors.topMargin:  ScreenTools.isShortScreen ? _toolButtonTopMargin : ScreenTools.defaultFontPixelHeight / 2
+        anchors.leftMargin: ScreenTools.defaultFontPixelHeight
+        anchors.left:       parent.left
+        anchors.top:        ScreenTools.isShortScreen ? parent.top : flyLabel.bottom
+        spacing:            ScreenTools.defaultFontPixelHeight
+        visible:            _mainIsMap
 
         //-- Map Center Control
         DropButton {
@@ -357,10 +355,9 @@ Item {
         anchors.horizontalCenter:   parent.horizontalCenter
         width:                      guidedModeColumn.width  + (_margins * 2)
         height:                     guidedModeColumn.height + (_margins * 2)
-        radius:                     _margins
-        color:                      _lightWidgetBorders ? qgcPal.mapWidgetBorderLight : qgcPal.mapWidgetBorderDark
+        radius:                     ScreenTools.defaultFontPixelHeight * 0.25
+        color:                      _lightWidgetBorders ? Qt.rgba(qgcPal.mapWidgetBorderLight.r, qgcPal.mapWidgetBorderLight.g, qgcPal.mapWidgetBorderLight.b, 0.8) : Qt.rgba(qgcPal.mapWidgetBorderDark.r, qgcPal.mapWidgetBorderDark.g, qgcPal.mapWidgetBorderDark.b, 0.75)
         visible:                    _activeVehicle
-        opacity:                    0.9
         z:                          QGroundControl.zOrderWidgets
         state:                      "Shown"
 
@@ -418,6 +415,7 @@ Item {
         readonly property int confirmChangeAlt:     7
         readonly property int confirmGoTo:          8
         readonly property int confirmRetask:        9
+        readonly property int confirmOrbit:         10
 
         property int    confirmActionCode
         property real   _showMargin:    _margins
@@ -458,6 +456,12 @@ Item {
                 break;
             case confirmRetask:
                 _activeVehicle.setCurrentMissionSequence(_flightMap._retaskSequence)
+                break;
+            case confirmOrbit:
+                //-- All parameters controlled by RC
+                _activeVehicle.guidedModeOrbit()
+                //-- Center on current flight map position and orbit with a 50m radius (velocity/direction controlled by the RC)
+                //_activeVehicle.guidedModeOrbit(QGroundControl.flightMapPosition, 50.0)
                 break;
             default:
                 console.warn(qsTr("Internal error: unknown confirmActionCode"), confirmActionCode)
@@ -506,6 +510,9 @@ Item {
                 break;
             case confirmRetask:
                 guidedModeConfirm.confirmText = qsTr("active waypoint change")
+                break;
+            case confirmOrbit:
+                guidedModeConfirm.confirmText = qsTr("enter orbit mode")
                 break;
             }
             _guidedModeBar.visible = false
@@ -566,6 +573,14 @@ Item {
                     visible:    (_activeVehicle && _activeVehicle.flying) && _activeVehicle.guidedModeSupported && _activeVehicle.armed
                     onClicked:  _guidedModeBar.confirmAction(_guidedModeBar.confirmChangeAlt)
                 }
+
+                QGCButton {
+                    pointSize:  _guidedModeBar._fontPointSize
+                    text:       qsTr("Orbit")
+                    visible:    (_activeVehicle && _activeVehicle.flying) && _activeVehicle.orbitModeSupported && _activeVehicle.armed
+                    onClicked:  _guidedModeBar.confirmAction(_guidedModeBar.confirmOrbit)
+                }
+
             } // Row
         } // Column
     } // Rectangle - Guided mode buttons
