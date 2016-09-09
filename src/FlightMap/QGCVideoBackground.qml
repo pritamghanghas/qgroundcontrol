@@ -26,8 +26,7 @@ VideoItem {
     id: videoBackground
     property var display
     property var receiver
-    property var runVideo:  false
-    property real _margins: ScreenTools.defaultFontPixelHeight
+//    property real _margins: ScreenTools.defaultFontPixelHeight
     property int  cameraControlPressedSince: 0 // miliseconds
 
     // enums for camera control
@@ -628,4 +627,5 @@ VideoItem {
             }
         }
     }
+    surface: display
 }

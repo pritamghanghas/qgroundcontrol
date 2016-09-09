@@ -33,6 +33,7 @@ class FirmwarePluginManager;
 class AutoPilotPlugin;
 class AutoPilotPluginManager;
 class MissionManager;
+class GeoFenceManager;
 class ParameterLoader;
 class JoystickManager;
 class UASMessage;
@@ -166,12 +167,8 @@ public:
     Q_PROPERTY(Fact* temperature        READ temperature        CONSTANT)
     Q_PROPERTY(Fact* cellCount          READ cellCount          CONSTANT)
 
-    /// If percentRemaining falls below this value, warning will be output through speech
-    Q_PROPERTY(Fact* percentRemainingAnnounce READ percentRemainingAnnounce CONSTANT)
-
     Fact* voltage                   (void) { return &_voltageFact; }
     Fact* percentRemaining          (void) { return &_percentRemainingFact; }
-    Fact* percentRemainingAnnounce  (void);
     Fact* mahConsumed               (void) { return &_mahConsumedFact; }
     Fact* current                   (void) { return &_currentFact; }
     Fact* temperature               (void) { return &_temperatureFact; }
@@ -182,14 +179,12 @@ public:
 
     static const char* _voltageFactName;
     static const char* _percentRemainingFactName;
-    static const char* _percentRemainingAnnounceFactName;
     static const char* _mahConsumedFactName;
     static const char* _currentFactName;
     static const char* _temperatureFactName;
     static const char* _cellCountFactName;
 
     static const char* _settingsGroup;
-    static const int   _percentRemainingAnnounceDefault;
 
     static const double _voltageUnavailable;
     static const int    _percentRemainingUnavailable;
@@ -206,10 +201,6 @@ private:
     Fact            _currentFact;
     Fact            _temperatureFact;
     Fact            _cellCountFact;
-
-    /// This fact is global to all Vehicles. We must allocated the first time we need it so we don't
-    /// run into QSettings application setup ordering issues.
-    static SettingsFact* _percentRemainingAnnounceFact;
 };
 
 class Vehicle : public FactGroup
@@ -225,9 +216,9 @@ public:
             AutoPilotPluginManager* autopilotPluginManager,
             JoystickManager*        joystickManager);
 
-    // The following is used to create a disconnected Vehicle. A disconnected vehicle is primarily used to access FactGroup information
-    // without needing a real connection.
-    Vehicle(QObject* parent = NULL);
+    // The following is used to create a disconnected Vehicle. Disconnected vehicles are used used to access FactGroup information
+    // without needing a real connection as well as offline mission planning.
+    Vehicle(MAV_AUTOPILOT firmwareType, MAV_TYPE vehicleType, QObject* parent = NULL);
 
     ~Vehicle();
 
@@ -278,6 +269,7 @@ public:
     Q_PROPERTY(bool                 supportsManualControl   READ supportsManualControl                                  CONSTANT)
     Q_PROPERTY(bool        supportsThrottleModeCenterZero   READ supportsThrottleModeCenterZero                         CONSTANT)
     Q_PROPERTY(bool                 supportsJSButton        READ supportsJSButton                                       CONSTANT)
+    Q_PROPERTY(bool                 supportsRadio           READ supportsRadio                                          CONSTANT)
     Q_PROPERTY(bool                 sub                     READ sub                                                    CONSTANT)
     Q_PROPERTY(bool                 autoDisconnect          MEMBER _autoDisconnect                                      NOTIFY autoDisconnectChanged)
     Q_PROPERTY(QString              prearmError             READ prearmError            WRITE setPrearmError            NOTIFY prearmErrorChanged)
@@ -457,6 +449,7 @@ public:
     int manualControlReservedButtonCount(void);
 
     MissionManager* missionManager(void) { return _missionManager; }
+    GeoFenceManager* geoFenceManager(void) { return _geoFenceManager; }
 
     bool homePositionAvailable(void);
     QGeoCoordinate homePosition(void);
@@ -581,6 +574,14 @@ public:
     /// @return true: X confiuration, false: Plus configuration
     bool xConfigMotors(void);
 
+    /// Returns true if the specifed parameter exists from the default component
+    bool parameterExists(int componentId, const QString& name);
+
+    /// Returns the specified parameter Fact from the default component
+    /// WARNING: Returns a default Fact if parameter does not exists. If that possibility exists, check for existence first with
+    /// parameterExists.
+    Fact* getParameterFact(int componentId, const QString& name);
+
 public slots:
     void setLatitude(double latitude);
     void setLongitude(double longitude);
@@ -673,6 +674,7 @@ private slots:
     void _imageReady                        (UASInterface* uas);
     void _connectionLostTimeout(void);
     void _prearmErrorTimeout(void);
+    void _newMissionItemsAvailable(void);
 
     void _onHeadingChanged();
     void _on1STimerTimeout();
@@ -698,6 +700,7 @@ private:
     void _handleCommandAck(mavlink_message_t& message);
     void _handleAutopilotVersion(mavlink_message_t& message);
     void _missionManagerError(int errorCode, const QString& errorMsg);
+    void _geoFenceManagerError(int errorCode, const QString& errorMsg);
     void _mapTrajectoryStart(void);
     void _mapTrajectoryStop(void);
     void _connectionActive(void);
@@ -765,6 +768,9 @@ private:
 
     MissionManager*     _missionManager;
     bool                _missionManagerInitialRequestComplete;
+
+    GeoFenceManager*    _geoFenceManager;
+    bool                _geoFenceManagerInitialRequestComplete;
 
     ParameterLoader*    _parameterLoader;
 

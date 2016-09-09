@@ -25,7 +25,7 @@
 #include "Fact.h"
 #include "QGCLoggingCategory.h"
 #include "QmlObjectListModel.h"
-#include "MissionCommands.h"
+#include "Vehicle.h"
 
 // Abstract base class for all Simple and Complex visual mission objects.
 class VisualMissionItem : public QObject
@@ -40,7 +40,7 @@ public:
 
     const VisualMissionItem& operator=(const VisualMissionItem& other);
 
-    // The following properties are calulated/set by the MissionControll recalc methods
+    // The following properties are calculated/set by the MissionControll recalc methods
 
     Q_PROPERTY(double altDifference READ altDifference  WRITE setAltDifference  NOTIFY altDifferenceChanged)    ///< Change in altitude from previous waypoint
     Q_PROPERTY(double altPercent    READ altPercent     WRITE setAltPercent     NOTIFY altPercentChanged)       ///< Percent of total altitude change in mission altitude

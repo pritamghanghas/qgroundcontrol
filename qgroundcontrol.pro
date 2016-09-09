@@ -46,6 +46,15 @@ contains (DEFINES, QGC_DISABLE_BLUETOOTH) {
     DEFINES += QGC_ENABLE_BLUETOOTH
 }
 
+# USB Camera and UVC Video Sources
+contains (DEFINES, QGC_DISABLE_UVC) {
+    message("Skipping support for UVC devices (manual override from command line)")
+    DEFINES += QGC_DISABLE_UVC
+} else:exists(user_config.pri):infile(user_config.pri, DEFINES, QGC_DISABLE_UVC) {
+    message("Skipping support for UVC devices (manual override from user_config.pri)")
+    DEFINES += QGC_DISABLE_UVC
+}
+
 LinuxBuild {
     CONFIG += link_pkgconfig
 }
@@ -78,7 +87,13 @@ QT += \
     sql \
     svg \
     widgets \
-    xml \
+    xml
+
+# Multimedia only used if QVC is enabled
+!contains (DEFINES, QGC_DISABLE_UVC) {
+    QT += \
+        multimedia
+}
 
 !MobileBuild {
 QT += \
@@ -178,6 +193,11 @@ RESOURCES += \
     qgroundcontrol.qrc \
     qgcresources.qrc
 
+DebugBuild {
+    # Unit Test resources
+    RESOURCES += UnitTest.qrc
+}
+
 DEPENDPATH += \
     . \
     plugins
@@ -240,7 +260,6 @@ FORMS += \
     src/ui/QGCUASFileViewMulti.ui \
     src/ui/uas/UASQuickView.ui \
     src/ui/uas/UASQuickViewItemSelect.ui \
-    src/ui/UASInfo.ui \
 }
 
 HEADERS += \
@@ -254,7 +273,7 @@ HEADERS += \
     src/comm/QGCMAVLink.h \
     src/comm/TCPLink.h \
     src/comm/UDPLink.h \
-    src/FlightDisplay/FlightDisplayViewController.h \
+    src/FlightDisplay/VideoManager.h \
     src/FlightMap/FlightMapSettings.h \
     src/FlightMap/Widgets/ValuesWidgetController.h \
     src/GAudioOutput.h \
@@ -267,13 +286,19 @@ HEADERS += \
     src/JsonHelper.h \
     src/LogCompressor.h \
     src/MG.h \
+    src/MissionManager/ComplexMissionItem.h \
+    src/MissionManager/GeoFenceController.h \
+    src/MissionManager/GeoFenceManager.h \
+    src/MissionManager/QGCMapPolygon.h \
     src/MissionManager/MissionCommandList.h \
-    src/MissionManager/MissionCommands.h \
+    src/MissionManager/MissionCommandTree.h \
+    src/MissionManager/MissionCommandUIInfo.h \
     src/MissionManager/MissionController.h \
     src/MissionManager/MissionItem.h \
     src/MissionManager/MissionManager.h \
-    src/MissionManager/ComplexMissionItem.h \
+    src/MissionManager/PlanElementController.h \
     src/MissionManager/SimpleMissionItem.h \
+    src/MissionManager/SurveyMissionItem.h \
     src/MissionManager/VisualMissionItem.h \
     src/QGC.h \
     src/QGCApplication.h \
@@ -373,7 +398,6 @@ HEADERS += \
     src/ui/QGCTabbedInfoView.h \
     src/ui/QGCUASFileView.h \
     src/ui/QGCUASFileViewMulti.h \
-    src/ui/uas/UASInfoWidget.h \
     src/ui/uas/UASQuickView.h \
     src/ui/uas/UASQuickViewGaugeItem.h \
     src/ui/uas/UASQuickViewItem.h \
@@ -412,9 +436,10 @@ SOURCES += \
     src/comm/LinkConfiguration.cc \
     src/comm/LinkManager.cc \
     src/comm/MAVLinkProtocol.cc \
+    src/comm/QGCMAVLink.cc \
     src/comm/TCPLink.cc \
     src/comm/UDPLink.cc \
-    src/FlightDisplay/FlightDisplayViewController.cc \
+    src/FlightDisplay/VideoManager.cc \
     src/FlightMap/FlightMapSettings.cc \
     src/FlightMap/Widgets/ValuesWidgetController.cc \
     src/GAudioOutput.cc \
@@ -426,13 +451,19 @@ SOURCES += \
     src/FollowMe/FollowMe.cc \
     src/LogCompressor.cc \
     src/main.cc \
+    src/MissionManager/ComplexMissionItem.cc \
+    src/MissionManager/GeoFenceController.cc \
+    src/MissionManager/GeoFenceManager.cc \
+    src/MissionManager/QGCMapPolygon.cc \
     src/MissionManager/MissionCommandList.cc \
-    src/MissionManager/MissionCommands.cc \
+    src/MissionManager/MissionCommandTree.cc \
+    src/MissionManager/MissionCommandUIInfo.cc \
     src/MissionManager/MissionController.cc \
     src/MissionManager/MissionItem.cc \
     src/MissionManager/MissionManager.cc \
-    src/MissionManager/ComplexMissionItem.cc \
+    src/MissionManager/PlanElementController.cc \
     src/MissionManager/SimpleMissionItem.cc \
+    src/MissionManager/SurveyMissionItem.cc \
     src/MissionManager/VisualMissionItem.cc \
     src/QGC.cc \
     src/QGCApplication.cc \
@@ -517,7 +548,6 @@ SOURCES += \
     src/ui/QGCTabbedInfoView.cpp \
     src/ui/QGCUASFileView.cc \
     src/ui/QGCUASFileViewMulti.cc \
-    src/ui/uas/UASInfoWidget.cc \
     src/ui/uas/UASQuickView.cc \
     src/ui/uas/UASQuickViewGaugeItem.cc \
     src/ui/uas/UASQuickViewItem.cc \
@@ -554,6 +584,7 @@ HEADERS += \
     src/FactSystem/FactSystemTestGeneric.h \
     src/FactSystem/FactSystemTestPX4.h \
     src/MissionManager/ComplexMissionItemTest.h \
+    src/MissionManager/MissionCommandTreeTest.h \
     src/MissionManager/MissionControllerTest.h \
     src/MissionManager/MissionControllerManagerTest.h \
     src/MissionManager/MissionItemTest.h \
@@ -573,6 +604,7 @@ HEADERS += \
     src/qgcunittest/TCPLinkTest.h \
     src/qgcunittest/TCPLoopBackServer.h \
     src/qgcunittest/UnitTest.h \
+    src/ViewWidgets/LogDownloadTest.h \
     src/VehicleSetup/SetupViewTest.h \
 
 SOURCES += \
@@ -580,6 +612,7 @@ SOURCES += \
     src/FactSystem/FactSystemTestGeneric.cc \
     src/FactSystem/FactSystemTestPX4.cc \
     src/MissionManager/ComplexMissionItemTest.cc \
+    src/MissionManager/MissionCommandTreeTest.cc \
     src/MissionManager/MissionControllerTest.cc \
     src/MissionManager/MissionControllerManagerTest.cc \
     src/MissionManager/MissionItemTest.cc \
@@ -600,6 +633,7 @@ SOURCES += \
     src/qgcunittest/TCPLoopBackServer.cc \
     src/qgcunittest/UnitTest.cc \
     src/qgcunittest/UnitTestList.cc \
+    src/ViewWidgets/LogDownloadTest.cc \
     src/VehicleSetup/SetupViewTest.cc \
 } # !MobileBuild
 } # DebugBuild

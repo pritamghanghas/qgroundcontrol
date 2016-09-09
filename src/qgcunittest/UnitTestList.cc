@@ -30,6 +30,8 @@
 #include "FileManagerTest.h"
 #include "TCPLinkTest.h"
 #include "ParameterLoaderTest.h"
+#include "MissionCommandTreeTest.h"
+#include "LogDownloadTest.h"
 
 UT_REGISTER_TEST(FactSystemTestGeneric)
 UT_REGISTER_TEST(FactSystemTestPX4)
@@ -48,6 +50,8 @@ UT_REGISTER_TEST(RadioConfigTest)
 UT_REGISTER_TEST(TCPLinkTest)
 UT_REGISTER_TEST(FileManagerTest)
 UT_REGISTER_TEST(ParameterLoaderTest)
+UT_REGISTER_TEST(MissionCommandTreeTest)
+UT_REGISTER_TEST(LogDownloadTest)
 
 // List of unit test which are currently disabled.
 // If disabling a new test, include reason in comment.

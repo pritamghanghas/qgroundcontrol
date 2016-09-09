@@ -15,6 +15,8 @@
         <file alias="LogDownload.qml">src/ViewWidgets/LogDownload.qml</file>
         <file alias="FirmwareUpgrade.qml">src/VehicleSetup/FirmwareUpgrade.qml</file>
         <file alias="FlightDisplayView.qml">src/FlightDisplay/FlightDisplayView.qml</file>
+        <file alias="FlightDisplayViewUVC.qml">src/FlightDisplay/FlightDisplayViewUVC.qml</file>
+        <file alias="FlightDisplayViewDummy.qml">src/FlightDisplay/FlightDisplayViewDummy.qml</file>
         <file alias="PX4FlightModes.qml">src/AutoPilotPlugins/PX4/PX4FlightModes.qml</file>
         <file alias="PX4AdvancedFlightModes.qml">src/AutoPilotPlugins/PX4/PX4AdvancedFlightModes.qml</file>
         <file alias="PX4SimpleFlightModes.qml">src/AutoPilotPlugins/PX4/PX4SimpleFlightModes.qml</file>
@@ -92,6 +94,7 @@
         <file alias="QGroundControl/Controls/ViewWidget.qml">src/ViewWidgets/ViewWidget.qml</file>
         <file alias="SimpleItemEditor.qml">src/MissionEditor/SimpleItemEditor.qml</file>
         <file alias="SurveyItemEditor.qml">src/MissionEditor/SurveyItemEditor.qml</file>
+        <file alias="GeoFenceEditor.qml">src/MissionEditor/GeoFenceEditor.qml</file>
         <file alias="QGroundControl/FactControls/FactBitmask.qml">src/FactSystem/FactControls/FactBitmask.qml</file>
         <file alias="QGroundControl/FactControls/FactCheckBox.qml">src/FactSystem/FactControls/FactCheckBox.qml</file>
         <file alias="QGroundControl/FactControls/FactComboBox.qml">src/FactSystem/FactControls/FactComboBox.qml</file>
@@ -107,6 +110,7 @@
         <file alias="VirtualJoystick.qml">src/FlightDisplay/VirtualJoystick.qml</file>
         <file alias="QGroundControl/FlightMap/qmldir">src/FlightMap/qmldir</file>
         <file alias="QGroundControl/FlightMap/FlightMap.qml">src/FlightMap/FlightMap.qml</file>
+        <file alias="QGroundControl/FlightMap/QGCMapPolygonControls.qml">src/MissionEditor/QGCMapPolygonControls.qml</file>
         <file alias="QGroundControl/FlightMap/MapScale.qml">src/FlightMap/MapScale.qml</file>
         <file alias="QGroundControl/FlightMap/MissionItemIndicator.qml">src/FlightMap/MapItems/MissionItemIndicator.qml</file>
         <file alias="QGroundControl/FlightMap/MissionItemView.qml">src/FlightMap/MapItems/MissionItemView.qml</file>
@@ -164,12 +168,23 @@
     </qresource>
     <qresource prefix="/json">
         <file alias="MavCmdInfoCommon.json">src/MissionManager/MavCmdInfoCommon.json</file>
+        <file alias="MavCmdInfoFixedWing.json">src/MissionManager/MavCmdInfoFixedWing.json</file>
+        <file alias="MavCmdInfoMultiRotor.json">src/MissionManager/MavCmdInfoMultiRotor.json</file>
+        <file alias="MavCmdInfoRover.json">src/MissionManager/MavCmdInfoRover.json</file>
+        <file alias="MavCmdInfoSub.json">src/MissionManager/MavCmdInfoSub.json</file>
+        <file alias="MavCmdInfoVTOL.json">src/MissionManager/MavCmdInfoVTOL.json</file>
         <file alias="APM/MavCmdInfoCommon.json">src/FirmwarePlugin/APM/MavCmdInfoCommon.json</file>
         <file alias="APM/MavCmdInfoFixedWing.json">src/FirmwarePlugin/APM/MavCmdInfoFixedWing.json</file>
         <file alias="APM/MavCmdInfoMultiRotor.json">src/FirmwarePlugin/APM/MavCmdInfoMultiRotor.json</file>
+        <file alias="APM/MavCmdInfoRover.json">src/FirmwarePlugin/APM/MavCmdInfoRover.json</file>
+        <file alias="APM/MavCmdInfoSub.json">src/FirmwarePlugin/APM/MavCmdInfoSub.json</file>
+        <file alias="APM/MavCmdInfoVTOL.json">src/FirmwarePlugin/APM/MavCmdInfoVTOL.json</file>
         <file alias="PX4/MavCmdInfoCommon.json">src/FirmwarePlugin/PX4/MavCmdInfoCommon.json</file>
         <file alias="PX4/MavCmdInfoFixedWing.json">src/FirmwarePlugin/PX4/MavCmdInfoFixedWing.json</file>
         <file alias="PX4/MavCmdInfoMultiRotor.json">src/FirmwarePlugin/PX4/MavCmdInfoMultiRotor.json</file>
+        <file alias="PX4/MavCmdInfoRover.json">src/FirmwarePlugin/PX4/MavCmdInfoRover.json</file>
+        <file alias="PX4/MavCmdInfoSub.json">src/FirmwarePlugin/PX4/MavCmdInfoSub.json</file>
+        <file alias="PX4/MavCmdInfoVTOL.json">src/FirmwarePlugin/PX4/MavCmdInfoVTOL.json</file>
         <file alias="Vehicle/VehicleFact.json">src/Vehicle/VehicleFact.json</file>
         <file alias="Vehicle/BatteryFact.json">src/Vehicle/BatteryFact.json</file>
         <file alias="Vehicle/GPSFact.json">src/Vehicle/GPSFact.json</file>

@@ -20,18 +20,22 @@
 
 static const char* kQmlGlobalKeyName = "QGCQml";
 
-SettingsFact* QGroundControlQmlGlobal::_offlineEditingFirmwareTypeFact =        NULL;
-FactMetaData* QGroundControlQmlGlobal::_offlineEditingFirmwareTypeMetaData =    NULL;
-SettingsFact* QGroundControlQmlGlobal::_offlineEditingVehicleTypeFact =         NULL;
-FactMetaData* QGroundControlQmlGlobal::_offlineEditingVehicleTypeMetaData =     NULL;
-SettingsFact* QGroundControlQmlGlobal::_offlineEditingCruiseSpeedFact =         NULL;
-SettingsFact* QGroundControlQmlGlobal::_offlineEditingHoverSpeedFact =          NULL;
-SettingsFact* QGroundControlQmlGlobal::_distanceUnitsFact =                     NULL;
-FactMetaData* QGroundControlQmlGlobal::_distanceUnitsMetaData =                 NULL;
-SettingsFact* QGroundControlQmlGlobal::_areaUnitsFact =                         NULL;
-FactMetaData* QGroundControlQmlGlobal::_areaUnitsMetaData =                     NULL;
-SettingsFact* QGroundControlQmlGlobal::_speedUnitsFact =                        NULL;
-FactMetaData* QGroundControlQmlGlobal::_speedUnitsMetaData =                    NULL;
+SettingsFact* QGroundControlQmlGlobal::_offlineEditingFirmwareTypeFact =            NULL;
+FactMetaData* QGroundControlQmlGlobal::_offlineEditingFirmwareTypeMetaData =        NULL;
+SettingsFact* QGroundControlQmlGlobal::_offlineEditingVehicleTypeFact =             NULL;
+FactMetaData* QGroundControlQmlGlobal::_offlineEditingVehicleTypeMetaData =         NULL;
+SettingsFact* QGroundControlQmlGlobal::_offlineEditingCruiseSpeedFact =             NULL;
+SettingsFact* QGroundControlQmlGlobal::_offlineEditingHoverSpeedFact =              NULL;
+SettingsFact* QGroundControlQmlGlobal::_distanceUnitsFact =                         NULL;
+FactMetaData* QGroundControlQmlGlobal::_distanceUnitsMetaData =                     NULL;
+SettingsFact* QGroundControlQmlGlobal::_areaUnitsFact =                             NULL;
+FactMetaData* QGroundControlQmlGlobal::_areaUnitsMetaData =                         NULL;
+SettingsFact* QGroundControlQmlGlobal::_speedUnitsFact =                            NULL;
+FactMetaData* QGroundControlQmlGlobal::_speedUnitsMetaData =                        NULL;
+SettingsFact* QGroundControlQmlGlobal::_batteryPercentRemainingAnnounceFact =       NULL;
+FactMetaData* QGroundControlQmlGlobal::_batteryPercentRemainingAnnounceMetaData =   NULL;
+SettingsFact* QGroundControlQmlGlobal::_mavlinkVersionFact =                        NULL;
+FactMetaData* QGroundControlQmlGlobal::_mavlinkVersionMetaData =                    NULL;
 
 const char* QGroundControlQmlGlobal::_virtualTabletJoystickKey  = "VirtualTabletJoystick";
 const char* QGroundControlQmlGlobal::_baseFontPointSizeKey      = "BaseDeviceFontPointSize";
@@ -42,9 +46,11 @@ QGroundControlQmlGlobal::QGroundControlQmlGlobal(QGCApplication* app)
     , _flightMapSettings(NULL)
     , _homePositionManager(NULL)
     , _linkManager(NULL)
-    , _missionCommands(NULL)
     , _multiVehicleManager(NULL)
     , _mapEngineManager(NULL)
+    , _qgcPositionManager(NULL)
+    , _missionCommandTree(NULL)
+    , _videoManager(NULL)
     , _virtualTabletJoystick(false)
     , _baseFontPointSize(0.0)
 {
@@ -69,11 +75,12 @@ void QGroundControlQmlGlobal::setToolbox(QGCToolbox* toolbox)
     _flightMapSettings      = toolbox->flightMapSettings();
     _homePositionManager    = toolbox->homePositionManager();
     _linkManager            = toolbox->linkManager();
-    _missionCommands        = toolbox->missionCommands();
     _multiVehicleManager    = toolbox->multiVehicleManager();
     _mapEngineManager       = toolbox->mapEngineManager();
-    _qgcPositionManager      = toolbox->qgcPositionManager();
-    _hbSettings          = toolbox->hbSettings();
+    _hbSettings             = toolbox->hbSettings();
+    _qgcPositionManager     = toolbox->qgcPositionManager();
+    _missionCommandTree     = toolbox->missionCommandTree();
+    _videoManager           = toolbox->videoManager();
 }
 
 
@@ -196,12 +203,6 @@ void QGroundControlQmlGlobal::setIsMultiplexingEnabled(bool enable)
     emit isMultiplexingEnabledChanged(enable);
 }
 
-void QGroundControlQmlGlobal::setIsVersionCheckEnabled(bool enable)
-{
-    qgcApp()->toolbox()->mavlinkProtocol()->enableVersionCheck(enable);
-    emit isVersionCheckEnabledChanged(enable);
-}
-
 void QGroundControlQmlGlobal::setMavlinkSystemID(int id)
 {
     qgcApp()->toolbox()->mavlinkProtocol()->setSystemId(id);
@@ -237,7 +238,7 @@ Fact* QGroundControlQmlGlobal::offlineEditingFirmwareType(void)
         _offlineEditingFirmwareTypeFact = new SettingsFact(QString(), "OfflineEditingFirmwareType", FactMetaData::valueTypeUint32, (uint32_t)MAV_AUTOPILOT_ARDUPILOTMEGA);
         _offlineEditingFirmwareTypeMetaData = new FactMetaData(FactMetaData::valueTypeUint32);
 
-        enumStrings << "ArduPilot Firmware" << "PX4 Firmware" << "Mavlink Generic Firmware";
+        enumStrings << tr("ArduPilot Firmware") << tr("PX4 Pro Firmware") << tr("Mavlink Generic Firmware");
         enumValues << QVariant::fromValue((uint32_t)MAV_AUTOPILOT_ARDUPILOTMEGA) << QVariant::fromValue((uint32_t)MAV_AUTOPILOT_PX4) << QVariant::fromValue((uint32_t)MAV_AUTOPILOT_GENERIC);
 
         _offlineEditingFirmwareTypeMetaData->setEnumInfo(enumStrings, enumValues);
@@ -256,8 +257,10 @@ Fact* QGroundControlQmlGlobal::offlineEditingVehicleType(void)
         _offlineEditingVehicleTypeFact = new SettingsFact(QString(), "OfflineEditingVehicleType", FactMetaData::valueTypeUint32, (uint32_t)MAV_TYPE_FIXED_WING);
         _offlineEditingVehicleTypeMetaData = new FactMetaData(FactMetaData::valueTypeUint32);
 
-        enumStrings << "Fixedwing" << "Multicopter" << "VTOL";
-        enumValues << QVariant::fromValue((uint32_t)MAV_TYPE_FIXED_WING) << QVariant::fromValue((uint32_t)MAV_TYPE_QUADROTOR) << QVariant::fromValue((uint32_t)MAV_TYPE_VTOL_DUOROTOR);
+        enumStrings << tr("Fixedwing") << tr("Multicopter") << tr("VTOL") << tr("Rover") << tr("Sub");
+        enumValues << QVariant::fromValue((uint32_t)MAV_TYPE_FIXED_WING) << QVariant::fromValue((uint32_t)MAV_TYPE_QUADROTOR)
+                   << QVariant::fromValue((uint32_t)MAV_TYPE_VTOL_DUOROTOR) << QVariant::fromValue((uint32_t)MAV_TYPE_GROUND_ROVER)
+                   << QVariant::fromValue((uint32_t)MAV_TYPE_SUBMARINE);
 
         _offlineEditingVehicleTypeMetaData->setEnumInfo(enumStrings, enumValues);
         _offlineEditingVehicleTypeFact->setMetaData(_offlineEditingVehicleTypeMetaData);
@@ -339,6 +342,46 @@ Fact* QGroundControlQmlGlobal::speedUnits(void)
     }
 
     return _speedUnitsFact;
+}
+
+Fact* QGroundControlQmlGlobal::batteryPercentRemainingAnnounce(void)
+{
+    if (!_batteryPercentRemainingAnnounceFact) {
+        QStringList     enumStrings;
+        QVariantList    enumValues;
+
+        _batteryPercentRemainingAnnounceFact = new SettingsFact(QString(), "batteryPercentRemainingAnnounce", FactMetaData::valueTypeUint32, 30);
+        _batteryPercentRemainingAnnounceMetaData = new FactMetaData(FactMetaData::valueTypeUint32);
+
+        _batteryPercentRemainingAnnounceMetaData->setDecimalPlaces(0);
+        _batteryPercentRemainingAnnounceMetaData->setShortDescription(tr("Percent announce"));
+        _batteryPercentRemainingAnnounceMetaData->setRawUnits("%");
+        _batteryPercentRemainingAnnounceMetaData->setRawMin(0);
+        _batteryPercentRemainingAnnounceMetaData->setRawMax(100);
+
+        _batteryPercentRemainingAnnounceFact->setMetaData(_batteryPercentRemainingAnnounceMetaData);
+    }
+
+    return _batteryPercentRemainingAnnounceFact;
+}
+
+Fact* QGroundControlQmlGlobal::mavlinkVersion(void)
+{
+    if (!_mavlinkVersionFact) {
+        QStringList     enumStrings;
+        QVariantList    enumValues;
+
+        _mavlinkVersionFact = new SettingsFact(QString(), "MavlinkVersion", FactMetaData::valueTypeUint32, MavlinkVersion2IfVehicle2);
+        _mavlinkVersionMetaData = new FactMetaData(FactMetaData::valueTypeUint32);
+
+        enumStrings << "Always use version 1" << "Default to 1, switch to 2 if Vehicle sends version 2" << "Always use version 2";
+        enumValues << QVariant::fromValue((uint32_t)MavlinkVersionAlways1) << QVariant::fromValue((uint32_t)MavlinkVersion2IfVehicle2) << QVariant::fromValue((uint32_t)MavlinkVersionAlways2);
+
+        _mavlinkVersionMetaData->setEnumInfo(enumStrings, enumValues);
+        _mavlinkVersionFact->setMetaData(_mavlinkVersionMetaData);
+    }
+
+    return _mavlinkVersionFact;
 }
 
 bool QGroundControlQmlGlobal::linesIntersect(QPointF line1A, QPointF line1B, QPointF line2A, QPointF line2B)

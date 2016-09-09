@@ -1,6 +1,7 @@
 import QtQuick                  2.2
 import QtQuick.Controls         1.2
 
+import QGroundControl               1.0
 import QGroundControl.ScreenTools   1.0
 import QGroundControl.Vehicle       1.0
 import QGroundControl.Controls      1.0
@@ -15,28 +16,79 @@ Rectangle {
     color:      qgcPal.windowShadeDark
     radius:     _radius
 
-    // The following properties must be available up the hierachy chain
+    // The following properties must be available up the hierarchy chain
     //property real   availableWidth    ///< Width for control
     //property var    missionItem       ///< Mission Item for editor
 
     property real _margin: ScreenTools.defaultFontPixelWidth / 2
 
+    property var _cameraInfoCanonSX260: { "focalLength": 4.5, "sensorHeight": 4.55, "sensorWidth": 6.17 }
+
+    function recalcFromCameraValues() {
+        var focalLength = Number(focalLengthField.text)
+        var sensorWidth = Number(sensorWidthField.text)
+        var sensorHeight = Number(sensorHeightField.text)
+        var overlap = Number(imageOverlapField.text)
+
+        if (focalLength <= 0.0 || sensorWidth <= 0.0 || sensorHeight <= 0.0) {
+            return
+        }
+
+        var scaledFocalLengthMM = (1000.0 * missionItem.gridAltitude.rawValue) / focalLength
+        var imageWidthM = (sensorWidth * scaledFocalLengthMM) / 1000.0;
+        var imageHeightM = (sensorHeight * scaledFocalLengthMM) / 1000.0;
+
+        var gridSpacing
+        var cameraTriggerDistance
+        if (cameraOrientationLandscape.checked) {
+            gridSpacing = imageWidthM
+            cameraTriggerDistance = imageHeightM
+        } else {
+            gridSpacing = imageHeightM
+            cameraTriggerDistance = imageWidthM
+        }
+        gridSpacing = (1.0 - (overlap / 100.0)) * gridSpacing
+        cameraTriggerDistance = (1.0 - (overlap / 100.0)) * cameraTriggerDistance
+
+        missionItem.gridSpacing.rawValue = gridSpacing
+        missionItem.cameraTriggerDistance.rawValue = cameraTriggerDistance
+    }
+
+    function polygonCaptureStarted() {
+        missionItem.clearPolygon()
+    }
+
+    function polygonCaptureFinished(coordinates) {
+        for (var i=0; i<coordinates.length; i++) {
+            missionItem.addPolygonCoordinate(coordinates[i])
+        }
+    }
+
+    function polygonAdjustVertex(vertexIndex, vertexCoordinate) {
+        missionItem.adjustPolygonCoordinate(vertexIndex, vertexCoordinate)
+    }
+
+    function polygonAdjustStarted() { }
+    function polygonAdjustFinished() { }
+
     QGCPalette { id: qgcPal; colorGroupEnabled: true }
 
-    function reset()
-    {
-        missionItem.clearPolygon();
+//    function reset()
+//    {
+//        missionItem.clearPolygon();
 
-        if (editorMap.polygonDraw.drawingPolygon) {
-            editorMap.polygonDraw.finishCapturePolygon()
-        }
+//        if (editorMap.polygonDraw.drawingPolygon) {
+//            editorMap.polygonDraw.finishCapturePolygon()
+//        }
 
-        if (editorMap.polygonDraw.adjustingPolygon) {
-            editorMap.polygonDraw.finishAdjustPolygon()
-        }
+//        if (editorMap.polygonDraw.adjustingPolygon) {
+//            editorMap.polygonDraw.finishAdjustPolygon()
+//        }
+//     }
 
-//        editorMap.polygonDraw.startCapturePolygon();
-//        editorMap.polygonDraw.finishCapturePolygon();
+    ExclusiveGroup {
+        id:                 cameraOrientationGroup
+        onCurrentChanged:   recalcFromCameraValues()
     }
 
     Column {
@@ -54,7 +106,7 @@ Rectangle {
         }
 
         Repeater {
-            model: [ missionItem.gridAltitude, missionItem.gridAngle, missionItem.gridSpacing ]
+            model: [ missionItem.gridAngle, missionItem.gridSpacing, missionItem.gridAltitude, missionItem.turnaroundDist ]
 
             Item {
                 anchors.left:   parent.left
@@ -84,77 +136,150 @@ Rectangle {
             onClicked:      missionItem.gridAltitudeRelative = checked
         }
 
-        QGCCheckBox {
-            id:                 cameraTrigger
-            anchors.left:       parent.left
-            text:               qsTr("Camera trigger:")
-            checked:            missionItem.cameraTrigger
-            onClicked:          missionItem.cameraTrigger = checked
-        }
+        QGCLabel { text: qsTr("Camera:") }
 
-        Item {
-            id:             distanceItem
+        Rectangle {
             anchors.left:   parent.left
             anchors.right:  parent.right
-            height:         textField.height
-            enabled:        cameraTrigger.checked
+            height:         1
+            color:          qgcPal.text
+        }
 
-            QGCLabel {
-                anchors.baseline:   textField.baseline
-                anchors.left:       parent.left
-                text:               qsTr("Distance:")
+        Row {
+            spacing: ScreenTools.defaultFontPixelWidth
+
+            QGCRadioButton {
+                id:             cameraOrientationLandscape
+                text:           "Landscape"
+                checked:        true
+                exclusiveGroup: cameraOrientationGroup
+            }
+
+            QGCRadioButton {
+                id:             cameraOrientationPortrait
+                text:           "Portrait"
+                exclusiveGroup: cameraOrientationGroup
+            }
+        }
+
+        Grid {
+            columns: 2
+            spacing: ScreenTools.defaultFontPixelWidth
+            verticalItemAlignment: Grid.AlignVCenter
+
+            QGCCheckBox {
+                id:         cameraTrigger
+                text:       qsTr("Trigger:")
+                checked:    missionItem.cameraTrigger
+                onClicked:  missionItem.cameraTrigger = checked
             }
 
             FactTextField {
-                id:             textField
-                anchors.right:  parent.right
-                width:          _editFieldWidth
-                showUnits:      true
-                fact:           missionItem.cameraTriggerDistance
+                width:      _editFieldWidth
+                showUnits:  true
+                fact:       missionItem.cameraTriggerDistance
+                enabled:    missionItem.cameraTrigger
+            }
+
+            QGCLabel { text: qsTr("Focal length:") }
+            QGCTextField {
+                id:         focalLengthField
+                unitsLabel: "mm"
+                showUnits:  true
+                text:       _cameraInfoCanonSX260.focalLength.toString()
+
+                onEditingFinished: recalcFromCameraValues()
+            }
+
+            QGCLabel { text: qsTr("Sensor Width:") }
+            QGCTextField {
+                id:         sensorWidthField
+                unitsLabel: "mm"
+                showUnits:  true
+                text:       _cameraInfoCanonSX260.sensorWidth.toString()
+
+                onEditingFinished: recalcFromCameraValues()
+            }
+
+            QGCLabel { text: qsTr("Sensor height:") }
+            QGCTextField {
+                id:         sensorHeightField
+                unitsLabel: "mm"
+                showUnits:  true
+                text:       _cameraInfoCanonSX260.sensorHeight.toString()
+
+                onEditingFinished: recalcFromCameraValues()
+            }
+
+            QGCLabel { text: qsTr("Image overlap:") }
+            QGCTextField {
+                id:         imageOverlapField
+                unitsLabel: "%"
+                showUnits:  true
+                text:       "0"
+
+                onEditingFinished: recalcFromCameraValues()
             }
         }
 
-        Connections {
-            target: editorMap.polygonDraw
+        QGCLabel { text: qsTr("Polygon:") }
 
-            onPolygonCaptureStarted: {
-                missionItem.clearPolygon()
-            }
-
-            onPolygonCaptureFinished: {
-                for (var i=0; i<coordinates.length; i++) {
-                    missionItem.addPolygonCoordinate(coordinates[i])
-                }
-            }
-
-            onPolygonAdjustVertex: missionItem.adjustPolygonCoordinate(vertexIndex, vertexCoordinate)
+        Rectangle {
+            anchors.left:   parent.left
+            anchors.right:  parent.right
+            height:         1
+            color:          qgcPal.text
         }
 
-        QGCButton {
-            text:       editorMap.polygonDraw.drawingPolygon ? qsTr("Finish Draw") : qsTr("Draw Polygon")
-            enabled:    ((editorMap.polygonDraw.drawingPolygon && editorMap.polygonDraw.polygonReady) || !editorMap.polygonDraw.drawingPolygon) &&
-                        !editorMap.polygonDraw.adjustingPolygon
+        Row {
+            spacing: ScreenTools.defaultFontPixelWidth
 
-            onClicked: {
-                if (editorMap.polygonDraw.drawingPolygon) {
-                    editorMap.polygonDraw.finishCapturePolygon()
-                } else {
-                    editorMap.polygonDraw.startCapturePolygon()
+            QGCButton {
+                text:       editorMap.polygonDraw.drawingPolygon ? qsTr("Finish Draw") : qsTr("Draw")
+                visible:    !editorMap.polygonDraw.adjustingPolygon
+                enabled:    ((editorMap.polygonDraw.drawingPolygon && editorMap.polygonDraw.polygonReady) || !editorMap.polygonDraw.drawingPolygon)
+
+                onClicked: {
+                    if (editorMap.polygonDraw.drawingPolygon) {
+                        editorMap.polygonDraw.finishCapturePolygon()
+                    } else {
+                        editorMap.polygonDraw.startCapturePolygon(_root)
+                    }
+                }
+            }
+
+            QGCButton {
+                text:       editorMap.polygonDraw.adjustingPolygon ? qsTr("Finish Adjust") : qsTr("Adjust")
+                visible:    missionItem.polygonPath.length > 0 && !editorMap.polygonDraw.drawingPolygon
+
+                onClicked: {
+                    if (editorMap.polygonDraw.adjustingPolygon) {
+                        editorMap.polygonDraw.finishAdjustPolygon()
+                    } else {
+                        editorMap.polygonDraw.startAdjustPolygon(_root, missionItem.polygonPath)
+                    }
                 }
             }
         }
 
-        QGCButton {
-            text:       editorMap.polygonDraw.adjustingPolygon ? qsTr("Finish Adjust") : qsTr("Adjust Polygon")
-            enabled:    !editorMap.polygonDraw.drawingPolygon
+        QGCLabel { text: qsTr("Statistics:") }
 
-            onClicked: {
-                if (editorMap.polygonDraw.adjustingPolygon) {
-                    editorMap.polygonDraw.finishAdjustPolygon()
-                } else {
-                    editorMap.polygonDraw.startAdjustPolygon(missionItem.polygonPath)
-                }
-            }
+        Rectangle {
+            anchors.left:   parent.left
+            anchors.right:  parent.right
+            height:         1
+            color:          qgcPal.text
+        }
+
+        Grid {
+            columns: 2
+            spacing: ScreenTools.defaultFontPixelWidth
+
+            QGCLabel { text: qsTr("Survey area:") }
+            QGCLabel { text: QGroundControl.squareMetersToAppSettingsAreaUnits(missionItem.coveredArea).toFixed(2) + " " + QGroundControl.appSettingsAreaUnitsString }
+
+            QGCLabel { text: qsTr("# shots:") }
+            QGCLabel { text: missionItem.cameraShots }
         }
     }
 }

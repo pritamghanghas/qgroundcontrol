@@ -15,6 +15,7 @@
 #include "UAS.h"
 #include "QGCApplication.h"
 #include "QGCToolbox.h"
+#include "QGCMapEngine.h"
 #include "Vehicle.h"
 #include "MainWindow.h"
 
@@ -31,7 +32,6 @@
 
 QGC_LOGGING_CATEGORY(LogDownloadLog, "LogDownloadLog")
 
-static QLocale kLocale;
 //-----------------------------------------------------------------------------
 struct LogDownloadData {
     LogDownloadData(QGCLogEntry* entry);
@@ -42,6 +42,8 @@ struct LogDownloadData {
     uint          ID;
     QGCLogEntry*  entry;
     uint          written;
+    size_t        rate_bytes;
+    qreal         rate_avg;
     QElapsedTimer elapsed;
 
     void advanceChunk()
@@ -76,6 +78,8 @@ LogDownloadData::LogDownloadData(QGCLogEntry* entry_)
     : ID(entry_->id())
     , entry(entry_)
     , written(0)
+    , rate_bytes(0)
+    , rate_avg(0)
 {
 
 }
@@ -95,12 +99,13 @@ QGCLogEntry::QGCLogEntry(uint logId, const QDateTime& dateTime, uint logSize, bo
 QString
 QGCLogEntry::sizeStr() const
 {
-    return kLocale.toString(_logSize);
+    return QGCMapEngine::bigSizeToString(_logSize);
 }
 
 //----------------------------------------------------------------------------------------
-LogDownloadController::LogDownloadController(void)
-    : _uas(NULL)
+LogDownloadController::LogDownloadController(bool standaloneUnitTesting)
+    : FactPanelController(standaloneUnitTesting)
+    , _uas(NULL)
     , _downloadData(NULL)
     , _vehicle(NULL)
     , _requestingLogEntries(false)
@@ -332,10 +337,18 @@ LogDownloadController::_logData(UASInterface* uas, uint32_t ofs, uint16_t id, ui
         //-- Write chunk to file
         if(_downloadData->file.write((const char*)data, count)) {
             _downloadData->written += count;
+            _downloadData->rate_bytes += count;
             if (_downloadData->elapsed.elapsed() >= kGUIRateMilliseconds) {
+                //-- Update download rate
+                qreal rrate = _downloadData->rate_bytes/(_downloadData->elapsed.elapsed()/1000.0);
+                _downloadData->rate_avg = _downloadData->rate_avg*0.95 + rrate*0.05;
+                _downloadData->rate_bytes = 0;
+
                 //-- Update status
-                QString comma_value = kLocale.toString(_downloadData->written);
-                _downloadData->entry->setStatus(comma_value);
+                const QString status = QString("%1 (%2/s)").arg(QGCMapEngine::bigSizeToString(_downloadData->written),
+                                                                QGCMapEngine::bigSizeToString(_downloadData->rate_avg));
+
+                _downloadData->entry->setStatus(status);
                 _downloadData->elapsed.start();
             }
             result = true;
@@ -353,6 +366,9 @@ LogDownloadController::_logData(UASInterface* uas, uint32_t ofs, uint16_t id, ui
                 _requestLogData(_downloadData->ID,
                                 _downloadData->current_chunk*kChunkSize,
                                 _downloadData->chunk_table.size()*MAVLINK_MSG_LOG_DATA_FIELD_DATA_LEN);
+            } else if (bin < _downloadData->chunk_table.size() - 1 && _downloadData->chunk_table.at(bin+1)) {
+                // Likely to be grabbing fragments and got to the end of a gap
+                _findMissingData();
             }
         } else {
             qWarning() << "Error while writing log file chunk";
@@ -487,6 +503,16 @@ LogDownloadController::_requestLogList(uint32_t start, uint32_t end)
 void
 LogDownloadController::download(void)
 {
+    QString dir = QGCFileDialog::getExistingDirectory(
+                MainWindow::instance(),
+                "Log Download Directory",
+                QDir::homePath(),
+                QGCFileDialog::ShowDirsOnly | QGCFileDialog::DontResolveSymlinks);
+    downloadToDirectory(dir);
+}
+
+void LogDownloadController::downloadToDirectory(const QString& dir)
+{
     //-- Stop listing just in case
     _receivedAllEntries();
     //-- Reset downloads, again just in case
@@ -494,12 +520,7 @@ LogDownloadController::download(void)
         delete _downloadData;
         _downloadData = 0;
     }
-    _downloadPath.clear();
-    _downloadPath = QGCFileDialog::getExistingDirectory(
-        MainWindow::instance(),
-        "Log Download Directory",
-        QDir::homePath(),
-        QGCFileDialog::ShowDirsOnly | QGCFileDialog::DontResolveSymlinks);
+    _downloadPath = dir;
     if(!_downloadPath.isEmpty()) {
         if(!_downloadPath.endsWith(QDir::separator()))
             _downloadPath += QDir::separator();
@@ -518,6 +539,7 @@ LogDownloadController::download(void)
         _receivedAllData();
     }
 }
+
 
 //----------------------------------------------------------------------------------------
 QGCLogEntry*
@@ -604,18 +626,22 @@ LogDownloadController::_prepareLogDownload()
 void
 LogDownloadController::_setDownloading(bool active)
 {
-    _downloadingLogs = active;
-    _vehicle->setConnectionLostEnabled(!active);
-    emit downloadingLogsChanged();
+    if (_downloadingLogs != active) {
+        _downloadingLogs = active;
+        _vehicle->setConnectionLostEnabled(!active);
+        emit downloadingLogsChanged();
+    }
 }
 
 //----------------------------------------------------------------------------------------
 void
 LogDownloadController::_setListing(bool active)
 {
-    _requestingLogEntries = active;
-    _vehicle->setConnectionLostEnabled(!active);
-    emit requestingListChanged();
+    if (_requestingLogEntries != active) {
+        _requestingLogEntries = active;
+        _vehicle->setConnectionLostEnabled(!active);
+        emit requestingListChanged();
+    }
 }
 
 //----------------------------------------------------------------------------------------

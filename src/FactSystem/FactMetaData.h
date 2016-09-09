@@ -21,7 +21,7 @@
 
 /// Holds the meta data associated with a Fact.
 ///
-/// Holds the meta data associated with a Fact. This is kept in a seperate object from the Fact itself
+/// Holds the meta data associated with a Fact. This is kept in a separate object from the Fact itself
 /// since you may have multiple instances of the same Fact. But there is only ever one FactMetaData
 /// instance or each Fact.
 class FactMetaData : public QObject
@@ -121,9 +121,6 @@ public:
     /// Set the translators to the standard built in versions
     void setBuiltInTranslator(void);
 
-    /// Set translators according to app settings
-    void setAppSettingsTranslators(void);
-
     /// Converts the specified raw value, validating against meta data
     ///     @param rawValue Value to convert, can be string
     ///     @param convertOnly true: convert to correct type only, do not validate against meta data
@@ -144,6 +141,7 @@ public:
 private:
     QVariant _minForType(void) const;
     QVariant _maxForType(void) const;
+    void _setAppSettingsTranslators(void);
 
     // Built in translators
     static QVariant _defaultTranslator(const QVariant& from) { return from; }
