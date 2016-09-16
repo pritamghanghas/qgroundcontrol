@@ -341,13 +341,13 @@ VideoItem {
         }
     }
 
-    onRunVideoChanged: {
-        if(videoBackground.receiver && videoBackground.display) {
-            if(videoBackground.runVideo) {
-                onModeChange();
-            } else {
-                videoBackground.receiver.stop();
-            }
-        }
-    }
+//    onRunVideoChanged: {
+//        if(videoBackground.receiver && videoBackground.display) {
+//            if(videoBackground.runVideo) {
+//                onModeChange();
+//            } else {
+//                videoBackground.receiver.stop();
+//            }
+//        }
+//    }
 }

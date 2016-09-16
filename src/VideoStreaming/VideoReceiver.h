@@ -35,7 +35,7 @@ public:
 #endif
 
 public Q_SLOTS:
-    void start  (const QString& optionsString);
+    void start  (const QString& optionsString = QString());
     void stop   ();
     void setUri (const QString& uri);
     void next();

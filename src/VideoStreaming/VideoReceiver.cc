@@ -81,9 +81,12 @@ void VideoReceiver::previous()
 void VideoReceiver::start(const QString &optionsString)
 {
 #if defined(QGC_GST_STREAMING)
-    QString newUri = QString("udp://0.0.0.0:") + QString::number(_nodeSelector->currentNode().targetStreamingPort);
-    qDebug() << newUri;
-    setUri(newUri);
+
+    if (!optionsString.isEmpty()) {
+        QString newUri = QString("udp://0.0.0.0:") + QString::number(_nodeSelector->currentNode().targetStreamingPort);
+        qDebug() << newUri;
+        setUri(newUri);
+    }
 
     if (_uri.isEmpty()) {
         qCritical() << "VideoReceiver::start() failed because URI is not specified";
@@ -95,9 +98,11 @@ void VideoReceiver::start(const QString &optionsString)
     }
 
     stop();
-    // start new stream
-    _nodeSelector->startStreaming(_nodeSelector->currentNode(), optionsString);
 
+    if (!optionsString.isEmpty()) {
+        // start new stream
+        _nodeSelector->startStreaming(_nodeSelector->currentNode(), optionsString);
+    }
 
     bool running = false;
 
