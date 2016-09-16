@@ -42,6 +42,8 @@ public:
     // Overrides from AutoPilotPlugin
     virtual const QVariantList& vehicleComponents(void);
 
+//    virtual Fact* getRCMode();
+
     // These methods should only be used by objects within the plugin
     AirframeComponent*      airframeComponent(void)     { return _airframeComponent; }
     PX4RadioComponent*      radioComponent(void)        { return _radioComponent; }

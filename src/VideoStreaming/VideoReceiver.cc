@@ -17,14 +17,14 @@
 #include "VideoReceiver.h"
 #include <QDebug>
 
-VideoReceiver::VideoReceiver(QObject* parent)
+VideoReceiver::VideoReceiver(NodeSelector *piNodeSelector, QObject* parent)
     : QObject(parent)
 #if defined(QGC_GST_STREAMING)
     , _pipeline(NULL)
     , _videoSink(NULL)
 #endif
 {
-
+    _nodeSelector = piNodeSelector;
 }
 
 VideoReceiver::~VideoReceiver()
@@ -66,9 +66,25 @@ static void newPadCB(GstElement * element, GstPad* pad, gpointer data)
 }
 #endif
 
-void VideoReceiver::start()
+void VideoReceiver::next()
+{
+    _nodeSelector->selectNext();
+//    start();
+}
+
+void VideoReceiver::previous()
+{
+    _nodeSelector->selectPrevious();
+//    start();
+}
+
+void VideoReceiver::start(const QString &optionsString)
 {
 #if defined(QGC_GST_STREAMING)
+    QString newUri = QString("udp://0.0.0.0:") + QString::number(_nodeSelector->currentNode().targetStreamingPort);
+    qDebug() << newUri;
+    setUri(newUri);
+
     if (_uri.isEmpty()) {
         qCritical() << "VideoReceiver::start() failed because URI is not specified";
         return;
@@ -79,6 +95,9 @@ void VideoReceiver::start()
     }
 
     stop();
+    // start new stream
+    _nodeSelector->startStreaming(_nodeSelector->currentNode(), optionsString);
+
 
     bool running = false;
 

@@ -208,7 +208,7 @@ int APMFirmwarePlugin::manualControlReservedButtonCount(void)
 {
     // We don't know whether the firmware is going to used any of these buttons.
     // So reserve them all.
-    return -1;
+    return 0;
 }
 
 void APMFirmwarePlugin::_handleParamValue(Vehicle* vehicle, mavlink_message_t* message)

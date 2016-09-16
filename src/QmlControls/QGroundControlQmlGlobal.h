@@ -19,6 +19,7 @@
 #include "LinkManager.h"
 #include "HomePositionManager.h"
 #include "FlightMapSettings.h"
+#include "nodeselector.h"
 #include "SettingsFact.h"
 #include "FactMetaData.h"
 #include "SimulatedPosition.h"
@@ -111,6 +112,7 @@ public:
     /// Returns the string for distance units which has configued by user
     Q_PROPERTY(QString appSettingsDistanceUnitsString READ appSettingsDistanceUnitsString CONSTANT)
     Q_PROPERTY(QString appSettingsAreaUnitsString READ appSettingsAreaUnitsString CONSTANT)
+    Q_PROPERTY(NodeSelector*        nodeSelector        READ nodeSelector           CONSTANT)
 
     Q_INVOKABLE void    saveGlobalSetting       (const QString& key, const QString& value);
     Q_INVOKABLE QString loadGlobalSetting       (const QString& key, const QString& defaultValue);
@@ -193,6 +195,8 @@ public:
     static Fact* areaUnits                      (void);
     static Fact* speedUnits                     (void);
     static Fact* batteryPercentRemainingAnnounce(void);
+
+    NodeSelector*         nodeSelector () { return NodeSelector::instance(); }
 
     //-- TODO: Make this into an actual preference.
     bool    isAdvancedMode          () { return false; }

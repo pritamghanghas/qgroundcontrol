@@ -122,4 +122,4 @@ private:
     void _recalcSetupComplete(void);
 };
 
-#endif
+#endif //AUTOPILOTPLUGIN_H
