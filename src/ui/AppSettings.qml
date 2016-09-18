@@ -95,6 +95,19 @@ Rectangle {
             }
 
             QGCButton {
+                id:             _osControl
+                height:         _buttonHeight
+                text:           qsTr("OS Control")
+                exclusiveGroup: panelActionGroup
+                onClicked: {
+                    if(__rightPanel.source != "LinuxControl.qml") {
+                        __rightPanel.source = "LinuxControl.qml"
+                    }
+                    checked = true
+                }
+            }
+
+            QGCButton {
                 height:         _buttonHeight
                 text:           qsTr("Comm Links")
                 exclusiveGroup: panelActionGroup
