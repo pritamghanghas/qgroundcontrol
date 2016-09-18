@@ -38,6 +38,7 @@ public:
     Q_PROPERTY(QVariantList         gridPoints              READ gridPoints                 NOTIFY gridPointsChanged)
     Q_PROPERTY(int                  cameraShots             READ cameraShots                NOTIFY cameraShotsChanged)
     Q_PROPERTY(double               coveredArea             READ coveredArea                NOTIFY coveredAreaChanged)
+    Q_PROPERTY(double               gridApproxFlightTime    READ gridApproxFlightTime       NOTIFY gridApproxFlightTimeChanged)
 
     Q_INVOKABLE void clearPolygon(void);
     Q_INVOKABLE void addPolygonCoordinate(const QGeoCoordinate coordinate);
@@ -54,6 +55,7 @@ public:
 
     int     cameraShots(void) const;
     double  coveredArea(void) const { return _coveredArea; }
+    double  gridApproxFlightTime(void) const  { return _gridApproxFlightTime; }
 
     // Overrides from ComplexMissionItem
 
@@ -95,6 +97,8 @@ signals:
     void gridAltitudeRelativeChanged    (bool gridAltitudeRelative);
     void cameraShotsChanged             (int cameraShots);
     void coveredAreaChanged             (double coveredArea);
+    void gridApproxFlightTimeChanged    (double estFlightTime);
+    void surveyDistanceChanged          (double surveyDistance);
 
 private slots:
     void _cameraTriggerChanged(void);
@@ -113,6 +117,8 @@ private:
     void _setSurveyDistance(double surveyDistance);
     void _setCameraShots(int cameraShots);
     void _setCoveredArea(double coveredArea);
+    double _calculateSegmentFlightTime(const double segmentDistance) const;
+    void _setEstFLightTime(double estFlightTime);
 
     int                 _sequenceNumber;
     bool                _dirty;
@@ -128,6 +134,7 @@ private:
     double              _surveyDistance;
     int                 _cameraShots;
     double              _coveredArea;
+    double              _gridApproxFlightTime;
 
     Fact            _gridAltitudeFact;
     Fact            _gridAngleFact;

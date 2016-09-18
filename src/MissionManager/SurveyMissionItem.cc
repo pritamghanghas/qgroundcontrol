@@ -12,6 +12,7 @@
 #include "JsonHelper.h"
 #include "MissionController.h"
 #include "QGCGeo.h"
+#include "ParameterManager.h"
 
 #include <QPolygonF>
 
@@ -39,6 +40,7 @@ SurveyMissionItem::SurveyMissionItem(Vehicle* vehicle, QObject* parent)
     , _surveyDistance(0.0)
     , _cameraShots(0)
     , _coveredArea(0.0)
+    , _gridApproxFlightTime(0)
 
     , _gridAltitudeFact         (0, "Altitude:",                FactMetaData::valueTypeDouble)
     , _gridAngleFact            (0, "Grid angle:",              FactMetaData::valueTypeDouble)
@@ -100,6 +102,14 @@ void SurveyMissionItem::_setSurveyDistance(double surveyDistance)
     if (!qFuzzyCompare(_surveyDistance, surveyDistance)) {
         _surveyDistance = surveyDistance;
         emit complexDistanceChanged(_surveyDistance);
+    }
+}
+
+void SurveyMissionItem::_setEstFLightTime(double estFlightTime)
+{
+    if (!qFuzzyCompare(_gridApproxFlightTime, estFlightTime)) {
+        _gridApproxFlightTime = estFlightTime;
+        emit gridApproxFlightTimeChanged(_gridApproxFlightTime);
     }
 }
 
@@ -378,12 +388,15 @@ void SurveyMissionItem::_generateGrid(void)
     _gridGenerator(polygonPoints, gridPoints);
 
     double surveyDistance = 0.0;
+    double estFlightTime  = 0.0;
     // Convert to Geo and set altitude
     for (int i=0; i<gridPoints.count(); i++) {
         QPointF& point = gridPoints[i];
 
         if (i != 0) {
-            surveyDistance += sqrt(pow((gridPoints[i] - gridPoints[i - 1]).x(),2.0) + pow((gridPoints[i] - gridPoints[i - 1]).y(),2.0));
+            double segmentDistance = sqrt(pow((gridPoints[i] - gridPoints[i - 1]).x(),2.0) + pow((gridPoints[i] - gridPoints[i - 1]).y(),2.0));
+            surveyDistance += segmentDistance;
+            estFlightTime += _calculateSegmentFlightTime(segmentDistance);
         }
 
         QGeoCoordinate geoCoord;
@@ -391,6 +404,7 @@ void SurveyMissionItem::_generateGrid(void)
         _gridPoints += QVariant::fromValue(geoCoord);
     }
     _setSurveyDistance(surveyDistance);
+    _setEstFLightTime(estFlightTime);
     if (_cameraTriggerDistanceFact.rawValue().toDouble() > 0) {
         _setCameraShots((int)floor(surveyDistance / _cameraTriggerDistanceFact.rawValue().toDouble()));
     } else {
@@ -677,4 +691,30 @@ void SurveyMissionItem::_cameraTriggerChanged(void)
 int SurveyMissionItem::cameraShots(void) const
 {
     return _cameraTrigger ? _cameraShots : 0;
+}
+
+// this is very rough calculation assuming that vehicles starts from zero and comes back to zero
+// for each segement. But vehicle travels much faster while taking turns than this zero assumption
+double SurveyMissionItem::_calculateSegmentFlightTime(const double segmentDistance) const
+{
+    if (!segmentDistance) {
+        return 0;
+    }
+
+    ParameterManager *parameterLoader = _vehicle->getParameterManager();
+    double topSpeed    = parameterLoader->getFact(-1, "WPNAV_SPEED")->rawValue().toDouble()/100; // m/s
+    double accelration = parameterLoader->getFact(-1, "WPNAV_ACCEL")->rawValue().toDouble()/100; // m/s/s
+
+    double timeToMaxSpeed = topSpeed/accelration;
+    double distanceToMaxSpeed = (accelration*timeToMaxSpeed*timeToMaxSpeed)/2;
+    double timeForTravel = 0;
+    if(distanceToMaxSpeed <= segmentDistance/2) {
+        timeForTravel += 2*sqrt(distanceToMaxSpeed*2/accelration); // first and last covered
+        timeForTravel += (segmentDistance-(distanceToMaxSpeed*2))/topSpeed; // mid segment
+    } else {
+        timeForTravel += 2*sqrt(segmentDistance/accelration); // first and last covered
+    }
+
+    // rough compensation for turns
+    return timeForTravel*0.9;
 }

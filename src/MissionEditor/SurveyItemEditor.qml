@@ -152,7 +152,7 @@ Rectangle {
     }
 
     function polygonCaptureStarted() {
-    	missionItem.clearPolygon()
+       missionItem.clearPolygon()
     }
 
     function polygonCaptureFinished(coordinates) {
@@ -547,6 +547,10 @@ Rectangle {
 
             QGCLabel { text: qsTr("# shots:") }
             QGCLabel { text: missionItem.cameraShots }
+
+            QGCLabel { text: qsTr("Est. Flt. Time:") }
+
+            QGCLabel { text: new Date(missionItem.gridApproxFlightTime * 1000).toISOString().substr(11, 8); }
         }
     }
 }
