@@ -1,30 +1,17 @@
-/*=====================================================================
+/****************************************************************************
+ *
+ *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
 
-QGroundControl Open Source Ground Control Station
-
-(c) 2009 - 2011 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
-
-This file is part of the QGROUNDCONTROL project
-
-    QGROUNDCONTROL is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    QGROUNDCONTROL is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with QGROUNDCONTROL. If not, see <http://www.gnu.org/licenses/>.
-
-======================================================================*/
 
 /**
  * @file QGCXPlaneLink.cc
  *   Implementation of X-Plane interface
- *   @author Lorenz Meier <mavteam@student.ethz.ch>
+ *   @author Lorenz Meier <lm@qgroundcontrol.org>
  *
  */
 
@@ -229,7 +216,7 @@ void QGCXPlaneLink::run()
     strncpy(ip.str_port_them, localPortStr.toLatin1(), qMin((int)sizeof(ip.str_port_them), 6));
     ip.use_ip = 1;
 
-    writeBytes((const char*)&ip, sizeof(ip));
+    writeBytesSafe((const char*)&ip, sizeof(ip));
 
     _should_exit = false;
 
@@ -369,9 +356,9 @@ void QGCXPlaneLink::updateControls(quint64 time, float rollAilerons, float pitch
     Q_UNUSED(systemMode);
     Q_UNUSED(navMode);
 
-    bool isFixedWing = true;
-
-    if (_vehicle->vehicleType() == MAV_TYPE_QUADROTOR)
+    if (_vehicle->vehicleType() == MAV_TYPE_QUADROTOR
+        || _vehicle->vehicleType() == MAV_TYPE_HEXAROTOR
+        || _vehicle->vehicleType() == MAV_TYPE_OCTOROTOR)
     {
         qDebug() << "MAV_TYPE_QUADROTOR";
 
@@ -381,7 +368,9 @@ void QGCXPlaneLink::updateControls(quint64 time, float rollAilerons, float pitch
         p.f[2] = throttle;
         p.f[3] = pitchElevator;
 
-        isFixedWing = false;
+        // Direct throttle control
+        p.index = 25;
+        writeBytesSafe((const char*)&p, sizeof(p));
     }
     else
     {
@@ -389,34 +378,26 @@ void QGCXPlaneLink::updateControls(quint64 time, float rollAilerons, float pitch
         p.f[0] = -pitchElevator;
         p.f[1] = rollAilerons;
         p.f[2] = yawRudder;
-    }
 
-    if(isFixedWing)
-    {
         // Ail / Elevon / Rudder
-        p.index = 12;   // XPlane, wing sweep
-        writeBytes((const char*)&p, sizeof(p));
 
-        p.index = 8;    // XPlane, joystick? why?
-        writeBytes((const char*)&p, sizeof(p));
+        // Send to group 12
+        p.index = 12;
+        writeBytesSafe((const char*)&p, sizeof(p));
 
-        p.index = 25;   // Thrust
+        // Send to group 8, which equals manual controls
+        p.index = 8;
+        writeBytesSafe((const char*)&p, sizeof(p));
+
+        // Send throttle to all four motors
+        p.index = 25;
         memset(p.f, 0, sizeof(p.f));
         p.f[0] = throttle;
         p.f[1] = throttle;
         p.f[2] = throttle;
         p.f[3] = throttle;
-
-        // Throttle
-        writeBytes((const char*)&p, sizeof(p));
+        writeBytesSafe((const char*)&p, sizeof(p));
     }
-    else
-    {
-        qDebug() << "Transmitting p.index = 25";
-        p.index = 25;   // XPlane, throttle command.
-        writeBytes((const char*)&p, sizeof(p));
-    }
-
 }
 
 Eigen::Matrix3f euler_to_wRo(double yaw, double pitch, double roll) {
@@ -448,14 +429,14 @@ Eigen::Matrix3f euler_to_wRo(double yaw, double pitch, double roll) {
   return wRo;
 }
 
-void QGCXPlaneLink::writeBytes(const char* data, qint64 size)
+void QGCXPlaneLink::_writeBytes(const QByteArray data)
 {
-    if (!data) return;
+    if (data.isEmpty()) return;
 
     // If socket exists and is connected, transmit the data
     if (socket && connectState)
     {
-        socket->writeDatagram(data, size, remoteHost, remotePort);
+        socket->writeDatagram(data, remoteHost, remotePort);
     }
 }
 
@@ -899,7 +880,7 @@ void QGCXPlaneLink::setPositionAttitude(double lat, double lon, double alt, doub
     pos.gear_flap_vect[1] = 0.0f;
     pos.gear_flap_vect[2] = 0.0f;
 
-    writeBytes((const char*)&pos, sizeof(pos));
+    writeBytesSafe((const char*)&pos, sizeof(pos));
 
 //    pos.header[0] = 'V';
 //    pos.header[1] = 'E';
@@ -917,7 +898,7 @@ void QGCXPlaneLink::setPositionAttitude(double lat, double lon, double alt, doub
 //    pos.gear_flap_vect[1] = -999;
 //    pos.gear_flap_vect[2] = -999;
 
-//    writeBytes((const char*)&pos, sizeof(pos));
+//    writeBytesSafe((const char*)&pos, sizeof(pos));
 }
 
 /**

@@ -1,25 +1,12 @@
-/*=====================================================================
+/****************************************************************************
+ *
+ *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
 
- QGroundControl Open Source Ground Control Station
-
- (c) 2009 - 2014 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
-
- This file is part of the QGROUNDCONTROL project
-
- QGROUNDCONTROL is free software: you can redistribute it and/or modify
- it under the terms of the GNU General Public License as published by
- the Free Software Foundation, either version 3 of the License, or
- (at your option) any later version.
-
- QGROUNDCONTROL is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU General Public License for more details.
-
- You should have received a copy of the GNU General Public License
- along with QGROUNDCONTROL. If not, see <http://www.gnu.org/licenses/>.
-
- ======================================================================*/
 
 #ifndef LogDownloadController_H
 #define LogDownloadController_H
@@ -28,6 +15,7 @@
 #include <QTimer>
 #include <QAbstractListModel>
 #include <QLocale>
+#include <QElapsedTimer>
 
 #include <memory>
 
@@ -39,7 +27,7 @@ class  MultiVehicleManager;
 class  UASInterface;
 class  Vehicle;
 class  QGCLogEntry;
-class  LogDownloadData;
+struct LogDownloadData;
 
 Q_DECLARE_LOGGING_CATEGORY(LogDownloadLog)
 
@@ -122,25 +110,13 @@ private:
 };
 
 //-----------------------------------------------------------------------------
-class LogDownloadData {
-public:
-    LogDownloadData(QGCLogEntry* entry);
-    QList<uint>     offsets;
-    QFile           file;
-    QString         filename;
-    uint            ID;
-    QTimer          processDataTimer;
-    QGCLogEntry*    entry;
-    uint            written;
-};
-
-//-----------------------------------------------------------------------------
 class LogDownloadController : public FactPanelController
 {
     Q_OBJECT
 public:
 
-    LogDownloadController();
+    /// @param standaloneUnitTesting true: being run without factPanel, false: normal operation, factPanel is required
+    LogDownloadController(bool standaloneUnitTesting = false);
 
     Q_PROPERTY(QGCLogModel* model           READ model              NOTIFY modelChanged)
     Q_PROPERTY(bool         requestingList  READ requestingList     NOTIFY requestingListChanged)
@@ -154,6 +130,8 @@ public:
     Q_INVOKABLE void download               ();
     Q_INVOKABLE void eraseAll               ();
     Q_INVOKABLE void cancel                 ();
+
+    void downloadToDirectory(const QString& dir);
 
 signals:
     void requestingListChanged  ();
@@ -170,16 +148,18 @@ private slots:
 private:
 
     bool _entriesComplete   ();
-    bool _logComplete       ();
+    bool _chunkComplete     () const;
+    bool _logComplete       () const;
     void _findMissingEntries();
     void _receivedAllEntries();
     void _receivedAllData   ();
     void _resetSelection    (bool canceled = false);
     void _findMissingData   ();
-    void _requestLogList    (uint32_t start = 0, uint32_t end = 0xFFFF);
+    void _requestLogList    (uint32_t start, uint32_t end);
     void _requestLogData    (uint8_t id, uint32_t offset = 0, uint32_t count = 0xFFFFFFFF);
     bool _prepareLogDownload();
     void _setDownloading    (bool active);
+    void _setListing        (bool active);
 
     QGCLogEntry* _getNextSelected();
 

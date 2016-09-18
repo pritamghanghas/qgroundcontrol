@@ -1,32 +1,19 @@
-/*=====================================================================
- 
- QGroundControl Open Source Ground Control Station
- 
- (c) 2009 - 2015 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
- 
- This file is part of the QGROUNDCONTROL project
- 
- QGROUNDCONTROL is free software: you can redistribute it and/or modify
- it under the terms of the GNU General Public License as published by
- the Free Software Foundation, either version 3 of the License, or
- (at your option) any later version.
- 
- QGROUNDCONTROL is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU General Public License for more details.
- 
- You should have received a copy of the GNU General Public License
- along with QGROUNDCONTROL. If not, see <http://www.gnu.org/licenses/>.
- 
- ======================================================================*/
+/****************************************************************************
+ *
+ *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
 
 /// @file
 ///     @author Don Gagne <don@thegagnes.com>
 
 #include "AutoPilotPlugin.h"
 #include "QGCApplication.h"
-#include "ParameterLoader.h"
+#include "ParameterManager.h"
 #include "UAS.h"
 #include "FirmwarePlugin.h"
 
@@ -101,40 +88,40 @@ void AutoPilotPlugin::resetAllParametersToDefaults(void)
     mavlink_message_t msg;
     MAVLinkProtocol* mavlink = qgcApp()->toolbox()->mavlinkProtocol();
 
-    mavlink_msg_command_long_pack(mavlink->getSystemId(), mavlink->getComponentId(), &msg, _vehicle->uas()->getUASID(), 0, MAV_CMD_PREFLIGHT_STORAGE, 0, 2, -1, 0, 0, 0, 0, 0);
-    _vehicle->sendMessage(msg);
+    mavlink_msg_command_long_pack(mavlink->getSystemId(),
+                                  mavlink->getComponentId(),
+                                  &msg,
+                                  _vehicle->id(),                   // Target systeem
+                                  _vehicle->defaultComponentId(),   // Target component
+                                  MAV_CMD_PREFLIGHT_STORAGE,
+                                  0,                                // Confirmation
+                                  2,                                // 2 = Reset params to default
+                                  -1,                               // -1 = No change to mission storage
+                                  0,                                // 0 = Ignore
+                                  0, 0, 0, 0);                      // Unused
+    _vehicle->sendMessageOnPriorityLink(msg);
 }
 
 void AutoPilotPlugin::refreshAllParameters(unsigned char componentID)
 {
-    _vehicle->getParameterLoader()->refreshAllParameters((uint8_t)componentID);
+    _vehicle->getParameterManager()->refreshAllParameters((uint8_t)componentID);
 }
 
 void AutoPilotPlugin::refreshParameter(int componentId, const QString& name)
 {
-    _vehicle->getParameterLoader()->refreshParameter(componentId, name);
+    _vehicle->getParameterManager()->refreshParameter(componentId, name);
 }
 
 void AutoPilotPlugin::refreshParametersPrefix(int componentId, const QString& namePrefix)
 {
-    _vehicle->getParameterLoader()->refreshParametersPrefix(componentId, namePrefix);
-}
-
-bool AutoPilotPlugin::parameterExists(int componentId, const QString& name)
-{
-    return _vehicle->getParameterLoader()->parameterExists(componentId, name);
-}
-
-Fact* AutoPilotPlugin::getParameterFact(int componentId, const QString& name)
-{
-    return _vehicle->getParameterLoader()->getFact(componentId, name);
+    _vehicle->getParameterManager()->refreshParametersPrefix(componentId, namePrefix);
 }
 
 bool AutoPilotPlugin::factExists(FactSystem::Provider_t provider, int componentId, const QString& name)
 {
     switch (provider) {
         case FactSystem::ParameterProvider:
-            return _vehicle->getParameterLoader()->parameterExists(componentId, name);
+            return _vehicle->getParameterManager()->parameterExists(componentId, name);
             
         // Other providers will go here once they come online
     }
@@ -147,7 +134,7 @@ Fact* AutoPilotPlugin::getFact(FactSystem::Provider_t provider, int componentId,
 {
     switch (provider) {
         case FactSystem::ParameterProvider:
-            return _vehicle->getParameterLoader()->getFact(componentId, name);
+            return _vehicle->getParameterManager()->getFact(componentId, name);
             
         // Other providers will go here once they come online
     }
@@ -158,20 +145,15 @@ Fact* AutoPilotPlugin::getFact(FactSystem::Provider_t provider, int componentId,
 
 QStringList AutoPilotPlugin::parameterNames(int componentId)
 {
-    return _vehicle->getParameterLoader()->parameterNames(componentId);
-}
-
-const QMap<int, QMap<QString, QStringList> >& AutoPilotPlugin::getGroupMap(void)
-{
-    return _vehicle->getParameterLoader()->getGroupMap();
+    return _vehicle->getParameterManager()->parameterNames(componentId);
 }
 
 void AutoPilotPlugin::writeParametersToStream(QTextStream &stream)
 {
-    _vehicle->getParameterLoader()->writeParametersToStream(stream);
+    _vehicle->getParameterManager()->writeParametersToStream(stream);
 }
 
 QString AutoPilotPlugin::readParametersFromStream(QTextStream &stream)
 {
-    return _vehicle->getParameterLoader()->readParametersFromStream(stream);
+    return _vehicle->getParameterManager()->readParametersFromStream(stream);
 }

@@ -1,5 +1,12 @@
-/*===================================================================
-======================================================================*/
+/****************************************************************************
+ *
+ *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
 
 /**
  * @file
@@ -45,7 +52,6 @@ const char* MAVLinkProtocol::_logFileExtension = "mavlink";             ///< Ext
 MAVLinkProtocol::MAVLinkProtocol(QGCApplication* app)
     : QGCTool(app)
     , m_multiplexingEnabled(false)
-    , m_authEnabled(false)
     , m_enable_version_check(true)
     , m_paramRetransmissionTimeout(350)
     , m_paramRewriteTimeout(500)
@@ -53,7 +59,7 @@ MAVLinkProtocol::MAVLinkProtocol(QGCApplication* app)
     , m_actionGuardEnabled(false)
     , m_actionRetransmissionTimeout(100)
     , versionMismatchIgnore(false)
-    , systemId(QGC::defaultSystemId)
+    , systemId(255)
 #ifndef __mobile__
     , _logSuspendError(false)
     , _logSuspendReplay(false)
@@ -63,7 +69,11 @@ MAVLinkProtocol::MAVLinkProtocol(QGCApplication* app)
     , _linkMgr(NULL)
     , _multiVehicleManager(NULL)
 {
-
+    memset(&totalReceiveCounter, 0, sizeof(totalReceiveCounter));
+    memset(&totalLossCounter, 0, sizeof(totalLossCounter));
+    memset(&totalErrorCounter, 0, sizeof(totalErrorCounter));
+    memset(&currReceiveCounter, 0, sizeof(currReceiveCounter));
+    memset(&currLossCounter, 0, sizeof(currLossCounter));
 }
 
 MAVLinkProtocol::~MAVLinkProtocol()
@@ -84,7 +94,6 @@ void MAVLinkProtocol::setToolbox(QGCToolbox *toolbox)
 
    qRegisterMetaType<mavlink_message_t>("mavlink_message_t");
 
-   m_authKey = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
    loadSettings();
 
    // All the *Counter variables are not initialized here, as they should be initialized
@@ -124,10 +133,6 @@ void MAVLinkProtocol::loadSettings()
         systemId = temp;
     }
 
-    // Set auth key
-    m_authKey = settings.value("GCS_AUTH_KEY", m_authKey).toString();
-    enableAuth(settings.value("GCS_AUTH_ENABLED", m_authEnabled).toBool());
-
     // Parameter interface settings
     bool ok;
     temp = settings.value("PARAMETER_RETRANSMISSION_TIMEOUT", m_paramRetransmissionTimeout).toInt(&ok);
@@ -146,8 +151,6 @@ void MAVLinkProtocol::storeSettings()
     settings.setValue("VERSION_CHECK_ENABLED", m_enable_version_check);
     settings.setValue("MULTIPLEXING_ENABLED", m_multiplexingEnabled);
     settings.setValue("GCS_SYSTEM_ID", systemId);
-    settings.setValue("GCS_AUTH_KEY", m_authKey);
-    settings.setValue("GCS_AUTH_ENABLED", m_authEnabled);
     // Parameter interface settings
     settings.setValue("PARAMETER_RETRANSMISSION_TIMEOUT", m_paramRetransmissionTimeout);
     settings.setValue("PARAMETER_REWRITE_TIMEOUT", m_paramRewriteTimeout);
@@ -266,6 +269,9 @@ void MAVLinkProtocol::receiveBytes(LinkInterface* link, QByteArray b)
                      */
                     rssi    = qMin(qMax(qRound(static_cast<qreal>(rssi)    / 1.9 - 127.0), - 120), 0);
                     remrssi = qMin(qMax(qRound(static_cast<qreal>(remrssi) / 1.9 - 127.0), - 120), 0);
+                } else {
+                    rssi = (int8_t) rstatus.rssi;
+                    remrssi = (int8_t) rstatus.remrssi;
                 }
 
                 emit radioStatusChanged(link, rstatus.rxerrors, rstatus.fixed, rssi, remrssi,
@@ -357,11 +363,12 @@ void MAVLinkProtocol::receiveBytes(LinkInterface* link, QByteArray b)
             {
                 // Calculate new loss ratio
                 // Receive loss
-                float receiveLoss = (double)currLossCounter[mavlinkChannel]/(double)(currReceiveCounter[mavlinkChannel]+currLossCounter[mavlinkChannel]);
-                receiveLoss *= 100.0f;
+                float receiveLossPercent = (double)currLossCounter[mavlinkChannel]/(double)(currReceiveCounter[mavlinkChannel]+currLossCounter[mavlinkChannel]);
+                receiveLossPercent *= 100.0f;
                 currLossCounter[mavlinkChannel] = 0;
                 currReceiveCounter[mavlinkChannel] = 0;
-                emit receiveLossChanged(message.sysid, receiveLoss);
+                emit receiveLossPercentChanged(message.sysid, receiveLossPercent);
+                emit receiveLossTotalChanged(message.sysid, totalLossCounter[mavlinkChannel]);
             }
 
             // The packet is emitted as a whole, as it is only 255 - 261 bytes short
@@ -407,7 +414,7 @@ void MAVLinkProtocol::setSystemId(int id)
 /** @return Component id of this application */
 int MAVLinkProtocol::getComponentId()
 {
-    return QGC::defaultComponentId;
+    return 0;
 }
 
 /**
@@ -431,14 +438,14 @@ void MAVLinkProtocol::_sendMessage(LinkInterface* link, mavlink_message_t messag
     static uint8_t buffer[MAVLINK_MAX_PACKET_LEN];
     // Rewriting header to ensure correct link ID is set
     static uint8_t messageKeys[256] = MAVLINK_MESSAGE_CRCS;
-    mavlink_finalize_message_chan(&message, this->getSystemId(), this->getComponentId(), link->getMavlinkChannel(), message.len, messageKeys[message.msgid]);
+    mavlink_finalize_message_chan(&message, this->getSystemId(), this->getComponentId(), link->getMavlinkChannel(), message.len, message.len, messageKeys[message.msgid]);
     // Write message into buffer, prepending start sign
     int len = mavlink_msg_to_send_buffer(buffer, &message);
     // If link is connected
     if (link->isConnected())
     {
         // Send the portion of the buffer now occupied by the message
-        link->writeBytes((const char*)buffer, len);
+        link->writeBytesSafe((const char*)buffer, len);
     }
 }
 
@@ -454,14 +461,14 @@ void MAVLinkProtocol::_sendMessage(LinkInterface* link, mavlink_message_t messag
     static uint8_t buffer[MAVLINK_MAX_PACKET_LEN];
     // Rewriting header to ensure correct link ID is set
     static uint8_t messageKeys[256] = MAVLINK_MESSAGE_CRCS;
-    mavlink_finalize_message_chan(&message, systemid, componentid, link->getMavlinkChannel(), message.len, messageKeys[message.msgid]);
+    mavlink_finalize_message_chan(&message, systemid, componentid, link->getMavlinkChannel(), message.len, message.len, messageKeys[message.msgid]);
     // Write message into buffer, prepending start sign
     int len = mavlink_msg_to_send_buffer(buffer, &message);
     // If link is connected
     if (link->isConnected())
     {
         // Send the portion of the buffer now occupied by the message
-        link->writeBytes((const char*)buffer, len);
+        link->writeBytesSafe((const char*)buffer, len);
     }
 }
 
@@ -472,16 +479,6 @@ void MAVLinkProtocol::enableMultiplexing(bool enabled)
 
     m_multiplexingEnabled = enabled;
     if (changed) emit multiplexingChanged(m_multiplexingEnabled);
-}
-
-void MAVLinkProtocol::enableAuth(bool enable)
-{
-    bool changed = false;
-    m_authEnabled = enable;
-    if (m_authEnabled != enable) {
-        changed = true;
-    }
-    if (changed) emit authChanged(m_authEnabled);
 }
 
 void MAVLinkProtocol::enableParamGuard(bool enabled)

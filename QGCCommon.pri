@@ -4,17 +4,7 @@
 # Maintainer:
 # Lorenz Meier <lm@inf.ethz.ch>
 # (c) 2009-2014 QGroundControl Developers
-# This file is part of the open groundstation project
-# QGroundControl is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-# QGroundControl is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU General Public License for more details.
-# You should have received a copy of the GNU General Public License
-# along with QGroundControl. If not, see <http://www.gnu.org/licenses/>.
+# License terms set in COPYING.md
 # -------------------------------------------------
 
 #
@@ -27,21 +17,32 @@
 # the project file.
 
 linux {
-    linux-g++ | linux-g++-64 | linux-g++-32 {
+    linux-g++ | linux-g++-64 | linux-g++-32 | linux-clang {
         message("Linux build")
         CONFIG += LinuxBuild
         DEFINES += __STDC_LIMIT_MACROS
+        linux-clang {
+            message("Linux clang")
+            QMAKE_CXXFLAGS += -Qunused-arguments -fcolor-diagnostics
+        }
     } else : linux-rasp-pi2-g++ {
         message("Linux R-Pi2 build")
         CONFIG += LinuxBuild
         DEFINES += __STDC_LIMIT_MACROS __rasp_pi2__
     } else : android-g++ {
-        message("Android build")
         CONFIG += AndroidBuild MobileBuild
         DEFINES += __android__
         DEFINES += __STDC_LIMIT_MACROS
         DEFINES += QGC_ENABLE_BLUETOOTH
         target.path = $$DESTDIR
+        equals(ANDROID_TARGET_ARCH, x86)  {
+            CONFIG += Androidx86Build
+            DEFINES += __androidx86__
+            DEFINES += QGC_DISABLE_UVC
+            message("Android x86 build")
+        } else {
+            message("Android Arm build")
+        }
     } else {
         error("Unsuported Linux toolchain, only GCC 32- or 64-bit is supported")
     }
@@ -60,7 +61,11 @@ linux {
         DEFINES += __macos__
         CONFIG += x86_64
         CONFIG -= x86
-        QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.6
+        equals(QT_MAJOR_VERSION, 5) | greaterThan(QT_MINOR_VERSION, 5) {
+                QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.7
+        } else {
+                QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.6
+        }
         QMAKE_MAC_SDK = macosx10.11
         QMAKE_CXXFLAGS += -fvisibility=hidden
     } else {
@@ -73,12 +78,26 @@ linux {
     message("iOS build")
     CONFIG += iOSBuild MobileBuild app_bundle
     DEFINES += __ios__
+    DEFINES += QGC_NO_GOOGLE_MAPS
     QMAKE_IOS_DEPLOYMENT_TARGET = 8.0
-    QMAKE_IOS_TARGETED_DEVICE_FAMILY = 2 #- iPad only for now
+    QMAKE_IOS_TARGETED_DEVICE_FAMILY = 1,2 # Universal
     QMAKE_LFLAGS += -Wl,-no_pie
-    warning("iOS build is experimental and not yet fully functional")
 } else {
     error("Unsupported build platform, only Linux, Windows, Android and Mac (Mac OS and iOS) are supported")
+}
+
+# Enable ccache where we can
+linux|macx|ios {
+    system(which ccache) {
+        message("Found ccache, enabling")
+        !ios {
+            QMAKE_CXX = ccache $$QMAKE_CXX
+            QMAKE_CC  = ccache $$QMAKE_CC
+        } else {
+            QMAKE_CXX = $$PWD/tools/iosccachecc.sh
+            QMAKE_CC  = $$PWD/tools/iosccachecxx.sh
+        }
+    }
 }
 
 MobileBuild {
@@ -88,20 +107,39 @@ MobileBuild {
 # set the QGC version from git
 
 exists ($$PWD/.git) {
-  GIT_DESCRIBE = $$system(git --git-dir $$PWD/.git --work-tree $$PWD describe --always --tags)
-  GIT_HASH     = $$system(git rev-parse HEAD)
-  VERSION      = $$replace(GIT_DESCRIBE, "v", "")
-  VERSION      = $$replace(VERSION, "-", ".")
-  VERSION      = $$section(VERSION, ".", 0, 3)
-  message(QGroundControl version $${GIT_DESCRIBE} hash $${GIT_HASH})
+    GIT_DESCRIBE = $$system(git --git-dir $$PWD/.git --work-tree $$PWD describe --always --tags)
+    GIT_BRANCH   = $$system(git --git-dir $$PWD/.git --work-tree $$PWD rev-parse --abbrev-ref HEAD)
+    GIT_HASH     = $$system(git --git-dir $$PWD/.git --work-tree $$PWD rev-parse --short HEAD)
+    GIT_TIME     = $$system(git --git-dir $$PWD/.git --work-tree $$PWD show --oneline --format=\"%ci\" -s HEAD)
+
+    # determine if we're on a tag matching vX.Y.Z (stable release)
+    contains(GIT_DESCRIBE, v[0-9].[0-9].[0-9]) {
+        # release version "vX.Y.Z"
+        GIT_VERSION = $${GIT_DESCRIBE}
+    } else {
+        # development version "Development branch:sha date"
+        GIT_VERSION = "Development $${GIT_BRANCH}:$${GIT_HASH} $${GIT_TIME}"
+    }
+
+    VERSION      = $$replace(GIT_DESCRIBE, "v", "")
+    VERSION      = $$replace(VERSION, "-", ".")
+    VERSION      = $$section(VERSION, ".", 0, 3)
+    MacBuild {
+        MAC_VERSION  = $$section(VERSION, ".", 0, 2)
+        MAC_BUILD    = $$section(VERSION, ".", 3, 3)
+        message(QGroundControl version $${MAC_VERSION} build $${MAC_BUILD} describe $${GIT_VERSION})
+    } else {
+        message(QGroundControl $${GIT_VERSION})
+    }
 } else {
-  GIT_DESCRIBE = None
-  GIT_HASH = None
-  VERSION = 0.0.0   # Marker to indicate out-of-tree build
+    GIT_VERSION     = None
+    VERSION         = 0.0.0   # Marker to indicate out-of-tree build
+    MAC_VERSION     = 0.0.0
+    MAC_BUILD       = 0
 }
 
-DEFINES += GIT_TAG=\"\\\"$$GIT_DESCRIBE\\\"\"
-DEFINES += GIT_HASH=\"\\\"$$GIT_HASH\\\"\"
+DEFINES += GIT_VERSION=\"\\\"$$GIT_VERSION\\\"\"
+DEFINES += EIGEN_MPL2_ONLY
 
 # Installer configuration
 
@@ -156,14 +194,22 @@ MacBuild | LinuxBuild {
     WarningsAsErrorsOn {
         QMAKE_CXXFLAGS_WARN_ON += -Werror
     }
+    MacBuild {
+        # Latest clang version has a buggy check for this which cause Qt headers to throw warnings on qmap.h
+        QMAKE_CXXFLAGS_WARN_ON += -Wno-return-stack-address
+    }
 }
 
 WindowsBuild {
+    QMAKE_CFLAGS_RELEASE -= -Zc:strictStrings
+    QMAKE_CFLAGS_RELEASE_WITH_DEBUGINFO -= -Zc:strictStrings
+    QMAKE_CXXFLAGS_RELEASE -= -Zc:strictStrings
+    QMAKE_CXXFLAGS_RELEASE_WITH_DEBUGINFO -= -Zc:strictStrings
     QMAKE_CXXFLAGS_WARN_ON += /W3 \
         /wd4996 \   # silence warnings about deprecated strcpy and whatnot
         /wd4005 \   # silence warnings about macro redefinition
-        /wd4290 \   # ignore exception specifications
-        /Zc:strictStrings-  # work around win 8.1 sdk sapi.h problem
+        /wd4290     # ignore exception specifications
+
     WarningsAsErrorsOn {
         QMAKE_CXXFLAGS_WARN_ON += /WX
     }
@@ -175,14 +221,21 @@ WindowsBuild {
 
 ReleaseBuild {
     DEFINES += QT_NO_DEBUG
-    WindowsBuild {
-        # Use link time code generation for better optimization (I believe this is supported in MSVC Express, but not 100% sure)
-        QMAKE_LFLAGS_LTCG = /LTCG
-        QMAKE_CFLAGS_LTCG = -GL
+    CONFIG += force_debug_info  # Enable debugging symbols on release builds
+    !iOSBuild {
+        CONFIG += ltcg              # Turn on link time code generation
+    }
 
-        # Turn on debugging information so we can collect good crash dumps from release builds
-        QMAKE_CXXFLAGS_RELEASE += /Zi
-        QMAKE_LFLAGS_RELEASE += /DEBUG
+    WindowsBuild {
+        # Enable function level linking and enhanced optimized debugging
+        QMAKE_CFLAGS_RELEASE   += /Gy /Zo
+        QMAKE_CXXFLAGS_RELEASE += /Gy /Zo
+        QMAKE_CFLAGS_RELEASE_WITH_DEBUGINFO   += /Gy /Zo
+        QMAKE_CXXFLAGS_RELEASE_WITH_DEBUGINFO += /Gy /Zo
+
+        # Eliminate duplicate COMDATs
+        QMAKE_LFLAGS_RELEASE += /OPT:ICF
+        QMAKE_LFLAGS_RELEASE_WITH_DEBUGINFO += /OPT:ICF
     }
 }
 

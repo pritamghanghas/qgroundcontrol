@@ -1,25 +1,12 @@
-/*=====================================================================
+/****************************************************************************
+ *
+ *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
 
-QGroundControl Open Source Ground Control Station
-
-(c) 2009, 2010 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
-
-This file is part of the QGROUNDCONTROL project
-
-    QGROUNDCONTROL is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    QGROUNDCONTROL is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with QGROUNDCONTROL. If not, see <http://www.gnu.org/licenses/>.
-
-======================================================================*/
 
 /**
  * @file
@@ -102,10 +89,6 @@ public:
     QObject* rootQmlObject(void);
 
 public slots:
-#ifndef __mobile__
-    void showSettings();
-#endif
-
     /** @brief Save power by reducing update rates */
     void enableLowPowerMode(bool enabled) { _lowPowerMode = enabled; }
 
@@ -119,16 +102,6 @@ protected slots:
      * @brief Enable/Disable Status Bar
      */
     void showStatusBarCallback(bool checked);
-
-    /**
-     * @brief Disable the other QActions that trigger view mode changes
-     *
-     * When a user hits Ctrl+1, Ctrl+2, Ctrl+3  - only one view is set to active
-     * (and in the QML file for the MainWindow the others are set to have
-     * visibility = false), but on the Menu all of them would be selected making
-     * this incoherent.
-     */
-    void handleActiveViewActionState(bool triggered);
 
 signals:
     void initStatusChanged(const QString& message, int alignment, const QColor &color);

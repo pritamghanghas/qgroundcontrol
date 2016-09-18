@@ -4,17 +4,7 @@
 # Maintainer:
 # Lorenz Meier <lm@inf.ethz.ch>
 # (c) 2009-2011 QGroundControl Developers
-# This file is part of the open groundstation project
-# QGroundControl is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-# QGroundControl is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU General Public License for more details.
-# You should have received a copy of the GNU General Public License
-# along with QGroundControl. If not, see <http://www.gnu.org/licenses/>.
+# License terms set in COPYING.md
 # -------------------------------------------------
 
 QMAKE_POST_LINK += echo "Copying files"
@@ -38,17 +28,23 @@ WindowsBuild {
     # Make sure to keep both side of this if using the same set of directories
     DESTDIR_COPY_RESOURCE_LIST = $$replace(DESTDIR,"/","\\")
     BASEDIR_COPY_RESOURCE_LIST = $$replace(BASEDIR,"/","\\")
-    QMAKE_POST_LINK += $$escape_expand(\\n) $$QMAKE_COPY_DIR \"$$BASEDIR_COPY_RESOURCE_LIST\\flightgear\" \"$$DESTDIR_COPY_RESOURCE_LIST\\flightgear\"
+    QMAKE_POST_LINK += $$escape_expand(\\n) $$QMAKE_COPY_DIR \"$$BASEDIR_COPY_RESOURCE_LIST\\resources\\flightgear\" \"$$DESTDIR_COPY_RESOURCE_LIST\\flightgear\"
 } else {
     !MobileBuild {
         # Make sure to keep both sides of this if using the same set of directories
-        QMAKE_POST_LINK += && $$QMAKE_COPY_DIR $$BASEDIR/flightgear $$DESTDIR_COPY_RESOURCE_LIST
+        QMAKE_POST_LINK += && $$QMAKE_COPY_DIR $$BASEDIR/resources/flightgear $$DESTDIR_COPY_RESOURCE_LIST
     }
 }
 
 #
 # Perform platform specific setup
 #
+
+iOSBuild | MacBuild {
+    # Update version info in bundle
+    QMAKE_POST_LINK += && /usr/libexec/PlistBuddy -c \"Set :CFBundleShortVersionString $${MAC_VERSION}\" $$DESTDIR/$${TARGET}.app/Contents/Info.plist
+    QMAKE_POST_LINK += && /usr/libexec/PlistBuddy -c \"Set :CFBundleVersion $${MAC_BUILD}\" $$DESTDIR/$${TARGET}.app/Contents/Info.plist
+}
 
 MacBuild {
     # Copy non-standard frameworks into app package
@@ -67,7 +63,8 @@ WindowsBuild {
     ReleaseBuild: DLL_QT_DEBUGCHAR = ""
     COPY_FILE_LIST = \
         $$BASEDIR\\libs\\lib\\sdl\\win32\\SDL.dll \
-        $$BASEDIR\\libs\\thirdParty\\libxbee\\lib\\libxbee.dll
+        $$BASEDIR\\libs\\thirdParty\\libxbee\\lib\\libxbee.dll \
+        $$BASEDIR\\deploy\\libeay32.dll
 
     for(COPY_FILE, COPY_FILE_LIST) {
         QMAKE_POST_LINK += $$escape_expand(\\n) $$QMAKE_COPY \"$$COPY_FILE\" \"$$DESTDIR_WIN\"
@@ -116,10 +113,17 @@ LinuxBuild {
             libQt5Quick.so.5 \
             libQt5QuickWidgets.so.5 \
             libQt5SerialPort.so.5 \
+            libQt5Sql.so.5 \
             libQt5Svg.so.5 \
             libQt5Test.so.5 \
             libQt5Widgets.so.5 \
             libQt5XcbQpa.so.5
+
+        !contains (DEFINES, QGC_DISABLE_UVC) {
+            QT_LIB_LIST += \
+                libQt5Multimedia.so.5 \
+                libQt5MultimediaQuick_p.so.5
+        }
 
         !contains(DEFINES, __rasp_pi2__) {
             QT_LIB_LIST += \
@@ -141,7 +145,8 @@ LinuxBuild {
             platforminputcontexts \
             platforms \
             platformthemes \
-            position
+            position \
+            sqldrivers
 
         !contains(DEFINES, __rasp_pi2__) {
             QT_PLUGIN_LIST += xcbglintegrations
@@ -156,6 +161,8 @@ LinuxBuild {
 
         # QGroundControl start script
         QMAKE_POST_LINK += && $$QMAKE_COPY $$BASEDIR/deploy/qgroundcontrol-start.sh $$DESTDIR
+        QMAKE_POST_LINK += && $$QMAKE_COPY $$BASEDIR/deploy/qgroundcontrol.desktop $$DESTDIR
+        QMAKE_POST_LINK += && $$QMAKE_COPY $$BASEDIR/resources/icons/qgroundcontrol.png $$DESTDIR
     }
 }
 

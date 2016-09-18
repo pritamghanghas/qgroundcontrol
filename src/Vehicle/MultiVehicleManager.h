@@ -1,25 +1,12 @@
-/*=====================================================================
+/****************************************************************************
+ *
+ *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
 
- QGroundControl Open Source Ground Control Station
-
- (c) 2009 - 2014 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
-
- This file is part of the QGROUNDCONTROL project
-
- QGROUNDCONTROL is free software: you can redistribute it and/or modify
- it under the terms of the GNU General Public License as published by
- the Free Software Foundation, either version 3 of the License, or
- (at your option) any later version.
-
- QGROUNDCONTROL is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU General Public License for more details.
-
- You should have received a copy of the GNU General Public License
- along with QGROUNDCONTROL. If not, see <http://www.gnu.org/licenses/>.
-
- ======================================================================*/
 
 /// @file
 ///     @author Don Gagne <don@thegagnes.com>
@@ -35,6 +22,7 @@
 
 class FirmwarePluginManager;
 class AutoPilotPluginManager;
+class FollowMe;
 class JoystickManager;
 class QGCApplication;
 class MAVLinkProtocol;
@@ -57,6 +45,9 @@ public:
     Q_PROPERTY(QmlObjectListModel*  vehicles                        READ vehicles                                                       CONSTANT)
     Q_PROPERTY(bool                 gcsHeartBeatEnabled             READ gcsHeartbeatEnabled            WRITE setGcsHeartbeatEnabled    NOTIFY gcsHeartBeatEnabledChanged)
 
+    /// A disconnected vehicle used for offline editing. It will match the vehicle type specified in Settings.
+    Q_PROPERTY(Vehicle*             offlineEditingVehicle           READ offlineEditingVehicle                                          CONSTANT)
+
     // Methods
 
     Q_INVOKABLE Vehicle* getVehicleById(int vehicleId);
@@ -76,6 +67,14 @@ public:
 
     bool gcsHeartbeatEnabled(void) const { return _gcsHeartbeatEnabled; }
     void setGcsHeartbeatEnabled(bool gcsHeartBeatEnabled);
+
+    Vehicle* offlineEditingVehicle(void) { return _offlineEditingVehicle; }
+
+    /// Determines if the link is in use by a Vehicle
+    ///     @param link Link to test against
+    ///     @param skipVehicle Don't consider this Vehicle as part of the test
+    /// @return true: link is in use by one or more Vehicles
+    bool linkInUse(LinkInterface* link, Vehicle* skipVehicle);
 
     // Override from QGCTool
     virtual void setToolbox(QGCToolbox *toolbox);
@@ -104,6 +103,7 @@ private:
     bool        _activeVehicleAvailable;            ///< true: An active vehicle is available
     bool        _parameterReadyVehicleAvailable;    ///< true: An active vehicle with ready parameters is available
     Vehicle*    _activeVehicle;                     ///< Currently active vehicle from a ui perspective
+    Vehicle*    _offlineEditingVehicle;             ///< Disconnected vechicle used for offline editing
 
     QList<Vehicle*> _vehiclesBeingDeleted;          ///< List of Vehicles being deleted in queued phases
     Vehicle*        _vehicleBeingSetActive;         ///< Vehicle being set active in queued phases

@@ -1,25 +1,12 @@
-/*=====================================================================
- 
- QGroundControl Open Source Ground Control Station
- 
- (c) 2009 - 2014 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
- 
- This file is part of the QGROUNDCONTROL project
- 
- QGROUNDCONTROL is free software: you can redistribute it and/or modify
- it under the terms of the GNU General Public License as published by
- the Free Software Foundation, either version 3 of the License, or
- (at your option) any later version.
- 
- QGROUNDCONTROL is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU General Public License for more details.
- 
- You should have received a copy of the GNU General Public License
- along with QGROUNDCONTROL. If not, see <http://www.gnu.org/licenses/>.
- 
- ======================================================================*/
+/****************************************************************************
+ *
+ *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
 
 #include "MissionManagerTest.h"
 #include "LinkManager.h"
@@ -45,32 +32,31 @@ void MissionManagerTest::_writeItems(MockLinkMissionItemHandler::FailureMode_t f
     _mockLink->setMissionItemFailureMode(failureMode);
     
     // Setup our test case data
-    QmlObjectListModel* list = new QmlObjectListModel();
+    QList<MissionItem*> missionItems;
     
     // Editor has a home position item on the front, so we do the same
     MissionItem* homeItem = new MissionItem(NULL /* Vehicle */, this);
-    homeItem->setHomePositionSpecialCase(true);
-    homeItem->setCommand(MavlinkQmlSingleton::MAV_CMD_NAV_WAYPOINT);
+    homeItem->setCommand(MAV_CMD_NAV_WAYPOINT);
     homeItem->setCoordinate(QGeoCoordinate(47.3769, 8.549444, 0));
     homeItem->setSequenceNumber(0);
-    list->insert(0, homeItem);
+    missionItems.append(homeItem);
 
     for (size_t i=0; i<_cTestCases; i++) {
         const TestCase_t* testCase = &_rgTestCases[i];
         
-        MissionItem* item = new MissionItem(NULL /* Vehicle */, list);
+        MissionItem* missionItem = new MissionItem(this);
         
         QTextStream loadStream(testCase->itemStream, QIODevice::ReadOnly);
-        QVERIFY(item->load(loadStream));
+        QVERIFY(missionItem->load(loadStream));
 
         // Mission Manager expects to get 1-base sequence numbers for write
-        item->setSequenceNumber(item->sequenceNumber() + 1);
+        missionItem->setSequenceNumber(missionItem->sequenceNumber() + 1);
         
-        list->append(item);
+        missionItems.append(missionItem);
     }
     
     // Send the items to the vehicle
-    _missionManager->writeMissionItems(*list);
+    _missionManager->writeMissionItems(missionItems);
     
     // writeMissionItems should emit these signals before returning:
     //      inProgressChanged
@@ -100,7 +86,7 @@ void MissionManagerTest::_writeItems(MockLinkMissionItemHandler::FailureMode_t f
             expectedCount++;
         }
 
-        QCOMPARE(_missionManager->missionItems()->count(), expectedCount);
+        QCOMPARE(_missionManager->missionItems().count(), expectedCount);
     } else {
         // This should be a failed run
         
@@ -124,8 +110,6 @@ void MissionManagerTest::_writeItems(MockLinkMissionItemHandler::FailureMode_t f
         checkExpectedMessageBox();
     }
     
-    delete list;
-    list = NULL;
     _multiSpyMissionManager->clearAllSignals();
 }
 
@@ -195,7 +179,7 @@ void MissionManagerTest::_roundTripItems(MockLinkMissionItemHandler::FailureMode
         cMissionItemsExpected = 0;
     }
     
-    QCOMPARE(_missionManager->missionItems()->count(), (int)cMissionItemsExpected);
+    QCOMPARE(_missionManager->missionItems().count(), (int)cMissionItemsExpected);
 
     size_t firstActualItem = 0;
     if (_mockLink->getFirmwareType() == MAV_AUTOPILOT_ARDUPILOTMEGA) {
@@ -213,7 +197,7 @@ void MissionManagerTest::_roundTripItems(MockLinkMissionItemHandler::FailureMode
             expectedSequenceNumber++;
         }
 
-        MissionItem* actual = qobject_cast<MissionItem*>(_missionManager->missionItems()->get(actualItemIndex));
+        MissionItem* actual = _missionManager->missionItems()[actualItemIndex];
         
         qDebug() << "Test case" << testCaseIndex;
         QCOMPARE(actual->sequenceNumber(),          expectedSequenceNumber);

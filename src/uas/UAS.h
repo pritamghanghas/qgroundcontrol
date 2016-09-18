@@ -1,25 +1,12 @@
-/*=====================================================================
+/****************************************************************************
+ *
+ *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
 
-QGroundControl Open Source Ground Control Station
-
-(c) 2009, 2010 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
-
-This file is part of the QGROUNDCONTROL project
-
-    QGROUNDCONTROL is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    QGROUNDCONTROL is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with QGROUNDCONTROL. If not, see <http://www.gnu.org/licenses/>.
-
-======================================================================*/
 
 /**
  * @file
@@ -77,8 +64,6 @@ public:
 
     /** @brief The time interval the robot is switched on */
     quint64 getUptime() const;
-    /** @brief Add one measurement and get low-passed voltage */
-    float filterVoltage(float value);
 
     Q_PROPERTY(double   latitude                READ getLatitude            WRITE setLatitude           NOTIFY latitudeChanged)
     Q_PROPERTY(double   longitude               READ getLongitude           WRITE setLongitude          NOTIFY longitudeChanged)
@@ -372,24 +357,7 @@ protected: //COMMENTS FOR TEST UNIT
     float sendDropRate;           ///< Percentage of packets that were not received from the MAV by the GCS
 
     /// BASIC UAS TYPE, NAME AND STATE
-    uint8_t base_mode;                 ///< The current mode of the MAV
-    uint32_t custom_mode;         ///< The current mode of the MAV
     int status;                   ///< The current status of the MAV
-
-    // dongfang: This looks like a candidate for being moved off to a separate class.
-    /// BATTERY / ENERGY
-    float startVoltage;         ///< Voltage at system start
-    float tickVoltage;          ///< Voltage where 0.1 V ticks are told
-    float lastTickVoltageValue; ///< The last voltage where a tick was announced
-    float tickLowpassVoltage;   ///< Lowpass-filtered voltage for the tick announcement
-    float warnLevelPercent;     ///< Warning level, in percent
-    double currentVoltage;      ///< Voltage currently measured
-    float lpVoltage;            ///< Low-pass filtered voltage
-    double currentCurrent;      ///< Battery current currently measured
-    bool batteryRemainingEstimateEnabled; ///< If the estimate is enabled, QGC will try to estimate the remaining battery life
-    float chargeLevel;          ///< Charge level of battery, in percent
-    bool lowBattAlarm;          ///< Switch if battery is low
-
 
     /// TIMEKEEPING
     quint64 startTime;            ///< The time the UAS was switched on
@@ -486,8 +454,6 @@ protected: //COMMENTS FOR TEST UNIT
 #endif
 
 public:
-    /** @brief Get the current charge level */
-    float getChargeLevel();
     /** @brief Get the human-readable status message for this code */
     void getStatusForCode(int statusCode, QString& uasState, QString& stateDescription);
 
@@ -559,9 +525,6 @@ public slots:
     void stopHil();
 #endif
 
-    void startLowBattAlarm();
-    void stopLowBattAlarm();
-
     /** @brief Set the values for the manual control of the vehicle */
     void setExternalControlSetpoint(float roll, float pitch, float yaw, float thrust, quint16 buttons, int joystickMode);
 
@@ -627,7 +590,7 @@ protected:
     bool componentMulti[256];
     bool connectionLost; ///< Flag indicates a timed out connection
     quint64 connectionLossTime; ///< Time the connection was interrupted
-    quint64 lastVoltageWarning; ///< Time at which the last voltage warning occured
+    quint64 lastVoltageWarning; ///< Time at which the last voltage warning occurred
     quint64 lastNonNullTime;    ///< The last timestamp from the MAV that was not null
     unsigned int onboardTimeOffsetInvalidCount;     ///< Count when the offboard time offset estimation seemed wrong
     bool hilEnabled;

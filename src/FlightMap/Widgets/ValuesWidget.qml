@@ -1,28 +1,16 @@
-/*=====================================================================
+/****************************************************************************
+ *
+ *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
 
-QGroundControl Open Source Ground Control Station
-
-(c) 2009, 2015 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
-
-This file is part of the QGROUNDCONTROL project
-
-    QGROUNDCONTROL is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    QGROUNDCONTROL is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with QGROUNDCONTROL. If not, see <http://www.gnu.org/licenses/>.
-
-======================================================================*/
 
 import QtQuick          2.4
 import QtQuick.Dialogs  1.2
+import QtQuick.Layouts  1.2
 
 import QGroundControl.Controls      1.0
 import QGroundControl.ScreenTools   1.0
@@ -33,7 +21,6 @@ import QGroundControl               1.0
 
 QGCFlickable {
     id:                 _root
-    visible:            _activeVehicle
     height:             Math.min(maxHeight, _smallFlow.y + _smallFlow.height)
     contentHeight:      _smallFlow.y + _smallFlow.height
     flickableDirection: Flickable.VerticalFlick
@@ -43,7 +30,7 @@ QGCFlickable {
     property color  textColor
     property var    maxHeight
 
-    property var    _activeVehicle: QGroundControl.multiVehicleManager.activeVehicle
+    property var    _activeVehicle: QGroundControl.multiVehicleManager.activeVehicle ? QGroundControl.multiVehicleManager.activeVehicle : QGroundControl.multiVehicleManager.offlineEditingVehicle
     property real   _margins:       ScreenTools.defaultFontPixelWidth / 2
 
     QGCPalette { id:qgcPal; colorGroupEnabled: true }
@@ -53,7 +40,16 @@ QGCFlickable {
     }
 
     function showPicker() {
-        qgcView.showDialog(propertyPicker, "Value Widget Setup", qgcView.showDialogDefaultWidth, StandardButton.Ok)
+        qgcView.showDialog(propertyPicker, qsTr("Value Widget Setup"), qgcView.showDialogDefaultWidth, StandardButton.Ok)
+    }
+
+    function listContains(list, value) {
+        for (var i=0; i<list.length; i++) {
+            if (list[i] === value) {
+                return true
+            }
+        }
+        return false
     }
 
     MouseArea {
@@ -70,22 +66,24 @@ QGCFlickable {
             model: _activeVehicle ? controller.largeValues : 0
 
             Column {
-                id:     valueColumn
                 width:  _largeColumn.width
 
                 property Fact fact: _activeVehicle.getFact(modelData.replace("Vehicle.", ""))
+                property bool largeValue: _root.listContains(controller.altitudeProperties, fact.name)
 
                 QGCLabel {
                     width:                  parent.width
                     horizontalAlignment:    Text.AlignHCenter
                     color:                  textColor
+                    fontSizeMode:           Text.HorizontalFit
                     text:                   fact.shortDescription + (fact.units ? " (" + fact.units + ")" : "")
                 }
                 QGCLabel {
                     width:                  parent.width
                     horizontalAlignment:    Text.AlignHCenter
-                    font.pixelSize:         ScreenTools.largeFontPixelSize
-                    font.weight:            Font.DemiBold
+                    font.pointSize:         ScreenTools.mediumFontPointSize * (largeValue ? 1.3 : 1.0)
+                    font.family:            largeValue ? ScreenTools.demiboldFontFamily : ScreenTools.normalFontFamily
+                    fontSizeMode:           Text.HorizontalFit
                     color:                  textColor
                     text:                   fact.valueString
                 }
@@ -105,7 +103,6 @@ QGCFlickable {
             model: _activeVehicle ? controller.smallValues : 0
 
             Column {
-                id:     valueColumn
                 width:  (_root.width / 2) - (_margins / 2) - 0.1
                 clip:   true
 
@@ -114,7 +111,8 @@ QGCFlickable {
                 QGCLabel {
                     width:                  parent.width
                     horizontalAlignment:    Text.AlignHCenter
-                    font.pixelSize:         ScreenTools.smallFontPixelSize
+                    font.pointSize:         ScreenTools.isTinyScreen ? ScreenTools.smallFontPointSize * 0.75 : ScreenTools.smallFontPointSize
+                    fontSizeMode:           Text.HorizontalFit
                     color:                  textColor
                     text:                   fact.shortDescription
                 }
@@ -122,12 +120,14 @@ QGCFlickable {
                     width:                  parent.width
                     horizontalAlignment:    Text.AlignHCenter
                     color:                  textColor
+                    fontSizeMode:           Text.HorizontalFit
                     text:                   fact.enumOrValueString
                 }
                 QGCLabel {
                     width:                  parent.width
                     horizontalAlignment:    Text.AlignHCenter
-                    font.pixelSize:         ScreenTools.smallFontPixelSize
+                    font.pointSize:         ScreenTools.isTinyScreen ? ScreenTools.smallFontPointSize * 0.75 : ScreenTools.smallFontPointSize
+                    fontSizeMode:           Text.HorizontalFit
                     color:                  textColor
                     text:                   fact.units
                 }
@@ -141,21 +141,28 @@ QGCFlickable {
         QGCViewDialog {
             id: _propertyPickerDialog
 
-            QGCLabel {
-                id:     _label
-                text:   "Select the values you want to display:"
-            }
+            QGCFlickable {
+                anchors.fill:       parent
+                contentHeight:      _loader.y + _loader.height
+                flickableDirection: Flickable.VerticalFlick
+                clip:               true
 
-            Loader {
-                anchors.left:       parent.left
-                anchors.right:      parent.right
-                anchors.topMargin:  _margins
-                anchors.top:        _label.bottom
-                anchors.bottom:     parent.bottom
-                sourceComponent:    factGroupList
+                QGCLabel {
+                    id:     _label
+                    text:   qsTr("Select the values you want to display:")
+                }
 
-                property var factGroup:     _activeVehicle
-                property var factGroupName: "Vehicle"
+                Loader {
+                    id:                 _loader
+                    anchors.left:       parent.left
+                    anchors.right:      parent.right
+                    anchors.topMargin:  _margins
+                    anchors.top:        _label.bottom
+                    sourceComponent:    factGroupList
+
+                    property var factGroup:     _activeVehicle
+                    property var factGroupName: "Vehicle"
+                }
             }
         }
     }
@@ -174,25 +181,16 @@ QGCFlickable {
             QGCLabel {
                 width:      parent.width
                 wrapMode:   Text.WordWrap
-                text:       factGroup ? factGroupName : "Vehicle must be connected to assign values."
+                text:       factGroup ? factGroupName : qsTr("Vehicle must be connected to assign values.")
             }
 
             Repeater {
                 model: factGroup ? factGroup.factNames : 0
 
-                Row {
+                RowLayout {
                     spacing: _margins
 
                     property string propertyName: factGroupName + "." + modelData
-
-                    function contains(list, value) {
-                        for (var i=0; i<list.length; i++) {
-                            if (list[i] === value) {
-                                return true
-                            }
-                        }
-                        return false
-                    }
 
                     function removeFromList(list, value) {
                         var newList = []
@@ -234,18 +232,20 @@ QGCFlickable {
                     }
 
                     QGCCheckBox {
-                        id:         _addCheckBox
-                        text:       factGroup.getFact(modelData).shortDescription
-                        checked:    _largeCheckBox.checked || parent.contains(controller.smallValues, propertyName)
-                        onClicked:  updateValues()
+                        id:                     _addCheckBox
+                        text:                   factGroup.getFact(modelData).shortDescription
+                        checked:                listContains(controller.smallValues, propertyName) || _largeCheckBox.checked
+                        onClicked:              updateValues()
+                        Layout.fillWidth:       true
+                        Layout.minimumWidth:    ScreenTools.defaultFontPixelWidth * 20
                     }
 
                     QGCCheckBox {
-                        id:         _largeCheckBox
-                        text:       "large"
-                        checked:    parent.contains(controller.largeValues, propertyName)
-                        enabled:    _addCheckBox.checked
-                        onClicked:  updateValues()
+                        id:                     _largeCheckBox
+                        text:                   qsTr("Large")
+                        checked:                listContains(controller.largeValues, propertyName)
+                        enabled:                _addCheckBox.checked
+                        onClicked:              updateValues()
                     }
                 }
             }
@@ -254,12 +254,10 @@ QGCFlickable {
 
             Repeater {
                 model: factGroup ? factGroup.factGroupNames : 0
-
                 Loader {
                     sourceComponent: factGroupList
-
                     property var    factGroup:      _root ? _root.parent.factGroup.getFactGroup(modelData) : undefined
-                    property string factGroupName:  _root ? _root.parent.factGroupName + "." + modelData : undefined
+                    property string factGroupName:  _root ? _root.parent.factGroupName + "." + modelData : ""
                 }
             }
         }

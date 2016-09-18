@@ -1,25 +1,12 @@
-/*=====================================================================
+/****************************************************************************
+ *
+ *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
 
-QGroundControl Open Source Ground Control Station
-
-(c) 2009 - 2015 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
-
-This file is part of the QGROUNDCONTROL project
-
-    QGROUNDCONTROL is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    QGROUNDCONTROL is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with QGROUNDCONTROL. If not, see <http://www.gnu.org/licenses/>.
-
-======================================================================*/
 
 /**
  * @file
@@ -38,6 +25,7 @@ This file is part of the QGROUNDCONTROL project
 #include <QDesktopServices>
 #include <QDockWidget>
 #include <QMenuBar>
+#include <QDialog>
 
 #include "QGC.h"
 #include "MAVLinkProtocol.h"
@@ -55,7 +43,6 @@ This file is part of the QGROUNDCONTROL project
 #include "QGCImageProvider.h"
 
 #ifndef __mobile__
-#include "SettingsDialog.h"
 #include "QGCDataPlot2D.h"
 #include "Linecharts.h"
 #include "QGCUASFileViewMulti.h"
@@ -63,9 +50,9 @@ This file is part of the QGROUNDCONTROL project
 #include "QGCTabbedInfoView.h"
 #include "CustomCommandWidget.h"
 #include "QGCDockWidget.h"
-#include "UASInfoWidget.h"
 #include "HILDockWidget.h"
 #include "LogDownload.h"
+#include "AppMessages.h"
 #endif
 
 #ifndef __ios__
@@ -84,7 +71,6 @@ enum DockWidgetTypes {
     MAVLINK_INSPECTOR,
     CUSTOM_COMMAND,
     ONBOARD_FILES,
-    STATUS_DETAILS,
     INFO_VIEW,
     HIL_CONFIG,
     ANALYZE,
@@ -95,7 +81,6 @@ static const char *rgDockWidgetNames[] = {
     "MAVLink Inspector",
     "Custom Command",
     "Onboard Files",
-    "Status Details",
     "Info View",
     "HIL Config",
     "Analyze",
@@ -140,6 +125,14 @@ MainWindow::MainWindow()
     Q_ASSERT(_instance == NULL);
     _instance = this;
 
+    //-- Load fonts
+    if(QFontDatabase::addApplicationFont(":/fonts/opensans") < 0) {
+        qWarning() << "Could not load /fonts/opensans font";
+    }
+    if(QFontDatabase::addApplicationFont(":/fonts/opensans-demibold") < 0) {
+        qWarning() << "Could not load /fonts/opensans-demibold font";
+    }
+
     // Qt 4/5 on Ubuntu does place the native menubar correctly so on Linux we revert back to in-window menu bar.
 #ifdef Q_OS_LINUX
     menuBar()->setNativeMenuBar(false);
@@ -164,6 +157,7 @@ MainWindow::MainWindow()
 
     QQmlEngine::setObjectOwnership(this, QQmlEngine::CppOwnership);
     _mainQmlWidgetHolder->setContextPropertyObject("controller", this);
+    _mainQmlWidgetHolder->setContextPropertyObject("debugMessageModel", AppMessages::getModel());
     _mainQmlWidgetHolder->setSource(QUrl::fromUserInput("qrc:qml/MainWindowHybrid.qml"));
 
     // Image provider
@@ -245,19 +239,6 @@ MainWindow::MainWindow()
 
     connect(_ui.actionStatusBar,  &QAction::triggered, this, &MainWindow::showStatusBarCallback);
 
-    // Set OS dependent keyboard shortcuts for the main window, non OS dependent shortcuts are set in MainWindow.ui
-#ifdef __macos__
-    _ui.actionSetup->setShortcut(QApplication::translate("MainWindow", "Meta+1", 0));
-    _ui.actionPlan->setShortcut(QApplication::translate("MainWindow", "Meta+2", 0));
-    _ui.actionFlight->setShortcut(QApplication::translate("MainWindow", "Meta+3", 0));
-#else
-    _ui.actionSetup->setShortcut(QApplication::translate("MainWindow", "Ctrl+1", 0));
-    _ui.actionPlan->setShortcut(QApplication::translate("MainWindow", "Ctrl+2", 0));
-    _ui.actionFlight->setShortcut(QApplication::translate("MainWindow", "Ctrl+3", 0));
-#endif
-
-    _ui.actionFlight->setChecked(true);
-
     connect(&windowNameUpdateTimer, &QTimer::timeout, this, &MainWindow::configureWindowName);
     windowNameUpdateTimer.start(15000);
     emit initStatusChanged(tr("Done"), Qt::AlignLeft | Qt::AlignBottom, QColor(62, 93, 141));
@@ -289,10 +270,19 @@ MainWindow::MainWindow()
 #ifndef __mobile__
     _loadVisibleWidgetsSettings();
 #endif
+    //-- Enable message handler display of messages in main window
+    UASMessageHandler* msgHandler = qgcApp()->toolbox()->uasMessageHandler();
+    if(msgHandler) {
+        msgHandler->showErrorsInToolbar();
+    }
 }
 
 MainWindow::~MainWindow()
 {
+    // This needs to happen before we get into the QWidget dtor
+    // otherwise  the QML engine reads freed data and tries to
+    // destroy MainWindow a second time.
+    delete _mainQmlWidgetHolder;
     _instance = NULL;
 }
 
@@ -319,7 +309,7 @@ void MainWindow::_buildCommonWidgets(void)
         const char* pDockWidgetName = rgDockWidgetNames[i];
 
         // Add to menu
-        QAction* action = new QAction(tr(pDockWidgetName), NULL);
+        QAction* action = new QAction(tr(pDockWidgetName), this);
         action->setCheckable(true);
         action->setData(i);
         connect(action, &QAction::triggered, this, &MainWindow::_showDockWidgetAction);
@@ -364,9 +354,6 @@ bool MainWindow::_createInnerDockWidget(const QString& widgetName)
                 break;
             case LOG_DOWNLOAD:
                 widget = new LogDownload(widgetName, action, this);
-                break;
-            case STATUS_DETAILS:
-                widget = new UASInfoWidget(widgetName, action, this);
                 break;
             case HIL_CONFIG:
                 widget = new HILDockWidget(widgetName, action, this);
@@ -418,7 +405,7 @@ void MainWindow::reallyClose(void)
 void MainWindow::closeEvent(QCloseEvent *event)
 {
     if (!_forceClose) {
-        // Attemp close from within the root Qml item
+        // Attempt close from within the root Qml item
         qgcApp()->qmlAttemptWindowClose();
         event->ignore();
         return;
@@ -431,10 +418,6 @@ void MainWindow::closeEvent(QCloseEvent *event)
 
     _storeCurrentViewState();
     storeSettings();
-
-    //-- TODO: This effectively causes the QGCApplication destructor to not being able
-    //   to access the pointer it is trying to delete.
-    _instance = NULL;
 
     emit mainWindowClosed();
 }
@@ -500,28 +483,8 @@ void MainWindow::connectCommonActions()
     connect(qgcApp()->toolbox()->audioOutput(), &GAudioOutput::mutedChanged, _ui.actionMuteAudioOutput, &QAction::setChecked);
     connect(_ui.actionMuteAudioOutput, &QAction::triggered, qgcApp()->toolbox()->audioOutput(), &GAudioOutput::mute);
 
-    // Application Settings
-    connect(_ui.actionSettings, &QAction::triggered, this, &MainWindow::showSettings);
-
-    // Views actions
-    connect(_ui.actionFlight,   &QAction::triggered,    qgcApp(),   &QGCApplication::showFlyView);
-    connect(_ui.actionPlan,     &QAction::triggered,    qgcApp(),   &QGCApplication::showPlanView);
-    connect(_ui.actionSetup,    &QAction::triggered,    qgcApp(),   &QGCApplication::showSetupView);
-    connect(_ui.actionFlight,   &QAction::triggered,    this,       &MainWindow::handleActiveViewActionState);
-    connect(_ui.actionPlan,     &QAction::triggered,    this,       &MainWindow::handleActiveViewActionState);
-    connect(_ui.actionSetup,    &QAction::triggered,    this,       &MainWindow::handleActiveViewActionState);
-
     // Connect internal actions
     connect(qgcApp()->toolbox()->multiVehicleManager(), &MultiVehicleManager::vehicleAdded, this, &MainWindow::_vehicleAdded);
-}
-
-void MainWindow::handleActiveViewActionState(bool triggered)
-{
-    Q_UNUSED(triggered);
-    QAction *triggeredAction = qobject_cast<QAction*>(sender());
-    _ui.actionFlight->setChecked(triggeredAction == _ui.actionFlight);
-    _ui.actionPlan->setChecked(triggeredAction == _ui.actionPlan);
-    _ui.actionSetup->setChecked(triggeredAction == _ui.actionSetup);
 }
 
 void MainWindow::_openUrl(const QString& url, const QString& errorMessage)
@@ -530,14 +493,6 @@ void MainWindow::_openUrl(const QString& url, const QString& errorMessage)
         qgcApp()->showMessage(QString("Could not open information in browser: %1").arg(errorMessage));
     }
 }
-
-#ifndef __mobile__
-void MainWindow::showSettings()
-{
-    SettingsDialog settings(this);
-    settings.exec();
-}
-#endif
 
 void MainWindow::_vehicleAdded(Vehicle* vehicle)
 {

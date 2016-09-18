@@ -1,31 +1,24 @@
-/*===================================================================
-QGroundControl Open Source Ground Control Station
+/****************************************************************************
+ *
+ *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
 
-(c) 2009, 2010 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
-
-This file is part of the QGROUNDCONTROL project
-
-    QGROUNDCONTROL is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    QGROUNDCONTROL is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with QGROUNDCONTROL. If not, see <http://www.gnu.org/licenses/>.
-
-======================================================================*/
 
 #include "JsonHelper.h"
 
 #include <QJsonArray>
+#include <QJsonParseError>
 
-const char* JsonHelper::_enumStringsJsonKey =   "enumStrings";
-const char* JsonHelper::_enumValuesJsonKey =    "enumValues";
+const char* JsonHelper::_enumStringsJsonKey =       "enumStrings";
+const char* JsonHelper::_enumValuesJsonKey =        "enumValues";
+const char* JsonHelper::jsonVersionKey =            "version";
+const char* JsonHelper::jsonGroundStationKey =      "groundStation";
+const char* JsonHelper::jsonGroundStationValue =    "QGroundControl";
+const char* JsonHelper::jsonFileTypeKey =           "fileType";
 
 bool JsonHelper::validateRequiredKeys(const QJsonObject& jsonObject, const QStringList& keys, QString& errorString)
 {
@@ -58,8 +51,15 @@ bool JsonHelper::toQGeoCoordinate(const QJsonValue& jsonValue, QGeoCoordinate& c
     QJsonArray coordinateArray = jsonValue.toArray();
     int requiredCount = altitudeRequired ? 3 : 2;
     if (coordinateArray.count() != requiredCount) {
-        errorString = QString("Json array must contains %1 values").arg(requiredCount);
+        errorString = QString("Coordinate array must contain %1 values").arg(requiredCount);
         return false;
+    }
+
+    foreach(const QJsonValue& jsonValue, coordinateArray) {
+        if (jsonValue.type() != QJsonValue::Double) {
+            errorString = QString("Coordinate array may only contain double values, found: %1").arg(jsonValue.type());
+            return false;
+        }
     }
 
     coordinate = QGeoCoordinate(coordinateArray[0].toDouble(), coordinateArray[1].toDouble());
@@ -75,7 +75,19 @@ bool JsonHelper::toQGeoCoordinate(const QJsonValue& jsonValue, QGeoCoordinate& c
     return true;
 }
 
-bool JsonHelper::validateKeyTypes(QJsonObject& jsonObject, const QStringList& keys, const QList<QJsonValue::Type>& types, QString& errorString)
+void JsonHelper::writeQGeoCoordinate(QJsonValue& jsonValue, const QGeoCoordinate& coordinate, bool writeAltitude)
+{
+    QJsonArray coordinateArray;
+
+    coordinateArray << coordinate.latitude() << coordinate.longitude();
+    if (writeAltitude) {
+        coordinateArray << coordinate.altitude();
+    }
+
+    jsonValue = QJsonValue(coordinateArray);
+}
+
+bool JsonHelper::validateKeyTypes(const QJsonObject& jsonObject, const QStringList& keys, const QList<QJsonValue::Type>& types, QString& errorString)
 {
     for (int i=0; i<keys.count(); i++) {
         if (jsonObject.contains(keys[i])) {
@@ -96,6 +108,23 @@ bool JsonHelper::parseEnum(QJsonObject& jsonObject, QStringList& enumStrings, QS
 
     if (enumStrings.count() != enumValues.count()) {
         errorString = QString("enum strings/values count mismatch: %1");
+        return false;
+    }
+
+    return true;
+}
+
+bool JsonHelper::isJsonFile(const QByteArray& bytes, QJsonDocument& jsonDoc)
+{
+    QJsonParseError error;
+
+    jsonDoc = QJsonDocument::fromJson(bytes, &error);
+
+    if (error.error == QJsonParseError::NoError) {
+        return true;
+    }
+
+    if (error.error == QJsonParseError::MissingObject && error.offset == 0) {
         return false;
     }
 

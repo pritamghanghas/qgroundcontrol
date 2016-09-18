@@ -1,28 +1,11 @@
-/*=====================================================================
-
- QGroundControl Open Source Ground Control Station
-
- (c) 2009 - 2014 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
-
- This file is part of the QGROUNDCONTROL project
-
- QGROUNDCONTROL is free software: you can redistribute it and/or modify
- it under the terms of the GNU General Public License as published by
- the Free Software Foundation, either version 3 of the License, or
- (at your option) any later version.
-
- QGROUNDCONTROL is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU General Public License for more details.
-
- You should have received a copy of the GNU General Public License
- along with QGROUNDCONTROL. If not, see <http://www.gnu.org/licenses/>.
-
-======================================================================*/
-
-/// @file
-/// @author Don Gagne <don@thegagnes.com>
+/****************************************************************************
+ *
+ *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
 
 #ifndef AUTOPILOTPLUGIN_H
 #define AUTOPILOTPLUGIN_H
@@ -36,7 +19,7 @@
 #include "FactSystem.h"
 #include "Vehicle.h"
 
-class ParameterLoader;
+class ParameterManager;
 class Vehicle;
 class FirmwarePlugin;
 
@@ -79,16 +62,8 @@ public:
     /// Request a refresh on all parameters that begin with the specified prefix
     Q_INVOKABLE void refreshParametersPrefix(int componentId, const QString& namePrefix);
 
-    /// Returns true if the specifed parameter exists from the default component
-    Q_INVOKABLE bool parameterExists(int componentId, const QString& name);
-
     /// Returns all parameter names
     QStringList parameterNames(int componentId);
-
-    /// Returns the specified parameter Fact from the default component
-    /// WARNING: Returns a default Fact if parameter does not exists. If that possibility exists, check for existence first with
-    /// parameterExists.
-    Fact* getParameterFact(int componentId, const QString& name);
 
     /// Writes the parameter facts to the specified stream
     void writeParametersToStream(QTextStream &stream);
@@ -108,8 +83,6 @@ public:
     Fact* getFact(FactSystem::Provider_t    provider,       ///< fact provider
                   int                       componentId,    ///< fact component, -1=default component
                   const QString&            name);          ///< fact name
-
-    const QMap<int, QMap<QString, QStringList> >& getGroupMap(void);
 
     // Must be implemented by derived class
     virtual const QVariantList& vehicleComponents(void) = 0;
@@ -138,6 +111,7 @@ protected:
     bool            _missingParameters;
     bool            _setupComplete;
 
+
 private slots:
     void _uasDisconnected(void);
     void _parametersReadyChanged(bool parametersReady);
@@ -146,4 +120,4 @@ private:
     void _recalcSetupComplete(void);
 };
 
-#endif
+#endif //AUTOPILOTPLUGIN_H

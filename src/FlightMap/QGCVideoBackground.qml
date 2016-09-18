@@ -1,25 +1,12 @@
-/*=====================================================================
+/****************************************************************************
+ *
+ *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
 
-QGroundControl Open Source Ground Control Station
-
-(c) 2009, 2015 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
-
-This file is part of the QGROUNDCONTROL project
-
-    QGROUNDCONTROL is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    QGROUNDCONTROL is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with QGROUNDCONTROL. If not, see <http://www.gnu.org/licenses/>.
-
-======================================================================*/
 
 /**
  * @file
@@ -39,8 +26,8 @@ VideoItem {
     id: videoBackground
     property var display
     property var receiver
+
     property var runVideo:  false
-    property real _margins: ScreenTools.defaultFontPixelHeight
     property int  cameraControlPressedSince: 0 // miliseconds
 
     // enums for camera control
@@ -313,13 +300,13 @@ VideoItem {
     function onIncrementYaw()
     {
         console.log("move yaw right by ", stepSize())
-        multiVehicleManager.activeVehicle.doChangeYaw(stepSize(), 0.0, true, 1);
+        QGroundControl.multiVehicleManager.activeVehicle.doChangeYaw(stepSize(), 0.0, true, 1);
     }
 
     function onDecrementYaw()
     {
         console.log("move yaw left by ", stepSize())
-        multiVehicleManager.activeVehicle.doChangeYaw(stepSize(), 0.0, true, -1);
+        QGroundControl.multiVehicleManager.activeVehicle.doChangeYaw(stepSize(), 0.0, true, -1);
     }
 
     function onIncrementPitch()
@@ -362,8 +349,8 @@ VideoItem {
     Column {
         id:                         toolColumn
         visible:                    !_mainIsMap
-        anchors.leftMargin:         _margins
-        anchors.topMargin:          _margins*5
+//        anchors.leftMargin:         _margins
+//        anchors.topMargin:          _margins*5
         anchors.left:               parent.left
         anchors.top:                parent.top
         spacing:                    ScreenTools.defaultFontPixelHeight
@@ -371,27 +358,27 @@ VideoItem {
         RoundButton {
             id: videoSettings
             buttonImage: "/qmlimages/cameraSettings.svg"
-            buttonAnchors.margins:  width*0.15
+//            buttonAnchors.margins:  width*0.15
             z:            QGroundControl.zOrderWidgets
         }
 
         RoundButton {
             id: cameraAngleControlButton
             buttonImage: "/qmlimages/look.svg"
-            buttonAnchors.margins:  width*0.15
+//            buttonAnchors.margins:  width*0.15
             z:            QGroundControl.zOrderWidgets
         }
 
         RoundButton {
             id: panSweepButton
             buttonImage: "/qmlimages/rotate.svg"
-            buttonAnchors.margins:  width*0.15
+//            buttonAnchors.margins:  width*0.15
             z:            QGroundControl.zOrderWidgets
             onClicked: {
                 if(checked) {
-                    multiVehicleManager.activeVehicle.doSweepYaw(QGroundControl.hbSettings.value("panSweepAngle", 20), QGroundControl.hbSettings.value("panSweepAngle", 5));
+                    QGroundControl.multiVehicleManager.activeVehicle.doSweepYaw(QGroundControl.hbSettings.value("panSweepAngle", 20), QGroundControl.hbSettings.value("panSweepAngle", 5));
                 } else {
-                    multiVehicleManager.activeVehicle.doSweepYaw(0, 0);
+                    QGroundControl.multiVehicleManager.activeVehicle.doSweepYaw(0, 0);
                 }
             }
         }
@@ -404,7 +391,7 @@ VideoItem {
         border.color:   "white"
         anchors.left: toolColumn.right
         anchors.verticalCenter: toolColumn.verticalCenter
-        anchors.margins: _margins
+//        anchors.margins: _margins
         height: parent.height/5
         width: parent.height/5
         color: "transparent"
@@ -542,7 +529,7 @@ VideoItem {
     Item {
         id : combos
         width: parent.width*0.4
-        anchors.leftMargin: _margins
+//        anchors.leftMargin: _margins
         anchors.top: toolColumn.top
         anchors.left: toolColumn.right
         x: parent.width - width;
@@ -550,7 +537,7 @@ VideoItem {
         visible: videoSettings.checked && !_mainIsMap
 
         Row {
-            spacing: _margins
+//            spacing: _margins
             layoutDirection: Qt.LeftToRight
 
 
@@ -632,13 +619,13 @@ VideoItem {
         }
     }
 
-    onRunVideoChanged: {
-        if(videoBackground.receiver && videoBackground.display) {
-            if(videoBackground.runVideo) {
-                onModeChange();
-            } else {
-                videoBackground.receiver.stop();
-            }
-        }
-    }
+//    onRunVideoChanged: {
+//        if(videoBackground.receiver && videoBackground.display) {
+//            if(videoBackground.runVideo) {
+//                onModeChange();
+//            } else {
+//                videoBackground.receiver.stop();
+//            }
+//        }
+//    }
 }
