@@ -33,6 +33,20 @@ Rectangle {
 
     QGCPalette { id: qgcPal; colorGroupEnabled: true }
 
+    readonly property int confirmShutdown:        1
+    readonly property int confirmRestart:         2
+    readonly property real _margins:              ScreenTools.defaultFontPixelHeight / 2
+    property real _fontPointSize: ScreenTools.isMobile ? ScreenTools.largeFontPointSize : ScreenTools.defaultFontPointSize
+
+    property int    confirmActionCode
+
+    Timer {
+        id:             confirmSlideHideTimer
+        interval:       7000
+        running:        true
+        onTriggered:    _OSControlConfirm.visible = false
+    }
+
     Column {
         anchors.margins:    ScreenTools.defaultFontPixelHeight
         anchors.left:       parent.left
@@ -41,11 +55,65 @@ Rectangle {
 
         QGCButton {
             text:       "Shutdown Controller"
-            onClicked:  QGroundControl.nodeSelector.shutdownAll();
+            onClicked: confirmAction(confirmShutdown)
         }
         QGCButton {
             text:       "Restart Controller"
-            onClicked:  QGroundControl.nodeSelector.restartAll();
+            onClicked: confirmAction(confirmRestart)
         }
     }
-}
+
+    // Action confirmation control
+    SliderSwitch {
+        id:                         _OSControlConfirm
+        anchors.bottomMargin:       _margins
+        anchors.bottom:             parent.bottom
+        anchors.horizontalCenter:   parent.horizontalCenter
+        visible:                    false
+        z:                          QGroundControl.zOrderWidgets
+        fontPointSize:              _fontPointSize
+
+        onAccept: {
+            _OSControlConfirm.visible = false
+            actionConfirmed()
+            confirmSlideHideTimer.stop()
+        }
+
+        onReject: {
+            _OSControlConfirm.visible = false
+            confirmSlideHideTimer.stop()
+        }
+
+    }
+
+    function actionConfirmed() {
+        confirmSlideHideTimer.stop()
+        _OSControlConfirm.visible = false
+        switch (confirmActionCode) {
+        case confirmShutdown:
+            console.log("shutting down")
+            QGroundControl.nodeSelector.shutdownAll();
+            break;
+        case confirmRestart:
+            console.log("restarting")
+            QGroundControl.nodeSelector.restartAll();
+            break;
+        default:
+            console.warn(qsTr("Internal error: unknown confirmActionCode"), confirmActionCode)
+        }
+    }
+
+    function confirmAction(actionCode) {
+        confirmSlideHideTimer.start()
+        _OSControlConfirm.visible = true
+        confirmActionCode = actionCode
+        switch (confirmActionCode) {
+        case confirmShutdown:
+            _OSControlConfirm.confirmText = qsTr("Shutdown")
+            break;
+        case confirmRestart:
+            _OSControlConfirm.confirmText = qsTr("Restart")
+            break;
+        }
+    }
+} // rectangle
