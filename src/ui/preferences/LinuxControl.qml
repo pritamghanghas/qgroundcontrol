@@ -22,6 +22,7 @@
  ======================================================================*/
 
 import QtQuick 2.3
+import QtQuick.Layouts 1.2
 
 import QGroundControl               1.0
 import QGroundControl.Controls      1.0
@@ -33,151 +34,201 @@ QGCView {
     viewPanel:          panel
     anchors.fill:       parent
 
-    QGCPalette { id: palette; colorGroupEnabled: enabled }
+    QGCPalette { id: qgcPal; colorGroupEnabled: enabled }
 
-    property real _margins: ScreenTools.defaultFontPixelHeight
+    readonly property int confirmShutdown:        1
+    readonly property int confirmRestart:         2
+
+    readonly property real _margins:      ScreenTools.defaultFontPixelHeight
+
+    property real _fontPointSize: ScreenTools.isMobile ? ScreenTools.largeFontPointSize : ScreenTools.defaultFontPointSize
+
+    property int    confirmActionCode
+
+    Timer {
+        id:             confirmSlideHideTimer
+        interval:       7000
+        running:        true
+        onTriggered:    _OSControlConfirm.visible = false
+    }
+
+    // Action confirmation control
+    SliderSwitch {
+        id:                         _OSControlConfirm
+        anchors.bottomMargin:       _margins
+        anchors.bottom:             parent.bottom
+        anchors.horizontalCenter:   parent.horizontalCenter
+        visible:                    false
+        z:                          QGroundControl.zOrderWidgets
+        fontPointSize:              _fontPointSize
+
+        onAccept: {
+            _OSControlConfirm.visible = false
+            actionConfirmed()
+            confirmSlideHideTimer.stop()
+        }
+
+        onReject: {
+            _OSControlConfirm.visible = false
+            confirmSlideHideTimer.stop()
+        }
+
+    }
+
+    function actionConfirmed() {
+        confirmSlideHideTimer.stop()
+        _OSControlConfirm.visible = false
+        switch (confirmActionCode) {
+        case confirmShutdown:
+            console.log("shutting down")
+            QGroundControl.nodeSelector.shutdownAll();
+            break;
+        case confirmRestart:
+            console.log("restarting")
+            QGroundControl.nodeSelector.restartAll();
+            break;
+        default:
+            console.warn(qsTr("Internal error: unknown confirmActionCode"), confirmActionCode)
+        }
+    }
+
+    function confirmAction(actionCode) {
+        confirmSlideHideTimer.start()
+        _OSControlConfirm.visible = true
+        confirmActionCode = actionCode
+        switch (confirmActionCode) {
+        case confirmShutdown:
+            _OSControlConfirm.confirmText = qsTr("Shutdown")
+            break;
+        case confirmRestart:
+            _OSControlConfirm.confirmText = qsTr("Restart")
+            break;
+        }
+    }
+
+
 
     QGCViewPanel {
         id:             panel
         anchors.fill:   parent
-        anchors.margins: _margins
 
         QGCFlickable {
             clip:               true
             anchors.fill:       parent
-            contentHeight:      wiredMaxAltitudeLabelField.y + wiredMaxAltitudeLabelField.height + _margins
-            contentWidth:       wiredMaxAltitudeLabelField.x + wiredMaxAltitudeLabelField.width + _margins
+            contentHeight:      flowLayout.height
+            contentWidth:       flowLayout.width
 
-            QGCLabel {
-                id:         piControlLabel
-                anchors.leftMargin: _margins
-                anchors.topMargin: _margins
-                text:       "System Control"
-                font.weight: Font.DemiBold
-            }
+            Flow {
+                id:         flowLayout
+                width:      panel.width // parent.width doesn't work for some reason
+                spacing:    _margins
 
-            Rectangle {
-                id:                     piControlActions
-                anchors.topMargin:      _margins / 2
-                anchors.rightMargin:    _margins
-                anchors.left:           parent.left
-                anchors.top:            piControlLabel.bottom
-                width:                  shutdownButton.x + shutdownButton.width + _margins
-                height:                 restartButton.y + restartButton.height + _margins
-                color:                  palette.windowShade
+                Column {
+                    spacing: _margins / 2
 
-                QGCButton {
-                    id:                 shutdownButton
-                    anchors.margins:    _margins
-                    anchors.left:       parent.left
-                    anchors.top:        parent.top
-                    text:               "Shutdown Controller"
-                    onClicked:          QGroundControl.nodeSelector.shutdownAll();
-                }
-                QGCButton {
-                    id:             restartButton
-                    anchors.topMargin: _margins
-                    anchors.top:   shutdownButton.bottom
-                    anchors.left: shutdownButton.left
-                    anchors.right: shutdownButton.right
-                    text:           "Restart Controller"
-                    onClicked: QGroundControl.nodeSelector.restartAll();
-                }
-            } // Rectangle - System Control
-
-            QGCLabel {
-                id:                 _wiredLimits
-                anchors.leftMargin: _margins
-                anchors.left:       piControlActions.right
-                anchors.top:        piControlLabel.top
-                text:               "Wire Limits"
-                font.weight:        Font.DemiBold
-            }
-
-            Rectangle {
-                id:                 _wireLimitSettings
-                anchors.topMargin:  _margins / 2
-                anchors.left:       _wiredLimits.left
-                anchors.top:        _wiredLimits.bottom
-                width:              panSweepAngleField.x + panSweepAngleField.width + _margins
-                height:             wiredMaxAltitudeLabelField.y + wiredMaxAltitudeLabelField.height + _margins
-                color:              palette.windowShade
-
-                QGCLabel {
-                    id: panSweepAngleLabel
-                    text : "Pan sweep angle (degree)"
-                    anchors.margins: _margins
-                    anchors.left: parent.left
-                    anchors.baseline: panSweepAngleField.baseline
-                }
-                QGCTextField {
-                    id: panSweepAngleField
-                    // limiting to 160 degree max as Ardupilot doesn't seem to honour direction
-                    // it leads to trouble when moving angle cloe to 180 or more
-                    validator: IntValidator { bottom: 5; top: 160 }
-                    anchors.margins: _margins
-                    anchors.left: panSweepAngleLabel.right
-                    anchors.top: parent.top
-                    text: QGroundControl.hbSettings.value("panSweepAngle", 20)
-                    onEditingFinished: {
-                        QGroundControl.hbSettings.setValue("panSweepAngle", text);
+                    QGCLabel {
+                        id:         piControlLabel
+                        text:       "Pi Control"
+                        font.family: ScreenTools.demiboldFontFamily
                     }
-                }
 
-                QGCLabel {
-                    id: panSweepSpeedLabel
-                    text : "sweep speed (degree/s)"
-                    anchors.left: panSweepAngleLabel.left
-                    anchors.baseline: panSweepSpeedField.baseline
-                }
-                QGCTextField {
-                    id: panSweepSpeedField
-                    validator: IntValidator { bottom: 1; top: 160 }
-                    anchors.topMargin: _margins
-                    anchors.left: panSweepAngleField.left
-                    anchors.top: panSweepAngleField.bottom
-                    text: QGroundControl.hbSettings.value("panSweepSpeed", 5)
-                    onEditingFinished: {
-                        QGroundControl.hbSettings.setValue("panSweepSpeed", text);
-                    }
-                }
 
-                QGCLabel {
-                    id: wiredMinAltitudeLabel
-                    text : "Wired Min Alt (meter)";
-                    anchors.left: panSweepAngleLabel.left
-                    anchors.baseline: wiredMinAltitudeLabelField.baseline
-                }
-                QGCTextField {
-                    id: wiredMinAltitudeLabelField
-                    validator: IntValidator { bottom: 5; top: 2000 }
-                    anchors.topMargin: _margins
-                    anchors.left: panSweepAngleField.left
-                    anchors.top: panSweepSpeedField.bottom
-                    text: QGroundControl.hbSettings.value("wiredMinAltitude", 5)
-                    onEditingFinished: {
-                        QGroundControl.hbSettings.setValue("wiredMinAltitude", text);
-                    }
-                }
+                    Rectangle {
+                        id:                     piControlActions
+//                        anchors.margins:        _margins
+                        color:                  qgcPal.windowShade
 
-                QGCLabel {
-                    id: wiredMaxAltitudeLabel
-                    text : "Wired Max Alt (meter)";
-                    anchors.left: panSweepAngleLabel.left
-                    anchors.baseline: wiredMaxAltitudeLabelField.baseline
-                }
-                QGCTextField {
-                    id: wiredMaxAltitudeLabelField
-                    validator: IntValidator { bottom: 5; top: 2000 }
-                    anchors.topMargin: _margins
-                    anchors.left: panSweepAngleField.left
-                    anchors.top: wiredMinAltitudeLabelField.bottom
-                    text: QGroundControl.hbSettings.value("wiredMaxAltitude", 60)
-                    onEditingFinished: {
-                        QGroundControl.hbSettings.setValue("wiredMaxAltitude", text);
+                        Column {
+                            spacing:            _margins / 2
+
+                            QGCButton {
+                                text:       "Shutdown Controller"
+                                onClicked: confirmAction(confirmShutdown)
+                            }
+                            QGCButton {
+                                text:       "Restart Controller"
+                                onClicked: confirmAction(confirmRestart)
+                            }
+                        }
+
+                    } // Rectangle - System Control
+                } // OS control column
+
+                Column {
+                    spacing: _margins / 2
+
+                    QGCLabel {
+                        id:                 _wiredLimits
+                        text:               "Wire Limits"
+                        font.family:        ScreenTools.demiboldFontFamily
                     }
+
+                    Rectangle {
+                        id:                 _wireLimitSettings
+                        anchors.margins:    _margins
+                        color:              qgcPal.windowShade
+
+                        Grid {
+                            columns : 2
+                            spacing : _margins/2
+
+                        QGCLabel {
+                            id: panSweepAngleLabel
+                            text : "Pan sweep angle (degree)"
+                        }
+                        QGCTextField {
+                            id: panSweepAngleField
+                            // limiting to 160 degree max as Ardupilot doesn't seem to honour direction
+                            // it leads to trouble when moving angle cloe to 180 or more
+                            validator: IntValidator { bottom: 5; top: 160 }
+                            text: QGroundControl.hbSettings.value("panSweepAngle", 20)
+                            onEditingFinished: {
+                                QGroundControl.hbSettings.setValue("panSweepAngle", text);
+                            }
+                        }
+
+                        QGCLabel {
+                            id: panSweepSpeedLabel
+                            text : "sweep speed (degree/s)"
+                        }
+                        QGCTextField {
+                            id: panSweepSpeedField
+                            validator: IntValidator { bottom: 1; top: 160 }
+                            text: QGroundControl.hbSettings.value("panSweepSpeed", 5)
+                            onEditingFinished: {
+                                QGroundControl.hbSettings.setValue("panSweepSpeed", text);
+                            }
+                        }
+
+                        QGCLabel {
+                            id: wiredMinAltitudeLabel
+                            text : "Wired Min Alt (meter)";
+                        }
+                        QGCTextField {
+                            id: wiredMinAltitudeLabelField
+                            validator: IntValidator { bottom: 5; top: 2000 }
+                            text: QGroundControl.hbSettings.value("wiredMinAltitude", 5)
+                            onEditingFinished: {
+                                QGroundControl.hbSettings.setValue("wiredMinAltitude", text);
+                            }
+                        }
+
+                        QGCLabel {
+                            id: wiredMaxAltitudeLabel
+                            text : "Wired Max Alt (meter)";
+                        }
+                        QGCTextField {
+                            id: wiredMaxAltitudeLabelField
+                            validator: IntValidator { bottom: 5; top: 2000 }
+                            text: QGroundControl.hbSettings.value("wiredMaxAltitude", 60)
+                            onEditingFinished: {
+                                QGroundControl.hbSettings.setValue("wiredMaxAltitude", text);
+                            }
+                        }
+                        }
+                    } // Rectangle altitude control
                 }
-            } // Rectangle altitude control
-      } // QGCFlickable
+            } // flow
+        } // QGCFlickable
     } // QGCViewPanel
 } // QGCView

@@ -235,7 +235,6 @@ public:
     Q_PROPERTY(QStringList          flightModes             READ flightModes                                            CONSTANT)
     Q_PROPERTY(QString              flightMode              READ flightMode             WRITE setFlightMode             NOTIFY flightModeChanged)
     Q_PROPERTY(bool                 hilMode                 READ hilMode                WRITE setHilMode                NOTIFY hilModeChanged)
-    Q_PROPERTY(bool                 missingParameters       READ missingParameters                                      NOTIFY missingParametersChanged)
     Q_PROPERTY(QmlObjectListModel*  trajectoryPoints        READ trajectoryPoints                                       CONSTANT)
     Q_PROPERTY(float                latitude                READ latitude                                               NOTIFY coordinateChanged)
     Q_PROPERTY(float                longitude               READ longitude                                              NOTIFY coordinateChanged)
@@ -294,6 +293,8 @@ public:
 
     /// true: Orbit mode is supported by this vehicle
     Q_PROPERTY(bool orbitModeSupported READ orbitModeSupported CONSTANT)
+
+    Q_PROPERTY(ParameterManager* parameterManager READ parameterManager CONSTANT)
 
     // FactGroup object model properties
 
@@ -496,8 +497,6 @@ public:
     ///     @param sendMultiple Send multiple time to guarantee Vehicle reception
     void requestDataStream(MAV_DATA_STREAM stream, uint16_t rate, bool sendMultiple = true);
 
-    bool missingParameters(void);
-
     typedef enum {
         MessageNone,
         MessageNormal,
@@ -549,8 +548,8 @@ public:
 
     void setConnectionLostEnabled(bool connectionLostEnabled);
 
-    ParameterManager* getParameterManager(void) { return _parameterLoader; }
-    ParameterManager* getParameterManager(void) const { return _parameterLoader; }
+    ParameterManager* parameterManager(void) { return _parameterManager; }
+    ParameterManager* parameterManager(void) const { return _parameterManager; }
 
     static const int cMaxRcChannels = 18;
 
@@ -579,14 +578,6 @@ public:
     /// @return true: X confiuration, false: Plus configuration
     bool xConfigMotors(void);
 
-    /// Returns true if the specifed parameter exists from the default component
-    bool parameterExists(int componentId, const QString& name) const;
-
-    /// Returns the specified parameter Fact from the default component
-    /// WARNING: Returns a default Fact if parameter does not exists. If that possibility exists, check for existence first with
-    /// parameterExists.
-    Fact* getParameterFact(int componentId, const QString& name);
-
 public slots:
     void setLatitude(double latitude);
     void setLongitude(double longitude);
@@ -604,7 +595,8 @@ signals:
     void armedChanged(bool armed);
     void flightModeChanged(const QString& flightMode);
     void hilModeChanged(bool hilMode);
-    void missingParametersChanged(bool missingParameters);
+    /** @brief HIL actuator controls (replaces HIL controls) */
+    void hilActuatorControlsChanged(quint64 time, quint64 flags, float ctl_0, float ctl_1, float ctl_2, float ctl_3, float ctl_4, float ctl_5, float ctl_6, float ctl_7, float ctl_8, float ctl_9, float ctl_10, float ctl_11, float ctl_12, float ctl_13, float ctl_14, float ctl_15, quint8 mode);
     void connectionLostChanged(bool connectionLost);
     void connectionLostEnabledChanged(bool connectionLostEnabled);
     void autoDisconnectChanged(bool autoDisconnectChanged);
@@ -700,6 +692,7 @@ private:
     void _handleExtendedSysState(mavlink_message_t& message);
     void _handleCommandAck(mavlink_message_t& message);
     void _handleAutopilotVersion(mavlink_message_t& message);
+    void _handleHilActuatorControls(mavlink_message_t& message);
     void _missionManagerError(int errorCode, const QString& errorMsg);
     void _geoFenceManagerError(int errorCode, const QString& errorMsg);
     void _mapTrajectoryStart(void);
@@ -771,7 +764,7 @@ private:
     GeoFenceManager*    _geoFenceManager;
     bool                _geoFenceManagerInitialRequestComplete;
 
-    ParameterManager*    _parameterLoader;
+    ParameterManager*    _parameterManager;
 
     bool    _armed;         ///< true: vehicle is armed
     uint8_t _base_mode;     ///< base_mode from HEARTBEAT

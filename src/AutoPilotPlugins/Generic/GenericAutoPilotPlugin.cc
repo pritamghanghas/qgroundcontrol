@@ -25,19 +25,3 @@ const QVariantList& GenericAutoPilotPlugin::vehicleComponents(void)
     
     return emptyList;
 }
-
-//Fact *GenericAutoPilotPlugin::getRCMode()
-//{
-//    static Fact fact(-1, "COM_RC_IN_MODE", FactMetaData::valueTypeInt32);
-//    fact.setRawValue("1");
-//    return &fact;
-//}
-
-/// This will perform various checks prior to signalling that the plug in ready
-void GenericAutoPilotPlugin::_parametersReadyPreChecks(bool missingParameters)
-{
-    _parametersReady = true;
-    _missingParameters = missingParameters;
-    emit missingParametersChanged(_missingParameters);
-    emit parametersReadyChanged(_parametersReady);
-}
