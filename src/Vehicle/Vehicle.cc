@@ -101,7 +101,7 @@ Vehicle::Vehicle(LinkInterface*             link,
     , _missionManagerInitialRequestComplete(false)
     , _geoFenceManager(NULL)
     , _geoFenceManagerInitialRequestComplete(false)
-    , _parameterLoader(NULL)
+    , _parameterManager(NULL)
     , _armed(false)
     , _base_mode(0)
     , _custom_mode(0)
@@ -156,9 +156,6 @@ Vehicle::Vehicle(LinkInterface*             link,
     _firmwarePlugin     = _firmwarePluginManager->firmwarePluginForAutopilot(_firmwareType, _vehicleType);
     _autopilotPlugin    = _autopilotPluginManager->newAutopilotPluginForVehicle(this);
 
-    connect(_autopilotPlugin, &AutoPilotPlugin::parametersReadyChanged,     this, &Vehicle::_parametersReady);
-    connect(_autopilotPlugin, &AutoPilotPlugin::missingParametersChanged,   this, &Vehicle::missingParametersChanged);
-
     // connect this vehicle to the follow me handle manager
     connect(this, &Vehicle::flightModeChanged,qgcApp()->toolbox()->followMe(), &FollowMe::followMeHandleManager);
 
@@ -199,9 +196,8 @@ Vehicle::Vehicle(LinkInterface*             link,
     connect(_missionManager, &MissionManager::error,                    this, &Vehicle::_missionManagerError);
     connect(_missionManager, &MissionManager::newMissionItemsAvailable, this, &Vehicle::_newMissionItemsAvailable);
 
-    _parameterLoader = new ParameterManager(this);
-    connect(_parameterLoader, &ParameterManager::parametersReady, _autopilotPlugin, &AutoPilotPlugin::_parametersReadyPreChecks);
-    connect(_parameterLoader, &ParameterManager::parameterListProgress, _autopilotPlugin, &AutoPilotPlugin::parameterListProgress);
+    _parameterManager = new ParameterManager(this);
+    connect(_parameterManager, &ParameterManager::parametersReadyChanged, this, &Vehicle::_parametersReady);
 
     // GeoFenceManager needs to access ParameterManager so make sure to create after
     _geoFenceManager = _firmwarePlugin->newGeoFenceManager(this);
@@ -295,7 +291,7 @@ Vehicle::Vehicle(MAV_AUTOPILOT              firmwareType,
     , _missionManagerInitialRequestComplete(false)
     , _geoFenceManager(NULL)
     , _geoFenceManagerInitialRequestComplete(false)
-    , _parameterLoader(NULL)
+    , _parameterManager(NULL)
     , _armed(false)
     , _base_mode(0)
     , _custom_mode(0)
@@ -328,11 +324,12 @@ Vehicle::Vehicle(MAV_AUTOPILOT              firmwareType,
     , _vibrationFactGroup(this)
 {
     _firmwarePlugin = _firmwarePluginManager->firmwarePluginForAutopilot(_firmwareType, _vehicleType);
+    _firmwarePlugin->initializeVehicle(this);
 
     _missionManager = new MissionManager(this);
     connect(_missionManager, &MissionManager::error, this, &Vehicle::_missionManagerError);
 
-    _parameterLoader = new ParameterManager(this);
+    _parameterManager = new ParameterManager(this);
 
     // GeoFenceManager needs to access ParameterManager so make sure to create after
     _geoFenceManager = _firmwarePlugin->newGeoFenceManager(this);
@@ -472,6 +469,9 @@ void Vehicle::_mavlinkMessageReceived(LinkInterface* link, mavlink_message_t mes
     case MAVLINK_MSG_ID_WIND_COV:
         _handleWindCov(message);
         break;
+    case MAVLINK_MSG_ID_HIL_ACTUATOR_CONTROLS:
+        _handleHilActuatorControls(message);
+        break;
 
     // Following are ArduPilot dialect messages
 
@@ -500,6 +500,30 @@ void Vehicle::_handleAutopilotVersion(mavlink_message_t& message)
         versionType = (FIRMWARE_VERSION_TYPE)((autopilotVersion.flight_sw_version >> (8*0)) & 0xFF);
         setFirmwareVersion(majorVersion, minorVersion, patchVersion, versionType);
     }
+}
+
+void Vehicle::_handleHilActuatorControls(mavlink_message_t &message)
+{
+    mavlink_hil_actuator_controls_t hil;
+    mavlink_msg_hil_actuator_controls_decode(&message, &hil);
+    emit hilActuatorControlsChanged(hil.time_usec, hil.flags,
+                                    hil.controls[0],
+                                    hil.controls[1],
+                                    hil.controls[2],
+                                    hil.controls[3],
+                                    hil.controls[4],
+                                    hil.controls[5],
+                                    hil.controls[6],
+                                    hil.controls[7],
+                                    hil.controls[8],
+                                    hil.controls[9],
+                                    hil.controls[10],
+                                    hil.controls[11],
+                                    hil.controls[12],
+                                    hil.controls[13],
+                                    hil.controls[14],
+                                    hil.controls[15],
+                                    hil.mode);
 }
 
 void Vehicle::_handleCommandAck(mavlink_message_t& message)
@@ -1298,11 +1322,6 @@ void Vehicle::setHilMode(bool hilMode)
     sendMessageOnPriorityLink(msg);
 }
 
-bool Vehicle::missingParameters(void)
-{
-    return _autopilotPlugin->missingParameters();
-}
-
 void Vehicle::requestDataStream(MAV_DATA_STREAM stream, uint16_t rate, bool sendMultiple)
 {
     mavlink_message_t               msg;
@@ -1813,7 +1832,7 @@ void Vehicle::rebootVehicle()
 
 int Vehicle::defaultComponentId(void)
 {
-    return _parameterLoader->defaultComponentId();
+    return _parameterManager->defaultComponentId();
 }
 
 void Vehicle::setSoloFirmware(bool soloFirmware)
@@ -1831,20 +1850,6 @@ void Vehicle::motorTest(int motor, int percent, int timeoutSecs)
     doCommandLong(defaultComponentId(), MAV_CMD_DO_MOTOR_TEST, motor, MOTOR_TEST_THROTTLE_PERCENT, percent, timeoutSecs);
 }
 #endif
-
-/// Returns true if the specifed parameter exists from the default component
-bool Vehicle::parameterExists(int componentId, const QString& name) const
-{
-    return getParameterManager()->parameterExists(componentId, name);
-}
-
-/// Returns the specified parameter Fact from the default component
-/// WARNING: Returns a default Fact if parameter does not exists. If that possibility exists, check for existence first with
-/// parameterExists.
-Fact* Vehicle::getParameterFact(int componentId, const QString& name)
-{
-    return getParameterManager()->getFact(componentId, name);
-}
 
 void Vehicle::_newMissionItemsAvailable(void)
 {

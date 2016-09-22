@@ -79,6 +79,6 @@ Column {
         sectionLabel:   qsTr("Fence Polygon:")
         visible:        geoFenceController.polygonSupported
 
-        onPolygonEditCompleted: geoFenceController.sendToVehicle()
+        onPolygonEditCompleted: geoFenceController.validateBreachReturn()
     }
 }

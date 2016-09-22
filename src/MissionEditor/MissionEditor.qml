@@ -154,6 +154,12 @@ QGCView {
 
         Component.onCompleted: start(true /* editMode */)
 
+        onFenceSupportedChanged: {
+            if (!fenceSupported && _editingLayer == _layerGeoFence) {
+                _editingLayer = _layerMission
+            }
+        }
+
         function saveToSelectedFile() {
             if (ScreenTools.isMobile) {
                 qgcView.showDialog(mobileFileSaver, qsTr("Save Fence File"), qgcView.showDialogDefaultWidth, StandardButton.Save | StandardButton.Cancel)
@@ -170,15 +176,14 @@ QGCView {
             }
         }
 
-        onFenceSupportedChanged: {
-            if (!fenceSupported && _editingLayer == _layerGeoFence) {
-                _editingLayer = _layerMission
-            }
-        }
-
-        onBreachReturnPointChanged: {
-            if (polygon.count() > 3) {
-                sendToVehicle()
+        function validateBreachReturn() {
+            if (geoFenceController.polygon.path.length > 0) {
+                if (!geoFenceController.polygon.containsCoordinate(geoFenceController.breachReturnPoint)) {
+                    geoFenceController.breachReturnPoint = geoFenceController.polygon.center()
+                }
+                if (!geoFenceController.polygon.containsCoordinate(geoFenceController.breachReturnPoint)) {
+                    geoFenceController.breachReturnPoint = geoFenceController.polygon.path[0]
+                }
             }
         }
     }
@@ -321,8 +326,8 @@ QGCView {
                             }
                             break
                         case _layerGeoFence:
-                            console.log("Updating breach return point", coordinate)
                             geoFenceController.breachReturnPoint = coordinate
+                            geoFenceController.validateBreachReturn()
                             break
                         }
                     }
@@ -380,7 +385,7 @@ QGCView {
 
                 // Add the complex mission item polygon to the map
                 MapItemView {
-                    model: _editingLayer == _layerMission ? missionController.complexVisualItems : undefined
+                    model: missionController.complexVisualItems
 
                     delegate: MapPolygon {
                         color:      'green'
@@ -391,7 +396,7 @@ QGCView {
 
                 // Add the complex mission item grid to the map
                 MapItemView {
-                    model: _editingLayer == _layerMission ? missionController.complexVisualItems : undefined
+                    model: missionController.complexVisualItems
 
                     delegate: MapPolyline {
                         line.color: "white"
@@ -402,7 +407,7 @@ QGCView {
 
                 // Add the complex mission item exit coordinates
                 MapItemView {
-                    model: _editingLayer == _layerMission ? missionController.complexVisualItems : undefined
+                    model: missionController.complexVisualItems
                     delegate:   exitCoordinateComponent
                 }
 
@@ -420,7 +425,7 @@ QGCView {
 
                 // Add the simple mission items to the map
                 MapItemView {
-                    model:      _editingLayer == _layerMission ? missionController.visualItems : undefined
+                    model:      missionController.visualItems
                     delegate:   missionItemComponent
                 }
 
@@ -628,13 +633,6 @@ QGCView {
                     visible:        geoFenceController.breachReturnSupported
                     sourceItem:     MissionItemIndexLabel { label: "F" }
                     z:              QGroundControl.zOrderMapItems
-
-                    Connections {
-                        target: geoFenceController
-                        onBreachReturnPointChanged: console.log("breachreturn changed inside", geoFenceController.breachReturnPoint)
-                    }
-
-                    onCoordinateChanged: console.log("MqpQuickItem coodinateChanged", coordinate)
                 }
 
                 //-- Dismiss Drop Down (if any)

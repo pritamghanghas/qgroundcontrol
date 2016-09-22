@@ -233,6 +233,9 @@ signals:
     void flightMapZoomChanged           (double flightMapZoom);
 
 private:
+    static SettingsFact* _createSettingsFact(const QString& name);
+    static QMap<QString, FactMetaData*>& nameToMetaDataMap(void);
+
     FlightMapSettings*      _flightMapSettings;
     HomePositionManager*    _homePositionManager;
     LinkManager*            _linkManager;
@@ -249,9 +252,7 @@ private:
 
     // These are static so they are available to C++ code as well as Qml
     static SettingsFact*    _offlineEditingFirmwareTypeFact;
-    static FactMetaData*    _offlineEditingFirmwareTypeMetaData;
     static SettingsFact*    _offlineEditingVehicleTypeFact;
-    static FactMetaData*    _offlineEditingVehicleTypeMetaData;
     static SettingsFact*    _offlineEditingCruiseSpeedFact;
     static SettingsFact*    _offlineEditingHoverSpeedFact;
     static SettingsFact*    _distanceUnitsFact;
@@ -261,7 +262,6 @@ private:
     static SettingsFact*    _speedUnitsFact;
     static FactMetaData*    _speedUnitsMetaData;
     static SettingsFact*    _batteryPercentRemainingAnnounceFact;
-    static FactMetaData*    _batteryPercentRemainingAnnounceMetaData;
 
     static const char*  _virtualTabletJoystickKey;
     static const char*  _baseFontPointSizeKey;
