@@ -97,7 +97,7 @@ Rectangle {
             QGCButton {
                 id:             _osControl
                 height:         _buttonHeight
-                text:           qsTr("OS Control")
+                text:           qsTr("SYS Control")
                 exclusiveGroup: panelActionGroup
                 onClicked: {
                     if(__rightPanel.source != "LinuxControl.qml") {
