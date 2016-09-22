@@ -408,7 +408,7 @@ QGCView {
                             spacing: ScreenTools.defaultFontPixelWidth
                             QGCLabel {
                                 anchors.baseline:   paletteCombo.baseline
-                                text:               qsTr("Style:")
+                                text:               qsTr("UI Style:")
                                 width:              _labelWidth
                             }
                             QGCComboBox {
@@ -470,6 +470,11 @@ QGCView {
                                 visible:    !ScreenTools.isiOS
                                 checked:    QGroundControl.linkManager.autoconnectPX4Flow
                                 onClicked:  QGroundControl.linkManager.autoconnectPX4Flow = checked
+                            }
+                            QGCCheckBox {
+                                text:       qsTr("LibrePilot")
+                                checked:    QGroundControl.linkManager.autoconnectLibrePilot
+                                onClicked:  QGroundControl.linkManager.autoconnectLibrePilot = checked
                             }
                             QGCCheckBox {
                                 text:       qsTr("UDP")
