@@ -28,14 +28,18 @@ import QGroundControl.Controls      1.0
 import QGroundControl.Palette       1.0
 import QGroundControl.ScreenTools   1.0
 
-Rectangle {
-    color: qgcPal.window
+QGCView {
+    id:                 _hoverbirdsView
+    viewPanel:          panel
+    anchors.fill:       parent
 
-    QGCPalette { id: qgcPal; colorGroupEnabled: true }
+    QGCPalette { id: qgcPal; colorGroupEnabled: enabled }
 
     readonly property int confirmShutdown:        1
     readonly property int confirmRestart:         2
-    readonly property real _margins:              ScreenTools.defaultFontPixelHeight / 2
+
+    readonly property real _margins:      ScreenTools.defaultFontPixelHeight
+
     property real _fontPointSize: ScreenTools.isMobile ? ScreenTools.largeFontPointSize : ScreenTools.defaultFontPointSize
 
     property int    confirmActionCode
@@ -45,22 +49,6 @@ Rectangle {
         interval:       7000
         running:        true
         onTriggered:    _OSControlConfirm.visible = false
-    }
-
-    Column {
-        anchors.margins:    ScreenTools.defaultFontPixelHeight
-        anchors.left:       parent.left
-        anchors.top:        parent.top
-        spacing:            ScreenTools.defaultFontPixelHeight
-
-        QGCButton {
-            text:       "Shutdown Controller"
-            onClicked: confirmAction(confirmShutdown)
-        }
-        QGCButton {
-            text:       "Restart Controller"
-            onClicked: confirmAction(confirmRestart)
-        }
     }
 
     // Action confirmation control
@@ -116,4 +104,115 @@ Rectangle {
             break;
         }
     }
-} // rectangle
+
+
+
+    QGCViewPanel {
+        id:             panel
+        anchors.fill:   parent
+
+        QGCFlickable {
+            clip:               true
+            anchors.fill:       parent
+            contentHeight:      flowLayout.height
+            contentWidth:       flowLayout.width
+
+            Flow {
+                id:         flowLayout
+                width:      panel.width // parent.width doesn't work for some reason
+                spacing:    _margins
+
+                Column {
+                    spacing: _margins / 2
+
+                    QGCLabel {
+                        id:         piControlLabel
+                        text:       "Drone OS"
+                        font.family: ScreenTools.demiboldFontFamily
+                    }
+
+
+                    Rectangle {
+                        id:                     piControlAction
+                        width:                  piControlActionsLayout.width + _margins
+                        height:                 piControlActionsLayout.height + _margins
+                        color:                  qgcPal.windowShade
+                        anchors.margins:        _margins/2
+
+                        Column {
+                            id:                piControlActionsLayout
+                            spacing:           _margins / 2
+                            anchors.margins :  _margins/2
+                            anchors.centerIn:  parent
+
+                            QGCButton {
+                                text:       "Shutdown Controller"
+                                onClicked: confirmAction(confirmShutdown)
+                            }
+                            QGCButton {
+                                text:       "Restart Controller"
+                                onClicked: confirmAction(confirmRestart)
+                            }
+                        }
+                    } // Rectangle - System Control
+                } // OS control column
+
+                Column {
+                    spacing: _margins / 2
+
+                    QGCLabel {
+                        id:         _apConfLabel
+                        text:       "Drone Access Point"
+                        font.family: ScreenTools.demiboldFontFamily
+                    }
+
+
+                    Rectangle {
+                        id:                     _apConf
+                        width:                  _APConfLayout.width + _margins
+                        height:                 _APConfLayout.height + _margins
+                        color:                  qgcPal.windowShade
+                        anchors.margins:        _margins/2
+
+                        Grid {
+                            id:                _APConfLayout
+                            spacing:           _margins / 2
+                            anchors.margins :  _margins/2
+                            anchors.centerIn:  parent
+                            columns: 2
+
+                            QGCLabel {
+                                text: "Interface"
+                            }
+                            QGCTextField {
+
+                            }
+
+                            QGCLabel {
+                                text: "SSID"
+                            }
+                            QGCTextField {
+
+                            }
+
+                            QGCLabel {
+                                text : "Password"
+                            }
+                            QGCTextField {
+
+                            }
+                            QGCLabel {
+                                text : "Channel"
+                            }
+                            QGCTextField {
+
+                            }
+                        }
+                    } // Rectangle - System Control
+                } // AP column
+
+
+            } // flow
+        } // QGCFlickable
+    } // QGCViewPanel
+} // QGCView
