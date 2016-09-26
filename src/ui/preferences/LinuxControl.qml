@@ -182,13 +182,6 @@ QGCView {
                             columns: 2
 
                             QGCLabel {
-                                text: "Interface"
-                            }
-                            QGCTextField {
-
-                            }
-
-                            QGCLabel {
                                 text: "SSID"
                             }
                             QGCTextField {
