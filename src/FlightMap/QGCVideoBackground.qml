@@ -234,6 +234,30 @@ VideoItem {
         ListElement { text: "matrix"; }
     }
 
+    ListModel {
+        id: orientationModeList
+
+        ListElement {
+            text: "none"
+            command: ""
+        }
+
+        ListElement {
+            text: "vflip"
+            command: " -vf "
+        }
+
+        ListElement {
+            text: "hflip"
+            command: " -hf "
+        }
+
+        ListElement {
+            text: "vhflip"
+            command: " -hf -vf "
+        }
+    }
+
     function onModeChange()
     {
         if (videoBackground.visible) {
@@ -244,7 +268,8 @@ VideoItem {
             var height = resolutionList.get(resolutionSelectionComboBox.currentIndex).height;
             var fps = resolutionList.get(resolutionSelectionComboBox.currentIndex).fps;
             var bitrate = resolutionList.get(resolutionSelectionComboBox.currentIndex).bitrate;
-            var optString = "-mm " + metringMode + " -awb " + awbMode + " -ex " + exposureMode + " -w " + width + " -h " + height + " -fps " + fps + " -b " + bitrate;
+            var flipMode = orientationModeList.get(orientationSelectionComboBox.currentIndex).command;
+            var optString = "-mm " + metringMode + " -awb " + awbMode + " -ex " + exposureMode + " -w " + width + " -h " + height + " -fps " + fps + " -b " + bitrate + flipMode;
             console.log("lets start the video with following optons: " + optString);
             videoBackground.receiver.start(optString)
         }
@@ -252,7 +277,7 @@ VideoItem {
 
     Item {
         id : combo
-        width: parent.width*0.4
+        width: parent.width*0.43
         anchors.right: parent.right
         x: parent.width - width;
         y: parent.height * 0.1;
@@ -265,7 +290,7 @@ VideoItem {
 
             QGCComboBox {
                 id:         meteringComboBox
-                width: combo.width*0.2
+                width: combo.width*0.17
                 visible:    true
                 model:      meteringModesList
 
@@ -276,7 +301,7 @@ VideoItem {
 
             QGCComboBox {
                 id:         exposureComboBox
-                width: combo.width*0.22
+                width: combo.width*0.2
                 visible:    true
                 model:      exposureModesList
 
@@ -287,7 +312,7 @@ VideoItem {
 
             QGCComboBox {
                 id:         awbComboBox
-                width: combo.width*0.22
+                width: combo.width*0.17
                 visible:    true
                 model:      awbModesList
 
@@ -298,9 +323,20 @@ VideoItem {
 
             QGCComboBox {
                 id:         resolutionSelectionComboBox
-                width: combo.width*0.3
+                width: combo.width*0.25
                 visible:    true
                 model:      resolutionList
+
+                onCurrentIndexChanged: {
+                    onModeChange();
+                }
+            }
+
+            QGCComboBox {
+                id: orientationSelectionComboBox
+                width: combo.width*0.12
+                visible: true
+                model: orientationModeList
 
                 onCurrentIndexChanged: {
                     onModeChange();
@@ -322,6 +358,8 @@ VideoItem {
         awbComboBox.currentIndex = 0;
         resolutionSelectionComboBox.currentIndex = 1;
         resolutionSelectionComboBox.currentIndex = 7;
+        orientationSelectionComboBox.currentIndex = 1;
+        orientationSelectionComboBox.currentIndex = 0;
         videoBackground.visible = true;
 
         if(videoBackground.display && videoBackground.receiver) {
