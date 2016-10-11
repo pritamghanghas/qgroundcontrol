@@ -99,6 +99,7 @@ void APMGeoFenceManager::loadFromVehicle(void)
         return;
     }
 
+    _breachReturnPoint = QGeoCoordinate();
     _polygon.clear();
 
     if (!_geoFenceSupported()) {
@@ -112,7 +113,8 @@ void APMGeoFenceManager::loadFromVehicle(void)
     int minFencePoints = 6;
     qCDebug(GeoFenceManagerLog) << "APMGeoFenceManager::loadFromVehicle" << cFencePoints;
     if (cFencePoints == 0) {
-        // No fence, no more work to do, fence data has already been cleared
+        // No fence
+        emit loadComplete(_breachReturnPoint, _polygon);
         return;
     }
     if (cFencePoints < 0 || (cFencePoints > 0 && cFencePoints < minFencePoints)) {
@@ -142,6 +144,8 @@ void APMGeoFenceManager::_mavlinkMessageReceived(const mavlink_message_t& messag
 
         if (fencePoint.idx != _currentFencePoint) {
             // FIXME: Protocol out of whack
+            _readTransactionInProgress = false;
+            emit inProgressChanged(inProgress());
             qCWarning(GeoFenceManagerLog) << "Indices out of sync" << fencePoint.idx << _currentFencePoint;
             return;
         }
@@ -159,8 +163,10 @@ void APMGeoFenceManager::_mavlinkMessageReceived(const mavlink_message_t& messag
                 _requestFencePoint(++_currentFencePoint);
             } else {
                 // We've finished collecting fence points
+                qCDebug(GeoFenceManagerLog) << "Fence point load complete";
                 _readTransactionInProgress = false;
                 emit loadComplete(_breachReturnPoint, _polygon);
+                emit inProgressChanged(inProgress());
             }
         }
     }
@@ -172,13 +178,14 @@ void APMGeoFenceManager::_requestFencePoint(uint8_t pointIndex)
     MAVLinkProtocol*    mavlink = qgcApp()->toolbox()->mavlinkProtocol();
 
     qCDebug(GeoFenceManagerLog) << "APMGeoFenceManager::_requestFencePoint" << pointIndex;
-    mavlink_msg_fence_fetch_point_pack(mavlink->getSystemId(),
-                                       mavlink->getComponentId(),
-                                       &msg,
-                                       _vehicle->id(),
-                                       _vehicle->defaultComponentId(),
-                                       pointIndex);
-    _vehicle->sendMessageOnPriorityLink(msg);
+    mavlink_msg_fence_fetch_point_pack_chan(mavlink->getSystemId(),
+                                            mavlink->getComponentId(),
+                                            _vehicle->priorityLink()->mavlinkChannel(),
+                                            &msg,
+                                            _vehicle->id(),
+                                            _vehicle->defaultComponentId(),
+                                            pointIndex);
+    _vehicle->sendMessageOnLink(_vehicle->priorityLink(), msg);
 }
 
 void APMGeoFenceManager::_sendFencePoint(uint8_t pointIndex)
@@ -200,16 +207,17 @@ void APMGeoFenceManager::_sendFencePoint(uint8_t pointIndex)
     // Total point count, +1 polygon close in last index, +1 for breach in index 0
     uint8_t totalPointCount = _polygon.count() + 1 + 1;
 
-    mavlink_msg_fence_point_pack(mavlink->getSystemId(),
-                                 mavlink->getComponentId(),
-                                 &msg,
-                                 _vehicle->id(),
-                                 _vehicle->defaultComponentId(),
-                                 pointIndex,                        // Index of point to set
-                                 totalPointCount,
-                                 fenceCoord.latitude(),
-                                 fenceCoord.longitude());
-    _vehicle->sendMessageOnPriorityLink(msg);
+    mavlink_msg_fence_point_pack_chan(mavlink->getSystemId(),
+                                      mavlink->getComponentId(),
+                                      _vehicle->priorityLink()->mavlinkChannel(),
+                                      &msg,
+                                      _vehicle->id(),
+                                      _vehicle->defaultComponentId(),
+                                      pointIndex,                        // Index of point to set
+                                      totalPointCount,
+                                      fenceCoord.latitude(),
+                                      fenceCoord.longitude());
+    _vehicle->sendMessageOnLink(_vehicle->priorityLink(), msg);
 }
 
 bool APMGeoFenceManager::inProgress(void) const

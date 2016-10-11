@@ -82,6 +82,8 @@
 #include "CoordinateVector.h"
 #include "MainToolBarController.h"
 #include "MissionController.h"
+#include "GeoFenceController.h"
+#include "RallyPointController.h"
 #include "VideoManager.h"
 #include "VideoSurface.h"
 #include "VideoReceiver.h"
@@ -93,7 +95,6 @@
 #include "PositionManager.h"
 #include "FollowMe.h"
 #include "MissionCommandTree.h"
-#include "GeoFenceController.h"
 #include "QGCMapPolygon.h"
 #include "ParameterManager.h"
 
@@ -106,6 +107,7 @@
     #include "QGCMessageBox.h"
     #include "FirmwareUpgradeController.h"
     #include "MainWindow.h"
+    #include "GeoTagController.h"
 #endif
 
 #ifdef QGC_RTLAB_ENABLED
@@ -126,6 +128,7 @@ QGCApplication* QGCApplication::_app = NULL;
 const char* QGCApplication::parameterFileExtension =    "params";
 const char* QGCApplication::missionFileExtension =      "mission";
 const char* QGCApplication::fenceFileExtension =        "fence";
+const char* QGCApplication::rallyPointFileExtension =   "rally";
 const char* QGCApplication::telemetryFileExtension =     "tlog";
 
 const char* QGCApplication::_deleteAllSettingsKey           = "DeleteAllSettingsNextBoot";
@@ -400,16 +403,18 @@ void QGCApplication::_initCommon(void)
     qmlRegisterType<ScreenToolsController>              ("QGroundControl.Controllers", 1, 0, "ScreenToolsController");
     qmlRegisterType<MainToolBarController>              ("QGroundControl.Controllers", 1, 0, "MainToolBarController");
     qmlRegisterType<MissionController>                  ("QGroundControl.Controllers", 1, 0, "MissionController");
+    qmlRegisterType<GeoFenceController>                 ("QGroundControl.Controllers", 1, 0, "GeoFenceController");
+    qmlRegisterType<RallyPointController>               ("QGroundControl.Controllers", 1, 0, "RallyPointController");
     qmlRegisterType<ValuesWidgetController>             ("QGroundControl.Controllers", 1, 0, "ValuesWidgetController");
     qmlRegisterType<QGCMobileFileDialogController>      ("QGroundControl.Controllers", 1, 0, "QGCMobileFileDialogController");
     qmlRegisterType<RCChannelMonitorController>         ("QGroundControl.Controllers", 1, 0, "RCChannelMonitorController");
     qmlRegisterType<JoystickConfigController>           ("QGroundControl.Controllers", 1, 0, "JoystickConfigController");
-    qmlRegisterType<GeoFenceController>                 ("QGroundControl.Controllers", 1, 0, "GeoFenceController");
 #ifndef __mobile__
     qmlRegisterType<ViewWidgetController>           ("QGroundControl.Controllers", 1, 0, "ViewWidgetController");
     qmlRegisterType<CustomCommandWidgetController>  ("QGroundControl.Controllers", 1, 0, "CustomCommandWidgetController");
     qmlRegisterType<FirmwareUpgradeController>      ("QGroundControl.Controllers", 1, 0, "FirmwareUpgradeController");
     qmlRegisterType<LogDownloadController>          ("QGroundControl.Controllers", 1, 0, "LogDownloadController");
+    qmlRegisterType<GeoTagController>               ("QGroundControl.Controllers", 1, 0, "GeoTagController");
 #endif
 
     // Register Qml Singletons
@@ -685,16 +690,6 @@ void QGCApplication::showMessage(const QString& message)
     }
 }
 
-void QGCApplication::showFlyView(void)
-{
-    QMetaObject::invokeMethod(_rootQmlObject(), "showFlyView");
-}
-
-void QGCApplication::showPlanView(void)
-{
-    QMetaObject::invokeMethod(_rootQmlObject(), "showPlanView");
-}
-
 void QGCApplication::showSetupView(void)
 {
     QMetaObject::invokeMethod(_rootQmlObject(), "showSetupView");
@@ -705,29 +700,6 @@ void QGCApplication::qmlAttemptWindowClose(void)
     QMetaObject::invokeMethod(_rootQmlObject(), "attemptWindowClose");
 }
 
-
-void QGCApplication::_showSetupFirmware(void)
-{
-    QMetaObject::invokeMethod(_rootQmlObject(), "showSetupFirmware");
-}
-
-void QGCApplication::_showSetupParameters(void)
-{
-    QMetaObject::invokeMethod(_rootQmlObject(), "showSetupParameters");
-}
-
-void QGCApplication::_showSetupSummary(void)
-{
-    QMetaObject::invokeMethod(_rootQmlObject(), "showSetupSummary");
-}
-
-void QGCApplication::_showSetupVehicleComponent(VehicleComponent* vehicleComponent)
-{
-    QVariant varReturn;
-    QVariant varComponent = QVariant::fromValue(vehicleComponent);
-
-    QMetaObject::invokeMethod(_rootQmlObject(), "showSetupVehicleComponent", Q_RETURN_ARG(QVariant, varReturn), Q_ARG(QVariant, varComponent));
-}
 
 void QGCApplication::setLastKnownHomePosition(QGeoCoordinate& lastKnownHomePosition)
 {
