@@ -17,7 +17,7 @@ WindowsBuild {
 # a single compiled codebase this hardwiring of dialect can go away. But until then
 # this "workaround" is needed.
 
-MAVLINKPATH_REL = libs/mavlink/include/mavlink/v1.0
+MAVLINKPATH_REL = libs/mavlink/include/mavlink/v2.0
 MAVLINKPATH = $$BASEDIR/$$MAVLINKPATH_REL
 MAVLINK_CONF = ardupilotmega
 DEFINES += MAVLINK_NO_DATA
@@ -169,21 +169,21 @@ contains(DEFINES, DISABLE_RTLAB) {
 #
 MacBuild {
     INCLUDEPATH += \
-        $$BASEDIR/libs/lib/Frameworks/SDL.framework/Headers
+        $$BASEDIR/libs/lib/Frameworks/SDL2.framework/Headers
 
     LIBS += \
         -F$$BASEDIR/libs/lib/Frameworks \
-        -framework SDL
+        -framework SDL2
 } else:LinuxBuild {
-    PKGCONFIG = sdl
+    PKGCONFIG = sdl2
 } else:WindowsBuild {
     INCLUDEPATH += \
-        $$BASEDIR/libs/lib/sdl/msvc/include \
+        $$BASEDIR/libs/lib/sdl2/msvc/include \
 
     LIBS += \
-        -L$$BASEDIR/libs/lib/sdl/msvc/lib \
-        -lSDLmain \
-        -lSDL
+        -L$$BASEDIR/libs/lib/sdl2/msvc/lib/x86 \
+        -lSDL2main \
+        -lSDL2
 }
 
 ##

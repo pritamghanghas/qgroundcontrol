@@ -19,6 +19,7 @@
 #include "LinkManager.h"
 #include "HomePositionManager.h"
 #include "FlightMapSettings.h"
+#include "nodeselector.h"
 #include "SettingsFact.h"
 #include "FactMetaData.h"
 #include "SimulatedPosition.h"
@@ -87,7 +88,6 @@ public:
     Q_PROPERTY(qreal    baseFontPointSize       READ baseFontPointSize          WRITE setBaseFontPointSize          NOTIFY baseFontPointSizeChanged)
 
     // MavLink Protocol
-    Q_PROPERTY(bool     isMultiplexingEnabled   READ isMultiplexingEnabled      WRITE setIsMultiplexingEnabled      NOTIFY isMultiplexingEnabledChanged)
     Q_PROPERTY(bool     isVersionCheckEnabled   READ isVersionCheckEnabled      WRITE setIsVersionCheckEnabled      NOTIFY isVersionCheckEnabledChanged)
     Q_PROPERTY(int      mavlinkSystemID         READ mavlinkSystemID            WRITE setMavlinkSystemID            NOTIFY mavlinkSystemIDChanged)
 
@@ -111,6 +111,7 @@ public:
     /// Returns the string for distance units which has configued by user
     Q_PROPERTY(QString appSettingsDistanceUnitsString READ appSettingsDistanceUnitsString CONSTANT)
     Q_PROPERTY(QString appSettingsAreaUnitsString READ appSettingsAreaUnitsString CONSTANT)
+    Q_PROPERTY(NodeSelector*        nodeSelector        READ nodeSelector           CONSTANT)
 
     Q_INVOKABLE void    saveGlobalSetting       (const QString& key, const QString& value);
     Q_INVOKABLE QString loadGlobalSetting       (const QString& key, const QString& defaultValue);
@@ -179,7 +180,6 @@ public:
     bool    virtualTabletJoystick   () { return _virtualTabletJoystick; }
     qreal   baseFontPointSize       () { return _baseFontPointSize; }
 
-    bool    isMultiplexingEnabled   () { return _toolbox->mavlinkProtocol()->multiplexingEnabled(); }
     bool    isVersionCheckEnabled   () { return _toolbox->mavlinkProtocol()->versionCheckEnabled(); }
     int     mavlinkSystemID         () { return _toolbox->mavlinkProtocol()->getSystemId(); }
 
@@ -194,6 +194,8 @@ public:
     static Fact* speedUnits                     (void);
     static Fact* batteryPercentRemainingAnnounce(void);
 
+    NodeSelector*         nodeSelector () { return NodeSelector::instance(); }
+
     //-- TODO: Make this into an actual preference.
     bool    isAdvancedMode          () { return false; }
 
@@ -204,7 +206,6 @@ public:
     void    setVirtualTabletJoystick    (bool enabled);
     void    setBaseFontPointSize        (qreal size);
 
-    void    setIsMultiplexingEnabled    (bool enable);
     void    setIsVersionCheckEnabled    (bool enable);
     void    setMavlinkSystemID          (int  id);
 

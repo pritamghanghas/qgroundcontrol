@@ -47,6 +47,11 @@ PX4AutoPilotPlugin::~PX4AutoPilotPlugin()
     delete _airframeFacts;
 }
 
+//Fact *PX4AutoPilotPlugin::getRCMode()
+//{
+//    return getFact(FactSystem::ParameterProvider, -1, "COM_RC_IN_MODE");
+//}
+
 const QVariantList& PX4AutoPilotPlugin::vehicleComponents(void)
 {
     if (_components.count() == 0 && !_incorrectParameterVersion) {

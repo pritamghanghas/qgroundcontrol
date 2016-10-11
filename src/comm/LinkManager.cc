@@ -191,6 +191,8 @@ void LinkManager::_addLink(LinkInterface* link)
             if (!(_mavlinkChannelsUsedBitMask & 1 << i)) {
                 mavlink_reset_channel_status(i);
                 link->_setMavlinkChannel(i);
+                // Start the channel on Mav 1 protocol
+                mavlink_get_channel_status(i)->flags = mavlink_get_channel_status(i)->flags | MAVLINK_STATUS_FLAG_OUT_MAVLINK1;
                 _mavlinkChannelsUsedBitMask |= 1 << i;
                 channelSet = true;
                 break;
@@ -270,7 +272,7 @@ void LinkManager::_deleteLink(LinkInterface* link)
     }
 
     // Free up the mavlink channel associated with this link
-    _mavlinkChannelsUsedBitMask &= ~(1 << link->getMavlinkChannel());
+    _mavlinkChannelsUsedBitMask &= ~(1 << link->mavlinkChannel());
 
     _links.removeOne(link);
     delete link;

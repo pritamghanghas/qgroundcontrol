@@ -20,6 +20,7 @@
 
 #include "ScreenToolsController.h"
 #include "VideoManager.h"
+#include "nodeselector.h"
 
 static const char* kVideoSourceKey  = "VideoSource";
 static const char* kVideoUDPPortKey = "VideoUDPPort";
@@ -227,7 +228,7 @@ void VideoManager::_updateVideo()
         if(_videoSurface)
             delete _videoSurface;
         _videoSurface  = new VideoSurface;
-        _videoReceiver = new VideoReceiver(this);
+        _videoReceiver = new VideoReceiver(NodeSelector::instance(), this);
         #if defined(QGC_GST_STREAMING)
         _videoReceiver->setVideoSink(_videoSurface->videoSink());
         if(_videoSource == kUDPStream)
