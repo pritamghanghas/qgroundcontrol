@@ -1,5 +1,3 @@
-#define MAVLINK_USE_MESSAGE_INFO
-#include <stddef.h>         // Hack workaround for Mav 2.0 header problem with respect to offsetof usage
 #include "QGCMAVLink.h"
 #include "QGCMAVLinkInspector.h"
 #include "MultiVehicleManager.h"
@@ -441,8 +439,7 @@ void QGCMAVLinkInspector::updateField(mavlink_message_t* msg, const mavlink_mess
         return;
     }
 
-    uint8_t* m = ((uint8_t*)uasMessage)+8;
-
+    uint8_t* m = (uint8_t*)&uasMessage->payload64[0];
 
     switch (msgInfo->fields[fieldid].type)
     {

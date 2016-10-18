@@ -186,13 +186,15 @@ void LinkManager::_addLink(LinkInterface* link)
     if (!_links.contains(link)) {
         bool channelSet = false;
 
-        // Find a mavlink channel to use for this link
-        for (int i=0; i<32; i++) {
+        // Find a mavlink channel to use for this link, Channel 0 is reserved for internal use.
+        for (int i=1; i<32; i++) {
             if (!(_mavlinkChannelsUsedBitMask & 1 << i)) {
                 mavlink_reset_channel_status(i);
                 link->_setMavlinkChannel(i);
                 // Start the channel on Mav 1 protocol
-                mavlink_get_channel_status(i)->flags = mavlink_get_channel_status(i)->flags | MAVLINK_STATUS_FLAG_OUT_MAVLINK1;
+                mavlink_status_t* mavlinkStatus = mavlink_get_channel_status(i);
+                mavlinkStatus->flags = mavlink_get_channel_status(i)->flags | MAVLINK_STATUS_FLAG_OUT_MAVLINK1;
+                qDebug() << "LinkManager mavlinkStatus" << mavlinkStatus << i << mavlinkStatus->flags;
                 _mavlinkChannelsUsedBitMask |= 1 << i;
                 channelSet = true;
                 break;
