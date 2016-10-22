@@ -207,6 +207,7 @@ VideoItem {
         ListElement { text: "fixedfps";}
         ListElement { text: "antishake";}
         ListElement { text: "fireworks";}
+        ListElement { text: "thermal"; }
     }
 
 
