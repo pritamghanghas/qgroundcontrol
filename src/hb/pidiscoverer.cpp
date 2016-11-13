@@ -23,7 +23,7 @@ void PiDiscoverer::startDiscovery()
 {
     static bool started = false;
     if (!started) {
-        m_socket.bind(PIDISCOVERER_BROADCAST_PORT);
+        m_socket.bind(QHostAddress::Any, PIDISCOVERER_BROADCAST_PORT);
         connect(&m_socket, SIGNAL(readyRead()), SLOT(datagramReceived()));
     }
 }
