@@ -1443,6 +1443,31 @@ void UAS::setExternalControlSetpoint(float roll, float pitch, float yaw, float t
                                                  &message,
                                                  this->uasId,
                                                  newPitchCommand, newRollCommand, newThrustCommand, newYawCommand, buttons);
+       } else if(joystickMode == Vehicle::JoystickMode_OVERRIDE) {
+            // Save the new manual control inputs
+            manualRollAngle = roll;
+            manualPitchAngle = pitch;
+            manualYawAngle = yaw;
+            manualThrust = thrust;
+            manualButtons = buttons;
+
+            // Store scaling values for all 3 axes
+            const float axesScaling = 1.0 * 1000.0;
+
+            // Calculate the new commands for roll, pitch, yaw, and thrust
+            // assuming all our systems will be belheli based and all pwm controls are 1000 to 2000pwm
+            const float newRollCommand = 1500 + (roll * axesScaling)/2;
+            const float newPitchCommand = 1500 + (pitch * axesScaling)/2;
+            const float newYawCommand = 1500 + (yaw * axesScaling)/2;
+            const float newThrustCommand = 1000+ (thrust * axesScaling);
+
+            qCDebug(UASLog) << "roll:" << newRollCommand << "pitch:" << newPitchCommand
+                            << "yaw:" << newYawCommand << "thrust:" << newThrustCommand;
+
+            // Send the rcoverride message
+            mavlink_msg_rc_channels_override_pack(mavlink->getSystemId(), mavlink->getComponentId(), &message, this->uasId,
+                                                  0, (uint16_t)newRollCommand,(uint16_t)newPitchCommand,
+                                                  (uint16_t)newThrustCommand, (uint16_t)newYawCommand, 0, 0, 0, 0);
         }
 
         _vehicle->sendMessageOnLink(_vehicle->priorityLink(), message);
