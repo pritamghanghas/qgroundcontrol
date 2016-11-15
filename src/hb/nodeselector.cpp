@@ -6,7 +6,7 @@
 static const QString PLAY_CMD("udpsrc port=$PORT ! application/x-rtp,encoding-name=H264,payload=96 ! rtph264depay ! h264parse ! avdec_h264");
 static const QString PICAM_REMOTE_CMD("raspivid -t 0 $OPT_STRING -o - | gst-launch-1.0 -v fdsrc ! h264parse ! rtph264pay config-interval=1 pt=96 ! udpsink host=$CLIENT_IP port=$UDP_PORT");
 //static const QString MAVPROXY_REMOTE_CMD("screen -S MAVPROXY /usr/local/bin/mavproxy.py --master=127.0.0.1:1440 --baudrate 57600 --out $CLIENT_IP:14550 --aircraft MyCopter");
-static const QString MAVPROXY_REMOTE_CMD("/home/pi/ardupilot/ardupilot/ArduCopter/ArduCopter.elf -A udp:$CLIENT_IP:14550 -B /dev/ttyS0");
+static const QString MAVPROXY_REMOTE_CMD("/home/pi/ardupilot/bin/start_ardupilot.sh $CLIENT_IP");
 
 NodeSelector* NodeSelector::instance(QNetworkAccessManager *nam)
 {
