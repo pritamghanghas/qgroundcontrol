@@ -26,7 +26,7 @@ public:
     int targetStreamingPort;
     QHostAddress address;
     QString addressString;
-    QhostAPDConf;
+    QVariantMap hostAPDConf;
 };
 
 #define PiNodeList QList<PiNode>
@@ -38,6 +38,7 @@ public:
     explicit PiDiscoverer(QObject *parent = 0);
     void startDiscovery();
     PiNodeList discoveredNodes() const;
+    void setDiscoveredNodes(const PiNodeList nodes);
 
 Q_SIGNALS:
     void nodeDiscovered(const PiNode &node);

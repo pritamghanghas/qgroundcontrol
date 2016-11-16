@@ -45,7 +45,7 @@ NodeSelector::~NodeSelector()
     Q_FOREACH(const PiNode &node, nodes) {
             terminatePicam(node);
             terminateThermal(node);
-            terminateMavProxy(node);
+//            terminateMavProxy(node); // don't terminate, don't want it falling down if gc is closed
         }
 }
 
@@ -60,7 +60,22 @@ void NodeSelector::terminatePicam(const PiNode &node)
 
 void NodeSelector::hostapdget()
 {
+    PiNode node = currentNode();
+    if(!node.isValid()) {
+        return;
+    }
 
+    if (!node.hostAPDConf.isEmpty()) {
+        return;
+    }
+
+    QString mavcmd = "http://" + node.addressString + ":8080/hostapdget";
+    mavcmd.replace("$CLIENT_IP", deviceAddress(node));
+    qDebug() << "mav command " << mavcmd;
+    QVariantMap map;
+    map.insert("requestFor", PiNode::AP);
+    map.insert("nodeIndex", m_currentIndex);
+    sendRequest(mavcmd, map);
 }
 
 void NodeSelector::terminateThermal(const PiNode &node)
@@ -135,6 +150,32 @@ PiNode NodeSelector::currentNode() const
     return nodes.at(m_currentIndex);
 }
 
+QVariantMap NodeSelector::currentHostAPDConf() const
+{
+    return currentNode().hostAPDConf;
+}
+
+void NodeSelector::setCurrentHostAPDConf(const QVariantMap &config)
+{
+    PiNodeList nodes = m_discoverer->discoveredNodes();
+    if (nodes.isEmpty()) {
+        return;
+    }
+    nodes[m_currentIndex].hostAPDConf = config;
+    m_discoverer->setDiscoveredNodes(nodes);
+
+
+    PiNode node = nodes[m_currentIndex];
+    QString mavcmd = "http://" + node.addressString + ":8080/hostapdget";
+    mavcmd.replace("$CLIENT_IP", deviceAddress(node));
+    Q_FOREACH(const QVariant &key, config.keys()) {
+        mavcmd.append("?" + key.toString() + "=" + config.value(key.toString()).toString());
+    }
+    qDebug() << "mav command " << mavcmd;
+    QVariantMap map;
+    sendRequest(mavcmd, map);
+}
+
 void NodeSelector::onNewNodeDiscovered(const PiNode &node)
 {
         if (node.caps & PiNode::MAVProxy) { // has mav capability
@@ -149,14 +190,8 @@ void NodeSelector::onNewNodeDiscovered(const PiNode &node)
             }
         }
 
-        if (node.caps & PiNode::AP) {
-            QString mavcmd = "http://" + node.addressString + ":8080/hostapdget";
-            mavcmd.replace("$CLIENT_IP", deviceAddress(node));
-            qDebug() << "mav command " << mavcmd;
-            QVariantMap map;
-            map.insert("requestFor", PiNode::AP);
-            map.insert("nodeIndex", m_currentIndex);
-            sendRequest(mavcmd, map);
+        if (node.caps & PiNode::AP) { // has ap capability
+            hostapdget();
         }
 
         // check if its thermal module, if so start thermal
@@ -307,18 +342,24 @@ void NodeSelector::replyFinished()
             qDebug() << "mavproxy started without any error";
             break;
         case PiNode::AP:
+        {
             index = reply->property("nodeIndex").toInt();
             QString replyString = reply->readAll();
             QStringList replyList = replyString.split(" ");
-            QVariantMap<QString, QString> keyPair;
+            QVariantMap keyPair;
             Q_FOREACH(const QString &pair, replyList) {
                 QStringList stringPair = pair.split("=");
-
+                nodes[index].hostAPDConf.insert(stringPair.first(), stringPair.last());
             }
-
+        }
+            break;
         default:
             break;
         }
+    }
+    m_discoverer->setDiscoveredNodes(nodes);
+    Q_FOREACH(const PiNode& node, nodes) {
+        qDebug() << node.hostAPDConf;
     }
 }
 

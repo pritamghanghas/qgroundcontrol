@@ -189,20 +189,36 @@ QGCView {
                                 text: "SSID"
                             }
                             QGCTextField {
-
+                                text: QGroundControl.nodeSelector.currentHostAPDConf()["ssid"];
+                                maximumLength:  10
+                                onEditingFinished: {
+                                     var hostapdConfig = QGroundControl.nodeSelector.currentHostAPDConf();
+                                     hostapdConfig["ssid"] = text;
+                                    QGroundControl.nodeSelector.setCurrentHostAPDConf(hostapdConfig)
+                                }
                             }
 
                             QGCLabel {
                                 text : "Password"
                             }
                             QGCTextField {
-
+                                text: QGroundControl.nodeSelector.currentHostAPDConf()["wpa_passphrase"];
+                                maximumLength:  10
+                                onEditingFinished: {
+                                     var hostapdConfig = QGroundControl.nodeSelector.currentHostAPDConf();
+                                     hostapdConfig["wpa_passphrase"] = text;
+                                }
                             }
                             QGCLabel {
                                 text : "Channel"
                             }
                             QGCTextField {
-
+                                text: QGroundControl.nodeSelector.currentHostAPDConf()["channel"];
+                                maximumLength:  10
+                                onEditingFinished: {
+                                     var hostapdConfig = QGroundControl.nodeSelector.currentHostAPDConf();
+                                     hostapdConfig["channel"] = text;
+                                }
                             }
                         }
                     } // Rectangle - System Control

@@ -66,6 +66,11 @@ PiNodeList PiDiscoverer::discoveredNodes() const
     return m_discoveredNodes;
 }
 
+void PiDiscoverer::setDiscoveredNodes(const QList<PiNode> nodes)
+{
+    m_discoveredNodes = nodes;
+}
+
 void PiDiscoverer::onNodeDiscovered(const PiNode &node)
 {
 //    qDebug() << "node discovered " << node.addressString;

@@ -21,6 +21,8 @@ Q_SIGNALS:
     void thermalUrl(const QUrl &thermalUrl);
 
 public Q_SLOTS:
+    QVariantMap currentHostAPDConf() const;
+    void setCurrentHostAPDConf(const QVariantMap &config);
     void onNewNodeDiscovered(const PiNode& node);
     void selectNext();
     void selectPrevious();
@@ -45,6 +47,7 @@ private Q_SLOTS:
 private:
     explicit NodeSelector(QNetworkAccessManager *nam = 0, QObject *parent = 0);
     virtual ~NodeSelector();
+    void hostapdget();
     void sendRequest(const QUrl &url, const QVariantMap &properties = QVariantMap());
     void terminateMavProxy(const PiNode& node);
 
