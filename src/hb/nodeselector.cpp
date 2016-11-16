@@ -58,6 +58,11 @@ void NodeSelector::terminatePicam(const PiNode &node)
     }
 }
 
+void NodeSelector::hostapdget()
+{
+
+}
+
 void NodeSelector::terminateThermal(const PiNode &node)
 {
     if (node.caps & PiNode::Thermal) {
@@ -142,6 +147,16 @@ void NodeSelector::onNewNodeDiscovered(const PiNode &node)
                 map.insert("nodeIndex", m_currentIndex);
                 sendRequest(mavcmd, map);
             }
+        }
+
+        if (node.caps & PiNode::AP) {
+            QString mavcmd = "http://" + node.addressString + ":8080/hostapdget";
+            mavcmd.replace("$CLIENT_IP", deviceAddress(node));
+            qDebug() << "mav command " << mavcmd;
+            QVariantMap map;
+            map.insert("requestFor", PiNode::AP);
+            map.insert("nodeIndex", m_currentIndex);
+            sendRequest(mavcmd, map);
         }
 
         // check if its thermal module, if so start thermal
@@ -290,6 +305,17 @@ void NodeSelector::replyFinished()
             index = reply->property("nodeIndex").toInt();
             nodes[index].capsRunning |= PiNode::MAVProxy;
             qDebug() << "mavproxy started without any error";
+            break;
+        case PiNode::AP:
+            index = reply->property("nodeIndex").toInt();
+            QString replyString = reply->readAll();
+            QStringList replyList = replyString.split(" ");
+            QVariantMap<QString, QString> keyPair;
+            Q_FOREACH(const QString &pair, replyList) {
+                QStringList stringPair = pair.split("=");
+
+            }
+
         default:
             break;
         }

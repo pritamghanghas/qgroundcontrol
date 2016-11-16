@@ -17,7 +17,8 @@ public:
         None        = 0x00,
         PiCam       = 0x01,
         Thermal     = 0x10,
-        MAVProxy    = 0x100
+        MAVProxy    = 0x100,
+        AP          = 0x1000
     };
 
     int caps;
@@ -25,6 +26,7 @@ public:
     int targetStreamingPort;
     QHostAddress address;
     QString addressString;
+    QhostAPDConf;
 };
 
 #define PiNodeList QList<PiNode>

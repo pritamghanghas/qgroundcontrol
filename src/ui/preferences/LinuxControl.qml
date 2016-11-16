@@ -44,6 +44,10 @@ QGCView {
 
     property int    confirmActionCode
 
+    function hostapdget() {
+
+    }
+
     Timer {
         id:             confirmSlideHideTimer
         interval:       7000

@@ -50,6 +50,10 @@ void PiDiscoverer::datagramReceived()
         if (datagram.contains("mavproxy")) {
             node.caps |= PiNode::MAVProxy;
         }
+
+        if (datagram.contains("hostapd")) {
+            node.caps |= PiNode::AP;
+        }
         node.targetStreamingPort = STREAMING_PORT_LOWEST + m_discoveredNodes.count();
         node.address = addr;
         node.addressString = addr.toString().split(":").last();
