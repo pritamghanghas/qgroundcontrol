@@ -192,8 +192,8 @@ QGCView {
                                 text: QGroundControl.nodeSelector.currentHostAPDConf()["ssid"];
                                 maximumLength:  10
                                 onEditingFinished: {
-                                     var hostapdConfig = QGroundControl.nodeSelector.currentHostAPDConf();
-                                     hostapdConfig["ssid"] = text;
+                                    var hostapdConfig = QGroundControl.nodeSelector.currentHostAPDConf();
+                                    hostapdConfig["ssid"] = text;
                                     QGroundControl.nodeSelector.setCurrentHostAPDConf(hostapdConfig)
                                 }
                             }
@@ -203,10 +203,11 @@ QGCView {
                             }
                             QGCTextField {
                                 text: QGroundControl.nodeSelector.currentHostAPDConf()["wpa_passphrase"];
-                                maximumLength:  10
+                                maximumLength:  20
                                 onEditingFinished: {
-                                     var hostapdConfig = QGroundControl.nodeSelector.currentHostAPDConf();
-                                     hostapdConfig["wpa_passphrase"] = text;
+                                    var hostapdConfig = QGroundControl.nodeSelector.currentHostAPDConf();
+                                    hostapdConfig["wpa_passphrase"] = text;
+                                    QGroundControl.nodeSelector.setCurrentHostAPDConf(hostapdConfig)
                                 }
                             }
                             QGCLabel {
@@ -214,10 +215,11 @@ QGCView {
                             }
                             QGCTextField {
                                 text: QGroundControl.nodeSelector.currentHostAPDConf()["channel"];
-                                maximumLength:  10
+                                maximumLength:  20
                                 onEditingFinished: {
-                                     var hostapdConfig = QGroundControl.nodeSelector.currentHostAPDConf();
-                                     hostapdConfig["channel"] = text;
+                                    var hostapdConfig = QGroundControl.nodeSelector.currentHostAPDConf();
+                                    hostapdConfig["channel"] = text;
+                                    QGroundControl.nodeSelector.setCurrentHostAPDConf(hostapdConfig)
                                 }
                             }
                         }

@@ -166,10 +166,13 @@ void NodeSelector::setCurrentHostAPDConf(const QVariantMap &config)
 
 
     PiNode node = nodes[m_currentIndex];
-    QString mavcmd = "http://" + node.addressString + ":8080/hostapdget";
+    QString mavcmd = "http://" + node.addressString + ":8080/hostapdset?";
     mavcmd.replace("$CLIENT_IP", deviceAddress(node));
     Q_FOREACH(const QVariant &key, config.keys()) {
-        mavcmd.append("?" + key.toString() + "=" + config.value(key.toString()).toString());
+        mavcmd.append(key.toString() + "=" + config.value(key.toString()).toString());
+        if (key != config.keys().last()) {
+            mavcmd.append("&");
+        }
     }
     qDebug() << "mav command " << mavcmd;
     QVariantMap map;
@@ -345,10 +348,15 @@ void NodeSelector::replyFinished()
         {
             index = reply->property("nodeIndex").toInt();
             QString replyString = reply->readAll();
-            QStringList replyList = replyString.split(" ");
+            QStringList replyList = replyString.split("\n");
+            qDebug() << replyList;
             QVariantMap keyPair;
             Q_FOREACH(const QString &pair, replyList) {
+                if (pair.isEmpty()) {
+                    continue;
+                }
                 QStringList stringPair = pair.split("=");
+                qDebug() << stringPair;
                 nodes[index].hostAPDConf.insert(stringPair.first(), stringPair.last());
             }
         }
