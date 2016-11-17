@@ -190,7 +190,7 @@ QGCView {
                             }
                             QGCTextField {
                                 text: QGroundControl.nodeSelector.currentHostAPDConf()["ssid"];
-                                maximumLength:  10
+                                maximumLength:  20
                                 onEditingFinished: {
                                     var hostapdConfig = QGroundControl.nodeSelector.currentHostAPDConf();
                                     hostapdConfig["ssid"] = text;
@@ -215,7 +215,8 @@ QGCView {
                             }
                             QGCTextField {
                                 text: QGroundControl.nodeSelector.currentHostAPDConf()["channel"];
-                                maximumLength:  20
+                                maximumLength:  2
+                                validator:      IntValidator {bottom: 1; top: 14;}
                                 onEditingFinished: {
                                     var hostapdConfig = QGroundControl.nodeSelector.currentHostAPDConf();
                                     hostapdConfig["channel"] = text;
