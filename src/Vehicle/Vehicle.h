@@ -472,6 +472,7 @@ public:
     bool sub(void) const;
 
     bool supportsManualControl(void) const;
+    bool supportsRCOverRide(void) const;
     bool supportsThrottleModeCenterZero(void) const;
     bool supportsRadio(void) const;
     bool supportsJSButton(void) const;

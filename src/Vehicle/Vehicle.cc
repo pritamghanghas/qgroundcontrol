@@ -1186,6 +1186,9 @@ void Vehicle::_loadSettings(void)
     if (!convertOk) {
         _joystickMode = JoystickModeRC;
     }
+    if (_firmwarePlugin->supportsRCOverRide()) {
+        _joystickMode = JoystickMode_OVERRIDE;
+    }
 
     // Joystick enabled is a global setting so first make sure there are any joysticks connected
     if (qgcApp()->toolbox()->joystickManager()->joysticks().count()) {
@@ -1532,7 +1535,7 @@ void Vehicle::virtualTabletJoystickValue(double roll, double pitch, double yaw, 
 {
     // The following if statement prevents the virtualTabletJoystick from sending values if the standard joystick is enabled
     if ( !_joystickEnabled ) {
-        _uas->setExternalControlSetpoint(roll, pitch, yaw, thrust, 0, JoystickModeRC);
+        _uas->setExternalControlSetpoint(roll, pitch, yaw, thrust, 0, _joystickMode);
     }
 }
 
@@ -1611,6 +1614,11 @@ bool Vehicle::vtol(void) const
 bool Vehicle::supportsManualControl(void) const
 {
     return _firmwarePlugin->supportsManualControl();
+}
+
+bool Vehicle::supportsRCOverRide(void) const
+{
+    return _firmwarePlugin->supportsRCOverRide();
 }
 
 bool Vehicle::supportsThrottleModeCenterZero(void) const
