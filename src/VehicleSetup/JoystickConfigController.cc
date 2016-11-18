@@ -832,5 +832,5 @@ void JoystickConfigController::_activeJoystickChanged(Joystick* joystick)
 
 bool JoystickConfigController::_validAxis(int axis)
 {
-    return axis >= 0 && axis < _axisCount;
+    return axis >= 0 && axis < _axisCount && axis != 4 && axis != 5;
 }
