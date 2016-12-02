@@ -14,7 +14,13 @@
 #include "PX4FirmwarePlugin.h"
 #include "PX4ParameterMetaData.h"
 #include "QGCApplication.h"
-#include "AutoPilotPlugins/PX4/PX4AutoPilotPlugin.h"    // FIXME: Hack
+#include "PX4AutoPilotPlugin.h"
+#include "PX4AdvancedFlightModesController.h"
+#include "PX4SimpleFlightModesController.h"
+#include "AirframeComponentController.h"
+#include "SensorsComponentController.h"
+#include "PowerComponentController.h"
+#include "RadioComponentController.h"
 
 #include <QDebug>
 
@@ -72,7 +78,17 @@ static const struct Modes2Name rgModes2Name[] = {
 PX4FirmwarePlugin::PX4FirmwarePlugin(void)
     : _versionNotified(false)
 {
+    qmlRegisterType<PX4AdvancedFlightModesController>   ("QGroundControl.Controllers", 1, 0, "PX4AdvancedFlightModesController");
+    qmlRegisterType<PX4SimpleFlightModesController>     ("QGroundControl.Controllers", 1, 0, "PX4SimpleFlightModesController");
+    qmlRegisterType<AirframeComponentController>        ("QGroundControl.Controllers", 1, 0, "AirframeComponentController");
+    qmlRegisterType<SensorsComponentController>         ("QGroundControl.Controllers", 1, 0, "SensorsComponentController");
+    qmlRegisterType<PowerComponentController>           ("QGroundControl.Controllers", 1, 0, "PowerComponentController");
+    qmlRegisterType<RadioComponentController>           ("QGroundControl.Controllers", 1, 0, "RadioComponentController");
+}
 
+AutoPilotPlugin* PX4FirmwarePlugin::autopilotPlugin(Vehicle* vehicle)
+{
+    return new PX4AutoPilotPlugin(vehicle, vehicle);
 }
 
 QList<VehicleComponent*> PX4FirmwarePlugin::componentsForVehicle(AutoPilotPlugin* vehicle)
@@ -177,10 +193,11 @@ bool PX4FirmwarePlugin::supportsManualControl(void)
 
 bool PX4FirmwarePlugin::isCapable(const Vehicle *vehicle, FirmwareCapabilities capabilities)
 {
-    if(vehicle->multiRotor()) {
+    if (vehicle->multiRotor()) {
         return (capabilities & (MavCmdPreflightStorageCapability | GuidedModeCapability | SetFlightModeCapability | PauseVehicleCapability | OrbitModeCapability)) == capabilities;
+    } else {
+        return (capabilities & (MavCmdPreflightStorageCapability | GuidedModeCapability | SetFlightModeCapability | PauseVehicleCapability)) == capabilities;
     }
-    return (capabilities & (MavCmdPreflightStorageCapability | GuidedModeCapability | SetFlightModeCapability | PauseVehicleCapability)) == capabilities;
 }
 
 void PX4FirmwarePlugin::initializeVehicle(Vehicle* vehicle)
@@ -365,7 +382,7 @@ void PX4FirmwarePlugin::guidedModeTakeoff(Vehicle* vehicle, double altitudeRel)
 
 void PX4FirmwarePlugin::guidedModeGotoLocation(Vehicle* vehicle, const QGeoCoordinate& gotoCoord)
 {
-    if (qIsNaN(vehicle->altitudeRelative()->rawValue().toDouble())) {
+    if (qIsNaN(vehicle->altitudeAMSL()->rawValue().toDouble())) {
         qgcApp()->showMessage(QStringLiteral("Unable to go to location, vehicle position not known."));
         return;
     }
@@ -397,8 +414,12 @@ void PX4FirmwarePlugin::guidedModeGotoLocation(Vehicle* vehicle, const QGeoCoord
 
 void PX4FirmwarePlugin::guidedModeChangeAltitude(Vehicle* vehicle, double altitudeRel)
 {
-    if (qIsNaN(vehicle->altitudeRelative()->rawValue().toDouble())) {
-        qgcApp()->showMessage(QStringLiteral("Unable to change altitude, vehicle altitude not known."));
+    if (!vehicle->homePositionAvailable()) {
+        qgcApp()->showMessage(QStringLiteral("Unable to change altitude, home position unknown."));
+        return;
+    }
+    if (qIsNaN(vehicle->homePosition().altitude())) {
+        qgcApp()->showMessage(QStringLiteral("Unable to change altitude, home position altitude unknown."));
         return;
     }
 
@@ -413,7 +434,7 @@ void PX4FirmwarePlugin::guidedModeChangeAltitude(Vehicle* vehicle, double altitu
     cmd.param4 = NAN;
     cmd.param5 = NAN;
     cmd.param6 = NAN;
-    cmd.param7 = vehicle->altitudeAMSL()->rawValue().toDouble() + altitudeRel;
+    cmd.param7 = vehicle->homePosition().altitude() + altitudeRel;
     cmd.target_system = vehicle->id();
     cmd.target_component = vehicle->defaultComponentId();
 

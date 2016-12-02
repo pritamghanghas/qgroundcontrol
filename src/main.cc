@@ -33,10 +33,11 @@
     #include "QGCSerialPortInfo.h"
 #endif
 
+#ifdef UNITTEST_BUILD
+    #include "UnitTest.h"
+#endif
+
 #ifdef QT_DEBUG
-    #ifndef __mobile__
-        #include "UnitTest.h"
-    #endif
     #include "CmdLineOptParser.h"
     #ifdef Q_OS_WIN
         #include <crtdbg.h>
@@ -73,7 +74,7 @@ int WindowsCrtReportHook(int reportType, char* message, int* returnValue)
 
 #endif
 
-#ifdef __android__
+#if defined(__android__) && !defined(NO_SERIAL_LINK)
 #include <jni.h>
 #include "qserialport.h"
 
@@ -150,7 +151,7 @@ int main(int argc, char *argv[])
     // that we use these types in signals, and without calling qRegisterMetaType we can't queue
     // these signals. In general we don't queue these signals, but we do what the warning says
     // anyway to silence the debug output.
-#ifndef __ios__
+#ifndef NO_SERIAL_LINK
     qRegisterMetaType<QSerialPort::SerialPortError>();
 #endif
 #ifdef QGC_ENABLE_BLUETOOTH
@@ -229,8 +230,7 @@ int main(int argc, char *argv[])
 
     int exitCode = 0;
 
-#ifndef __mobile__
-#ifdef QT_DEBUG
+#ifdef UNITTEST_BUILD
     if (runUnitTests) {
         for (int i=0; i < (stressUnitTests ? 20 : 1); i++) {
             if (!app->_initForUnitTests()) {
@@ -249,7 +249,6 @@ int main(int argc, char *argv[])
             }
         }
     } else
-#endif
 #endif
     {
         if (!app->_initForNormalAppBoot()) {

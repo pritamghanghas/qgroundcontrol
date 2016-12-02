@@ -27,6 +27,7 @@ public:
     void            loadFromVehicle         (void) final;
     void            sendToVehicle           (const QGeoCoordinate& breachReturn, const QList<QGeoCoordinate>& polygon) final;
     bool            fenceSupported          (void) const final { return _fenceSupported; }
+    bool            fenceEnabled            (void) const final;
     bool            circleSupported         (void) const final;
     bool            polygonSupported        (void) const final;
     bool            breachReturnSupported   (void) const final { return _breachReturnSupported; }
@@ -40,6 +41,7 @@ private slots:
     void _updateSupportedFlags(void);
     void _circleRadiusRawValueChanged(QVariant value);
     void _parametersReady(void);
+    void _fenceEnabledRawValueChanged(QVariant value);
     
 private:
     void _requestFencePoint(uint8_t pointIndex);
@@ -49,6 +51,8 @@ private:
 private:
     bool _fenceSupported;
     bool _breachReturnSupported;
+    bool _circleSupported;
+    bool _polygonSupported;
     bool _firstParamLoadComplete;
 
     QVariantList    _params;
@@ -63,7 +67,6 @@ private:
     uint8_t _cWriteFencePoints;
     uint8_t _currentFencePoint;
 
-    Fact* _fenceEnableFact;
     Fact* _fenceTypeFact;
 
     static const char* _fenceTotalParam;

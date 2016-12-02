@@ -14,19 +14,20 @@
 #include "QGCApplication.h"
 #include "ParameterManager.h"
 
-const char* APMGeoFenceManager::_fenceTotalParam =     "FENCE_TOTAL";
-const char* APMGeoFenceManager::_fenceActionParam =    "FENCE_ACTION";
-const char* APMGeoFenceManager::_fenceEnableParam =    "FENCE_ENABLE";
+const char* APMGeoFenceManager::_fenceTotalParam =  "FENCE_TOTAL";
+const char* APMGeoFenceManager::_fenceActionParam = "FENCE_ACTION";
+const char* APMGeoFenceManager::_fenceEnableParam = "FENCE_ENABLE";
 
 APMGeoFenceManager::APMGeoFenceManager(Vehicle* vehicle)
     : GeoFenceManager(vehicle)
     , _fenceSupported(false)
     , _breachReturnSupported(vehicle->fixedWing())
+    , _circleSupported(false)
+    , _polygonSupported(false)
     , _firstParamLoadComplete(false)
     , _circleRadiusFact(NULL)
     , _readTransactionInProgress(false)
     , _writeTransactionInProgress(false)
-    , _fenceEnableFact(NULL)
     , _fenceTypeFact(NULL)
 {
     connect(_vehicle,                       &Vehicle::mavlinkMessageReceived,           this, &APMGeoFenceManager::_mavlinkMessageReceived);
@@ -72,23 +73,14 @@ void APMGeoFenceManager::sendToVehicle(const QGeoCoordinate& breachReturn, const
     _breachReturnPoint = breachReturn;
     _polygon = polygon;
 
-    // First thing is to turn off geo fence while we are updating. This prevents the vehicle from going haywire it is in the air.
-    // Unfortunately the param to do this with differs between plane and copter.
-    const char* enableParam = _vehicle->fixedWing() ? _fenceActionParam : _fenceEnableParam;
-    Fact* fenceEnableFact = _vehicle->parameterManager()->getParameter(FactSystem::defaultComponentId, enableParam);
-    QVariant savedEnableState = fenceEnableFact->rawValue();
-    fenceEnableFact->setRawValue(0);
-
     // Total point count, +1 polygon close in last index, +1 for breach in index 0
-    _cWriteFencePoints = (validatedPolygonCount ? (validatedPolygonCount + 1) : 0) + 1 ;
+    _cWriteFencePoints = validatedPolygonCount ? validatedPolygonCount + 1 + 1 : 0;
     _vehicle->parameterManager()->getParameter(FactSystem::defaultComponentId, _fenceTotalParam)->setRawValue(_cWriteFencePoints);
 
     // FIXME: No validation of correct fence received
     for (uint8_t index=0; index<_cWriteFencePoints; index++) {
         _sendFencePoint(index);
     }
-
-    fenceEnableFact->setRawValue(savedEnableState);
 
     emit loadComplete(_breachReturnPoint, _polygon);
 }
@@ -106,11 +98,11 @@ void APMGeoFenceManager::loadFromVehicle(void)
         return;
     }
 
-    // Point 0: Breach return point (ArduPlane only)
+    // Point 0: Breach return point (always sent, but supported by ArduPlane only)
     // Point [1,N]: Polygon points
     // Point N+1: Close polygon point (same as point 1)
     int cFencePoints = _vehicle->parameterManager()->getParameter(FactSystem::defaultComponentId, _fenceTotalParam)->rawValue().toInt();
-    int minFencePoints = 6;
+    int minFencePoints = 5;
     qCDebug(GeoFenceManagerLog) << "APMGeoFenceManager::loadFromVehicle" << cFencePoints;
     if (cFencePoints == 0) {
         // No fence
@@ -240,10 +232,43 @@ bool APMGeoFenceManager::_geoFenceSupported(void)
     }
 }
 
+bool APMGeoFenceManager::fenceEnabled(void) const
+{
+    if (qgcApp()->runningUnitTests()) {
+        return false;
+    }
+
+    if (_vehicle->parameterManager()->parameterExists(FactSystem::defaultComponentId, _fenceEnableParam)) {
+        bool fenceEnabled = _vehicle->parameterManager()->getParameter(FactSystem::defaultComponentId, _fenceEnableParam)->rawValue().toBool();
+        qCDebug(GeoFenceManagerLog) << "FENCE_ENABLE available" << fenceEnabled;
+        return fenceEnabled;
+    }
+
+    qCDebug(GeoFenceManagerLog) << "FENCE_ENABLE not available";
+    return true;
+}
+
+void APMGeoFenceManager::_fenceEnabledRawValueChanged(QVariant value)
+{
+    qCDebug(GeoFenceManagerLog) << "FENCE_ENABLE changed" << value.toBool();
+    emit fenceEnabledChanged(!qgcApp()->runningUnitTests() && value.toBool());
+}
+
 void APMGeoFenceManager::_updateSupportedFlags(void)
 {
-    emit circleSupportedChanged(circleSupported());
-    emit polygonSupportedChanged(polygonSupported());
+    bool newCircleSupported = _fenceSupported && _vehicle->multiRotor() && _fenceTypeFact && (_fenceTypeFact->rawValue().toInt() & 2);
+    if (newCircleSupported != _circleSupported) {
+        _circleSupported = newCircleSupported;
+        emit circleSupportedChanged(newCircleSupported);
+    }
+
+    bool newPolygonSupported = _fenceSupported &&
+            ((_vehicle->multiRotor() && _fenceTypeFact && (_fenceTypeFact->rawValue().toInt() & 4)) ||
+             _vehicle->fixedWing());
+    if (newPolygonSupported != _polygonSupported) {
+        _polygonSupported = newPolygonSupported;
+        emit polygonSupportedChanged(newPolygonSupported);
+    }
 }
 
 void APMGeoFenceManager::_parametersReady(void)
@@ -257,12 +282,14 @@ void APMGeoFenceManager::_parametersReady(void)
             QStringList paramNames;
             QStringList paramLabels;
 
+            if (_vehicle->parameterManager()->parameterExists(FactSystem::defaultComponentId, _fenceEnableParam)) {
+                connect(_vehicle->parameterManager()->getParameter(FactSystem::defaultComponentId, _fenceEnableParam), &Fact::rawValueChanged, this, &APMGeoFenceManager::_fenceEnabledRawValueChanged);
+            }
+
             if (_vehicle->multiRotor()) {
-                _fenceEnableFact = _vehicle->parameterManager()->getParameter(FactSystem::defaultComponentId, QStringLiteral("FENCE_ENABLE"));
                 _fenceTypeFact = _vehicle->parameterManager()->getParameter(FactSystem::defaultComponentId, QStringLiteral("FENCE_TYPE"));
 
-                connect(_fenceEnableFact,   &Fact::rawValueChanged, this, &APMGeoFenceManager::_updateSupportedFlags);
-                connect(_fenceTypeFact,     &Fact::rawValueChanged, this, &APMGeoFenceManager::_updateSupportedFlags);
+                connect(_fenceTypeFact, &Fact::rawValueChanged, this, &APMGeoFenceManager::_updateSupportedFlags);
 
                 _circleRadiusFact = _vehicle->parameterManager()->getParameter(FactSystem::defaultComponentId, QStringLiteral("FENCE_RADIUS"));
                 connect(_circleRadiusFact, &Fact::rawValueChanged, this, &APMGeoFenceManager::_circleRadiusRawValueChanged);
@@ -293,8 +320,7 @@ void APMGeoFenceManager::_parametersReady(void)
             emit paramLabelsChanged(_paramLabels);
 
             emit fenceSupportedChanged(_fenceSupported);
-            emit circleSupportedChanged(circleSupported());
-            emit polygonSupportedChanged(polygonSupported());
+            _updateSupportedFlags();
         }
 
         qCDebug(GeoFenceManagerLog) << "fenceSupported:circleSupported:polygonSupported:breachReturnSupported" <<
@@ -318,26 +344,12 @@ void APMGeoFenceManager::_circleRadiusRawValueChanged(QVariant value)
 
 bool APMGeoFenceManager::circleSupported(void) const
 {
-    if (_fenceSupported && _vehicle->multiRotor() && _fenceEnableFact && _fenceTypeFact) {
-        return _fenceEnableFact->rawValue().toBool() && (_fenceTypeFact->rawValue().toInt() & 2);
-    }
-
-    return false;
+    return _circleSupported;
 }
 
 bool APMGeoFenceManager::polygonSupported(void) const
 {
-    if (_fenceSupported) {
-        if (_vehicle->multiRotor()) {
-            if (_fenceEnableFact && _fenceTypeFact) {
-                return _fenceEnableFact->rawValue().toBool() && (_fenceTypeFact->rawValue().toInt() & 4);
-            }
-        } else if (_vehicle->fixedWing()) {
-            return true;
-        }
-    }
-
-    return false;
+    return _polygonSupported;
 }
 
 QString APMGeoFenceManager::editorQml(void) const

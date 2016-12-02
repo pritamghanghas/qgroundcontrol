@@ -32,7 +32,6 @@
 #include "MultiVehicleManager.h"
 #include "JoystickManager.h"
 #include "GAudioOutput.h"
-#include "AutoPilotPluginManager.h"
 #include "UASMessageHandler.h"
 #include "FactSystem.h"
 
@@ -167,8 +166,8 @@ private slots:
     void _missingParamsDisplay(void);
 
 private:
-    void _loadCurrentStyle(void);
-    QObject* _rootQmlObject(void);
+    void        _loadCurrentStyle   ();
+    QObject*    _rootQmlObject      ();
 
 #ifdef __mobile__
     QQmlApplicationEngine* _qmlAppEngine;
@@ -206,6 +205,7 @@ private:
 
     /// Unit Test have access to creating and destroying singletons
     friend class UnitTest;
+
 };
 
 /// @brief Returns the QGCApplication object singleton.

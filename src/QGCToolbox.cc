@@ -8,7 +8,6 @@
  ****************************************************************************/
 
 
-#include "AutoPilotPluginManager.h"
 #include "FactSystem.h"
 #include "FirmwarePluginManager.h"
 #include "FlightMapSettings.h"
@@ -29,10 +28,15 @@
 #include "PositionManager.h"
 #include "VideoManager.h"
 #include "MAVLinkLogManager.h"
+#include "QGCCorePlugin.h"
+#include "QGCOptions.h"
+
+#if defined(QGC_CUSTOM_BUILD)
+#include CUSTOMHEADER
+#endif
 
 QGCToolbox::QGCToolbox(QGCApplication* app)
     : _audioOutput(NULL)
-    , _autopilotPluginManager(NULL)
     , _factSystem(NULL)
     , _firmwarePluginManager(NULL)
     , _flightMapSettings(NULL)
@@ -52,9 +56,11 @@ QGCToolbox::QGCToolbox(QGCApplication* app)
     , _qgcPositionManager(NULL)
     , _videoManager(NULL)
     , _mavlinkLogManager(NULL)
+    , _corePlugin(NULL)
 {
+    //-- Scan and load plugins
+    _scanAndLoadPlugins(app);
     _audioOutput =              new GAudioOutput(app);
-    _autopilotPluginManager =   new AutoPilotPluginManager(app);
     _factSystem =               new FactSystem(app);
     _firmwarePluginManager =    new FirmwarePluginManager(app);
     _flightMapSettings =        new FlightMapSettings(app);
@@ -78,8 +84,8 @@ QGCToolbox::QGCToolbox(QGCApplication* app)
 
 void QGCToolbox::setChildToolboxes(void)
 {
+    _corePlugin->setToolbox(this);
     _audioOutput->setToolbox(this);
-    _autopilotPluginManager->setToolbox(this);
     _factSystem->setToolbox(this);
     _firmwarePluginManager->setToolbox(this);
     _flightMapSettings->setToolbox(this);
@@ -106,7 +112,6 @@ QGCToolbox::~QGCToolbox()
     delete _videoManager;
     delete _mavlinkLogManager;
     delete _audioOutput;
-    delete _autopilotPluginManager;
     delete _factSystem;
     delete _firmwarePluginManager;
     delete _flightMapSettings;
@@ -120,6 +125,20 @@ QGCToolbox::~QGCToolbox()
     delete _uasMessageHandler;
     delete _followMe;
     delete _qgcPositionManager;
+    delete _corePlugin;
+}
+
+void QGCToolbox::_scanAndLoadPlugins(QGCApplication* app)
+{
+#if defined (QGC_CUSTOM_BUILD)
+    //-- Create custom plugin (Static)
+    _corePlugin = (QGCCorePlugin*) new CUSTOMCLASS(app);
+    if(_corePlugin) {
+        return;
+    }
+#endif
+    //-- No plugins found, use default instance
+    _corePlugin = new QGCCorePlugin(app);
 }
 
 QGCTool::QGCTool(QGCApplication* app)
@@ -127,7 +146,6 @@ QGCTool::QGCTool(QGCApplication* app)
     , _app(app)
     , _toolbox(NULL)
 {
-
 }
 
 void QGCTool::setToolbox(QGCToolbox* toolbox)

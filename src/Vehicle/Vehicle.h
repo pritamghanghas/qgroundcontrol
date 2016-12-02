@@ -31,7 +31,6 @@ class UASInterface;
 class FirmwarePlugin;
 class FirmwarePluginManager;
 class AutoPilotPlugin;
-class AutoPilotPluginManager;
 class MissionManager;
 class GeoFenceManager;
 class RallyPointManager;
@@ -214,7 +213,6 @@ public:
             MAV_AUTOPILOT           firmwareType,
             MAV_TYPE                vehicleType,
             FirmwarePluginManager*  firmwarePluginManager,
-            AutoPilotPluginManager* autopilotPluginManager,
             JoystickManager*        joystickManager);
 
     // The following is used to create a disconnected Vehicle for use while offline editing.
@@ -280,6 +278,7 @@ public:
     Q_PROPERTY(bool                 xConfigMotors           READ xConfigMotors                                          CONSTANT)
     Q_PROPERTY(bool                 isOfflineEditingVehicle READ isOfflineEditingVehicle                                CONSTANT)
     Q_PROPERTY(QString              brandImage              READ brandImage                                             CONSTANT)
+    Q_PROPERTY(QStringList          unhealthySensors        READ unhealthySensors                                       NOTIFY unhealthySensorsChanged)
 
     /// true: Vehicle is flying, false: Vehicle is on ground
     Q_PROPERTY(bool flying      READ flying     WRITE setFlying     NOTIFY flyingChanged)
@@ -531,6 +530,7 @@ public:
     uint32_t        customMode              () const { return _custom_mode; }
     bool            isOfflineEditingVehicle () const { return _offlineEditingVehicle; }
     QString         brandImage              () const;
+    QStringList     unhealthySensors        () const;
 
     Fact* roll              (void) { return &_rollFact; }
     Fact* heading           (void) { return &_headingFact; }
@@ -578,6 +578,13 @@ public:
     /// @return true: X confiuration, false: Plus configuration
     bool xConfigMotors(void);
 
+    /// @return Firmware plugin instance data associated with this Vehicle
+    QObject* firmwarePluginInstanceData(void) { return _firmwarePluginInstanceData; }
+
+    /// Sets the firmware plugin instance data associated with this Vehicle. This object will be parented to the Vehicle
+    /// and destroyed when the vehicle goes away.
+    void setFirmwarePluginInstanceData(QObject* firmwarePluginInstanceData);
+
 public slots:
     void setLatitude(double latitude);
     void setLongitude(double longitude);
@@ -605,6 +612,7 @@ signals:
     void prearmErrorChanged(const QString& prearmError);
     void commandLongAck(uint8_t compID, uint16_t command, uint8_t result);
     void soloFirmwareChanged(bool soloFirmware);
+    void unhealthySensorsChanged(void);
 
     void messagesReceivedChanged    ();
     void messagesSentChanged        ();
@@ -715,6 +723,7 @@ private:
     MAV_AUTOPILOT       _firmwareType;
     MAV_TYPE            _vehicleType;
     FirmwarePlugin*     _firmwarePlugin;
+    QObject*            _firmwarePluginInstanceData;
     AutoPilotPlugin*    _autopilotPlugin;
     MAVLinkProtocol*    _mavlink;
     bool                _soloFirmware;
@@ -752,6 +761,10 @@ private:
     double          _rcRSSIstore;
     bool            _autoDisconnect;    ///< true: Automatically disconnect vehicle when last connection goes away or lost heartbeat
     bool            _flying;
+    uint32_t        _onboardControlSensorsPresent;
+    uint32_t        _onboardControlSensorsEnabled;
+    uint32_t        _onboardControlSensorsHealth;
+    uint32_t        _onboardControlSensorsUnhealthy;
 
     QString             _prearmError;
     QTimer              _prearmErrorTimer;
@@ -800,7 +813,6 @@ private:
 
     // Toolbox references
     FirmwarePluginManager*      _firmwarePluginManager;
-    AutoPilotPluginManager*     _autopilotPluginManager;
     JoystickManager*            _joystickManager;
 
     int                         _flowImageIndex;
