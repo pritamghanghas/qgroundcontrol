@@ -19,20 +19,25 @@
 #include <QFile>
 #include <QFileInfo>
 
-#define kTimeOutMilliseconds 1000
-
 QGC_LOGGING_CATEGORY(MAVLinkLogManagerLog, "MAVLinkLogManagerLog")
 
-static const char* kEmailAddressKey         = "MAVLinkLogEmail";
-static const char* kDescriptionsKey         = "MAVLinkLogDescription";
+static const char* kMAVLinkLogGroup         = "MAVLinkLogGroup";
+static const char* kEmailAddressKey         = "Email";
+static const char* kDescriptionsKey         = "Description";
 static const char* kDefaultDescr            = "QGroundControl Session";
-static const char* kPx4URLKey               = "MAVLinkLogURL";
+static const char* kPx4URLKey               = "LogURL";
 static const char* kDefaultPx4URL           = "http://logs.px4.io/upload";
-static const char* kEnableAutoUploadKey     = "EnableAutoUploadKey";
-static const char* kEnableAutoStartKey      = "EnableAutoStartKey";
-static const char* kEnableDeletetKey        = "EnableDeleteKey";
+static const char* kEnableAutoUploadKey     = "EnableAutoUpload";
+static const char* kEnableAutoStartKey      = "EnableAutoStart";
+static const char* kEnableDeletetKey        = "EnableDelete";
 static const char* kUlogExtension           = ".ulg";
 static const char* kSidecarExtension        = ".uploaded";
+static const char* kVideoURLKey             = "VideoURL";
+static const char* kWindSpeedKey            = "WindSpeed";
+static const char* kRateKey                 = "RateKey";
+static const char* kPublicLogKey            = "PublicLog";
+static const char* kFeedback                = "feedback";
+static const char* kVideoURL                = "videoUrl";
 
 //-----------------------------------------------------------------------------
 MAVLinkLogFiles::MAVLinkLogFiles(MAVLinkLogManager* manager, const QString& filePath, bool newFile)
@@ -301,16 +306,22 @@ MAVLinkLogManager::MAVLinkLogManager(QGCApplication* app)
     , _loggingDisabled(false)
     , _logProcessor(NULL)
     , _deleteAfterUpload(false)
-    , _loggingCmdTryCount(0)
+    , _windSpeed(-1)
+    , _publicLog(false)
 {
     //-- Get saved settings
     QSettings settings;
+    settings.beginGroup(kMAVLinkLogGroup);
     setEmailAddress(settings.value(kEmailAddressKey, QString()).toString());
     setDescription(settings.value(kDescriptionsKey, QString(kDefaultDescr)).toString());
     setUploadURL(settings.value(kPx4URLKey, QString(kDefaultPx4URL)).toString());
+    setVideoURL(settings.value(kVideoURLKey, QString()).toString());
     setEnableAutoUpload(settings.value(kEnableAutoUploadKey, true).toBool());
     setEnableAutoStart(settings.value(kEnableAutoStartKey, true).toBool());
     setDeleteAfterUpload(settings.value(kEnableDeletetKey, false).toBool());
+    setWindSpeed(settings.value(kWindSpeedKey, -1).toInt());
+    setRating(settings.value(kRateKey, "notset").toString());
+    setPublicLog(settings.value(kPublicLogKey, true).toBool());
     //-- Logging location
     _logPath = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
     _logPath += "/MAVLinkLogs";
@@ -347,7 +358,6 @@ MAVLinkLogManager::setToolbox(QGCToolbox* toolbox)
     qmlRegisterUncreatableType<MAVLinkLogManager>("QGroundControl.MAVLinkLogManager", 1, 0, "MAVLinkLogManager", "Reference only");
     if(!_loggingDisabled) {
         connect(toolbox->multiVehicleManager(), &MultiVehicleManager::activeVehicleChanged, this, &MAVLinkLogManager::_activeVehicleChanged);
-        connect(&_ackTimer, &QTimer::timeout, this, &MAVLinkLogManager::_processCmdAck);
     }
 }
 
@@ -357,6 +367,7 @@ MAVLinkLogManager::setEmailAddress(QString email)
 {
     _emailAddress = email;
     QSettings settings;
+    settings.beginGroup(kMAVLinkLogGroup);
     settings.setValue(kEmailAddressKey, email);
     emit emailAddressChanged();
 }
@@ -367,6 +378,7 @@ MAVLinkLogManager::setDescription(QString description)
 {
     _description = description;
     QSettings settings;
+    settings.beginGroup(kMAVLinkLogGroup);
     settings.setValue(kDescriptionsKey, description);
     emit descriptionChanged();
 }
@@ -380,8 +392,28 @@ MAVLinkLogManager::setUploadURL(QString url)
         _uploadURL = kDefaultPx4URL;
     }
     QSettings settings;
+    settings.beginGroup(kMAVLinkLogGroup);
     settings.setValue(kPx4URLKey, _uploadURL);
     emit uploadURLChanged();
+}
+
+//-----------------------------------------------------------------------------
+void
+MAVLinkLogManager::setFeedback(QString fb)
+{
+    _feedback = fb;
+    emit feedbackChanged();
+}
+
+//-----------------------------------------------------------------------------
+void
+MAVLinkLogManager::setVideoURL(QString url)
+{
+    _videoURL = url;
+    QSettings settings;
+    settings.beginGroup(kMAVLinkLogGroup);
+    settings.setValue(kVideoURLKey, url);
+    emit videoURLChanged();
 }
 
 //-----------------------------------------------------------------------------
@@ -390,6 +422,7 @@ MAVLinkLogManager::setEnableAutoUpload(bool enable)
 {
     _enableAutoUpload = enable;
     QSettings settings;
+    settings.beginGroup(kMAVLinkLogGroup);
     settings.setValue(kEnableAutoUploadKey, enable);
     emit enableAutoUploadChanged();
 }
@@ -400,6 +433,7 @@ MAVLinkLogManager::setEnableAutoStart(bool enable)
 {
     _enableAutoStart = enable;
     QSettings settings;
+    settings.beginGroup(kMAVLinkLogGroup);
     settings.setValue(kEnableAutoStartKey, enable);
     emit enableAutoStartChanged();
 }
@@ -410,8 +444,42 @@ MAVLinkLogManager::setDeleteAfterUpload(bool enable)
 {
     _deleteAfterUpload = enable;
     QSettings settings;
+    settings.beginGroup(kMAVLinkLogGroup);
     settings.setValue(kEnableDeletetKey, enable);
     emit deleteAfterUploadChanged();
+}
+
+//-----------------------------------------------------------------------------
+void
+MAVLinkLogManager::setWindSpeed(int speed)
+{
+    _windSpeed = speed;
+    QSettings settings;
+    settings.beginGroup(kMAVLinkLogGroup);
+    settings.setValue(kWindSpeedKey, speed);
+    emit windSpeedChanged();
+}
+
+//-----------------------------------------------------------------------------
+void
+MAVLinkLogManager::setRating(QString rate)
+{
+    _rating = rate;
+    QSettings settings;
+    settings.beginGroup(kMAVLinkLogGroup);
+    settings.setValue(kRateKey, rate);
+    emit ratingChanged();
+}
+
+//-----------------------------------------------------------------------------
+void
+MAVLinkLogManager::setPublicLog(bool pub)
+{
+    _publicLog = pub;
+    QSettings settings;
+    settings.beginGroup(kMAVLinkLogGroup);
+    settings.setValue(kPublicLogKey, pub);
+    emit publicLogChanged();
 }
 
 //-----------------------------------------------------------------------------
@@ -540,8 +608,6 @@ MAVLinkLogManager::startLogging()
         if(_createNewLog()) {
             _vehicle->startMavlinkLog();
             _logRunning = true;
-            _loggingCmdTryCount = 0;
-            _ackTimer.start(kTimeOutMilliseconds);
             emit logRunningChanged();
         }
     }
@@ -570,11 +636,6 @@ MAVLinkLogManager::stopLogging()
         delete _logProcessor;
         _logProcessor = NULL;
         _logRunning = false;
-        if(_vehicle) {
-            //-- Setup a timer to make sure vehicle received the command
-            _loggingCmdTryCount = 0;
-            _ackTimer.start(kTimeOutMilliseconds);
-        }
         emit logRunningChanged();
     }
 }
@@ -630,17 +691,41 @@ MAVLinkLogManager::_sendLog(const QString& logFile)
     QHttpMultiPart* multiPart = new QHttpMultiPart(QHttpMultiPart::FormDataType);
     QHttpPart emailPart = create_form_part("email", _emailAddress);
     QHttpPart descriptionPart = create_form_part("description", _description);
-    QHttpPart sourcePart = create_form_part("source", "QGroundControl");
-    QHttpPart versionPart = create_form_part("version", _app->applicationVersion());
-    QHttpPart logPart;
-    logPart.setHeader(QNetworkRequest::ContentTypeHeader, "application/octet-stream");
-    logPart.setHeader(QNetworkRequest::ContentDispositionHeader, QString("form-data; name=\"filearg\"; filename=\"%1\"").arg(fi.fileName()));
-    logPart.setBodyDevice(file);
+    QHttpPart sourcePart      = create_form_part("source", "QGroundControl");
+    QHttpPart versionPart     = create_form_part("version", _app->applicationVersion());
+    QHttpPart typePart        = create_form_part("type", "flightreport");
+    QHttpPart windPart        = create_form_part("windSpeed", QString::number(_windSpeed));
+    QHttpPart ratingPart      = create_form_part("rating", _rating);
+    QHttpPart publicPart      = create_form_part("public", _publicLog ? "true" : "false");
     //-- Assemble request and POST it
     multiPart->append(emailPart);
     multiPart->append(descriptionPart);
     multiPart->append(sourcePart);
     multiPart->append(versionPart);
+    multiPart->append(typePart);
+    multiPart->append(windPart);
+    multiPart->append(ratingPart);
+    multiPart->append(publicPart);
+    //-- Optional
+    QHttpPart feedbackPart;
+    if(_feedback.isEmpty()) {
+        feedbackPart = create_form_part(kFeedback, "None Given");
+    } else {
+        feedbackPart = create_form_part(kFeedback, _feedback);
+    }
+    multiPart->append(feedbackPart);
+    QHttpPart videoPart;
+    if(_videoURL.isEmpty()) {
+        videoPart = create_form_part(kVideoURL, "None");
+    } else {
+        videoPart = create_form_part(kVideoURL, _videoURL);
+    }
+    multiPart->append(videoPart);
+    //-- Actual Log File
+    QHttpPart logPart;
+    logPart.setHeader(QNetworkRequest::ContentTypeHeader, "application/octet-stream");
+    logPart.setHeader(QNetworkRequest::ContentDispositionHeader, QString("form-data; name=\"filearg\"; filename=\"%1\"").arg(fi.fileName()));
+    logPart.setBodyDevice(file);
     multiPart->append(logPart);
     file->setParent(multiPart);
     QNetworkRequest request(_uploadURL);
@@ -742,9 +827,9 @@ MAVLinkLogManager::_activeVehicleChanged(Vehicle* vehicle)
     //   For now, we only handle one log download at a time.
     // Disconnect the previous one (if any)
     if(_vehicle) {
-        disconnect(_vehicle, &Vehicle::armedChanged,   this, &MAVLinkLogManager::_armedChanged);
-        disconnect(_vehicle, &Vehicle::mavlinkLogData, this, &MAVLinkLogManager::_mavlinkLogData);
-        disconnect(_vehicle, &Vehicle::commandLongAck, this, &MAVLinkLogManager::_commandLongAck);
+        disconnect(_vehicle, &Vehicle::armedChanged,        this, &MAVLinkLogManager::_armedChanged);
+        disconnect(_vehicle, &Vehicle::mavlinkLogData,      this, &MAVLinkLogManager::_mavlinkLogData);
+        disconnect(_vehicle, &Vehicle::mavCommandResult,    this, &MAVLinkLogManager::_mavCommandResult);
         _vehicle = NULL;
         //-- Stop logging (if that's the case)
         stopLogging();
@@ -753,40 +838,10 @@ MAVLinkLogManager::_activeVehicleChanged(Vehicle* vehicle)
     // Connect new system
     if(vehicle) {
         _vehicle = vehicle;
-        connect(_vehicle, &Vehicle::armedChanged,   this, &MAVLinkLogManager::_armedChanged);
-        connect(_vehicle, &Vehicle::mavlinkLogData, this, &MAVLinkLogManager::_mavlinkLogData);
-        connect(_vehicle, &Vehicle::commandLongAck, this, &MAVLinkLogManager::_commandLongAck);
+        connect(_vehicle, &Vehicle::armedChanged,       this, &MAVLinkLogManager::_armedChanged);
+        connect(_vehicle, &Vehicle::mavlinkLogData,     this, &MAVLinkLogManager::_mavlinkLogData);
+        connect(_vehicle, &Vehicle::mavCommandResult,   this, &MAVLinkLogManager::_mavCommandResult);
         emit canStartLogChanged();
-    }
-}
-
-//-----------------------------------------------------------------------------
-void
-MAVLinkLogManager::_processCmdAck()
-{
-    if(_loggingCmdTryCount++ > 3) {
-        _ackTimer.stop();
-        //-- Give up
-        if(_logRunning) {
-            qCWarning(MAVLinkLogManagerLog) << "Start MAVLink log command had no response.";
-            _discardLog();
-        } else {
-            qCWarning(MAVLinkLogManagerLog) << "Stop MAVLink log command had no response.";
-        }
-    } else {
-        if(_vehicle) {
-            if(_logRunning) {
-                _vehicle->startMavlinkLog();
-                qCWarning(MAVLinkLogManagerLog) << "Start MAVLink log command sent again.";
-            } else {
-                _vehicle->stopMavlinkLog();
-                qCWarning(MAVLinkLogManagerLog) << "Stop MAVLink log command sent again.";
-            }
-            _ackTimer.start(kTimeOutMilliseconds);
-        } else {
-            //-- Vehicle went away on us
-            _ackTimer.stop();
-        }
     }
 }
 
@@ -794,10 +849,6 @@ MAVLinkLogManager::_processCmdAck()
 void
 MAVLinkLogManager::_mavlinkLogData(Vehicle* /*vehicle*/, uint8_t /*target_system*/, uint8_t /*target_component*/, uint16_t sequence, uint8_t first_message, QByteArray data, bool /*acked*/)
 {
-    //-- Disable timer if we got a message before an ACK for the start command
-    if(_logRunning) {
-        _ackTimer.stop();
-    }
     if(_logProcessor && _logProcessor->valid()) {
         if(!_logProcessor->processStreamData(sequence, first_message, data)) {
             qCCritical(MAVLinkLogManagerLog) << "Error writing MAVLink log file:" << _logProcessor->fileName();
@@ -814,12 +865,15 @@ MAVLinkLogManager::_mavlinkLogData(Vehicle* /*vehicle*/, uint8_t /*target_system
 
 //-----------------------------------------------------------------------------
 void
-MAVLinkLogManager::_commandLongAck(uint8_t /*compID*/, uint16_t command, uint8_t result)
+MAVLinkLogManager::_mavCommandResult(int vehicleId, int component, int command, int result, bool noReponseFromVehicle)
 {
+    Q_UNUSED(vehicleId);
+    Q_UNUSED(component);
+    Q_UNUSED(noReponseFromVehicle)
+
     if(command == MAV_CMD_LOGGING_START || command == MAV_CMD_LOGGING_STOP) {
-        _ackTimer.stop();
         //-- Did it fail?
-        if(result) {
+        if(result != MAV_RESULT_ACCEPTED) {
             if(command == MAV_CMD_LOGGING_STOP) {
                 //-- Not that it could happen but...
                 qCWarning(MAVLinkLogManagerLog) << "Stop MAVLink log command failed.";

@@ -72,7 +72,7 @@ ParameterManager::ParameterManager(Vehicle* vehicle)
     _mavlink = qgcApp()->toolbox()->mavlinkProtocol();
 
     _initialRequestTimeoutTimer.setSingleShot(true);
-    _initialRequestTimeoutTimer.setInterval(20000);
+    _initialRequestTimeoutTimer.setInterval(5000);
     connect(&_initialRequestTimeoutTimer, &QTimer::timeout, this, &ParameterManager::_initialRequestTimeout);
 
     _waitingParamTimeoutTimer.setSingleShot(true);
@@ -135,12 +135,8 @@ void ParameterManager::_parameterUpdate(int vehicleId, int componentId, QString 
         return;
     }
 
-    if (parameterId >= parameterCount) {
-        qCDebug(ParameterManagerLog) << _logVehiclePrefix() << "Discarding bogus update name:id:count" << parameterName << parameterId << parameterCount;
-        return;
-    }
-
     _initialRequestTimeoutTimer.stop();
+    _waitingParamTimeoutTimer.stop();
 
     _dataMutex.lock();
 
@@ -179,14 +175,9 @@ void ParameterManager::_parameterUpdate(int vehicleId, int componentId, QString 
         componentParamsComplete = true;
     }
 
-    if (_waitingReadParamIndexMap[componentId].contains(parameterId) ||
-        _waitingReadParamNameMap[componentId].contains(parameterName) ||
-        _waitingWriteParamNameMap[componentId].contains(parameterName)) {
-        // We were waiting for this parameter, restart wait timer. Otherwise it is a spurious parameter update which
-        // means we should not reset the wait timer.
-        qCDebug(ParameterManagerVerbose1Log) << _logVehiclePrefix() << "Restarting _waitingParamTimeoutTimer (valid param received)";
-        _waitingParamTimeoutTimer.start();
-    } else {
+    if (!_waitingReadParamIndexMap[componentId].contains(parameterId) &&
+        !_waitingReadParamNameMap[componentId].contains(parameterName) &&
+        !_waitingWriteParamNameMap[componentId].contains(parameterName)) {
         qCDebug(ParameterManagerVerbose1Log) << _logVehiclePrefix() << "Unrequested param update" << parameterName;
     }
 
@@ -234,12 +225,17 @@ void ParameterManager::_parameterUpdate(int vehicleId, int componentId, QString 
     int readWaitingParamCount = waitingReadParamIndexCount + waitingReadParamNameCount;
     int totalWaitingParamCount = readWaitingParamCount + waitingWriteParamNameCount;
     if (totalWaitingParamCount) {
-        qCDebug(ParameterManagerVerbose1Log) << _logVehiclePrefix(componentId) << "totalWaitingParamCount:" << totalWaitingParamCount;
-    } else if (_defaultComponentId != MAV_COMP_ID_ALL || _defaultComponentIdParam.isEmpty()) {
-        // No more parameters to wait for, stop the timeout. Be careful to not stop timer if we don't have the default
-        // component yet.
-        qCDebug(ParameterManagerVerbose1Log) << _logVehiclePrefix() << "Stopping _waitingParamTimeoutTimer (all requests satisfied)";
-        _waitingParamTimeoutTimer.stop();
+        // More params to wait for, restart timer
+        _waitingParamTimeoutTimer.start();
+        qCDebug(ParameterManagerVerbose1Log) << _logVehiclePrefix() << "Restarting _waitingParamTimeoutTimer: totalWaitingParamCount:" << totalWaitingParamCount;
+    } else {
+        if (_defaultComponentId == MAV_COMP_ID_ALL && !_defaultComponentIdParam.isEmpty()) {
+            // Still waiting for default component id, restart timer
+            qCDebug(ParameterManagerVerbose1Log) << _logVehiclePrefix() << "Restarting _waitingParamTimeoutTimer (still waiting for default component)";
+            _waitingParamTimeoutTimer.start();
+        } else {
+            qCDebug(ParameterManagerVerbose1Log) << _logVehiclePrefix() << "Not restarting _waitingParamTimeoutTimer (all requests satisfied)";
+        }
     }
 
     // Update progress bar for waiting reads
@@ -820,15 +816,11 @@ void ParameterManager::_saveToEEPROM(void)
     if (_saveRequired) {
         _saveRequired = false;
         if (_vehicle->firmwarePlugin()->isCapable(_vehicle, FirmwarePlugin::MavCmdPreflightStorageCapability)) {
-            mavlink_message_t msg;
-            mavlink_msg_command_long_pack_chan(_mavlink->getSystemId(),
-                                               _mavlink->getComponentId(),
-                                               _vehicle->priorityLink()->mavlinkChannel(),
-                                               &msg,
-                                               _vehicle->id(),
-                                               0,
-                                               MAV_CMD_PREFLIGHT_STORAGE, 1, 1, -1, -1, -1, 0, 0, 0);
-            _vehicle->sendMessageOnLink(_vehicle->priorityLink(), msg);
+            _vehicle->sendMavCommand(MAV_COMP_ID_ALL,
+                                     MAV_CMD_PREFLIGHT_STORAGE,
+                                     true,  // showError
+                                     1,     // Write parameters to EEPROM
+                                     -1);   // Don't do anything with mission storage
             qCDebug(ParameterManagerLog) << _logVehiclePrefix() << "_saveToEEPROM";
         } else {
             qCDebug(ParameterManagerLog) << _logVehiclePrefix() << "_saveToEEPROM skipped due to FirmwarePlugin::isCapable";
@@ -1064,12 +1056,13 @@ void ParameterManager::_checkInitialLoadComplete(bool failIfNoDefaultComponent)
 void ParameterManager::_initialRequestTimeout(void)
 {
     if (!_disableAllRetries && ++_initialRequestRetryCount <= _maxInitialRequestListRetry) {
+        qCDebug(ParameterManagerLog) << _logVehiclePrefix() << "Retyring initial parameter request list";
         refreshAllParameters();
         _initialRequestTimeoutTimer.start();
     } else {
         if (!_vehicle->genericFirmware()) {
             // Generic vehicles (like BeBop) may not have any parameters, so don't annoy the user
-            QString errorMsg = tr("Vehicle %1 did not respond to request for parameters"
+            QString errorMsg = tr("Vehicle %1 did not respond to request for parameters. "
                                   "This will cause QGroundControl to be unable to display its full user interface.").arg(_vehicle->id());
             qCDebug(ParameterManagerLog) << errorMsg;
             qgcApp()->showMessage(errorMsg);
@@ -1445,22 +1438,11 @@ bool ParameterManager::loadFromJson(const QJsonObject& json, bool required, QStr
 
 void ParameterManager::resetAllParametersToDefaults(void)
 {
-    mavlink_message_t msg;
-    MAVLinkProtocol* mavlink = qgcApp()->toolbox()->mavlinkProtocol();
-
-    mavlink_msg_command_long_pack_chan(mavlink->getSystemId(),
-                                       mavlink->getComponentId(),
-                                       _vehicle->priorityLink()->mavlinkChannel(),
-                                       &msg,
-                                       _vehicle->id(),                   // Target systeem
-                                       _vehicle->defaultComponentId(),   // Target component
-                                       MAV_CMD_PREFLIGHT_STORAGE,
-                                       0,                                // Confirmation
-                                       2,                                // 2 = Reset params to default
-                                       -1,                               // -1 = No change to mission storage
-                                       0,                                // 0 = Ignore
-                                       0, 0, 0, 0);                      // Unused
-    _vehicle->sendMessageOnLink(_vehicle->priorityLink(), msg);
+    _vehicle->sendMavCommand(MAV_COMP_ID_ALL,
+                             MAV_CMD_PREFLIGHT_STORAGE,
+                             true,  // showError
+                             2,     // Reset params to default
+                             -1);   // Don't do anything with mission storage
 }
 
 QString ParameterManager::_logVehiclePrefix(int componentId)

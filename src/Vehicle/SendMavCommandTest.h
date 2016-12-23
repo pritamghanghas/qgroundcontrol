@@ -8,26 +8,24 @@
  ****************************************************************************/
 
 
-#ifndef ParameterManagerTest_H
-#define ParameterManagerTest_H
+#ifndef SendMavCommandTest_H
+#define SendMavCommandTest_H
 
 #include "UnitTest.h"
-#include "MockLink.h"
-#include "MultiSignalSpy.h"
-#include "MockLink.h"
 
-class ParameterManagerTest : public UnitTest
+class SendMavCommandTest : public UnitTest
 {
     Q_OBJECT
     
 private slots:
     void _noFailure(void);
-    void _requestListNoResponse(void);
-    void _requestListMissingParamSuccess(void);
-    void _requestListMissingParamFail(void);
+    void _failureShowError(void);
+    void _failureNoShowError(void);
+    void _noFailureAfterRetry(void);
+    void _failureAfterRetry(void);
+    void _failureAfterNoReponse(void);
 
 private:
-    void _noFailureWorker(MockConfiguration::FailureMode_t failureMode);
 };
 
 #endif
