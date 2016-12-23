@@ -117,6 +117,11 @@ bool FirmwarePlugin::supportsManualControl(void)
     return false;
 }
 
+bool FirmwarePlugin::supportsRCOverRide(void)
+{
+    return false;
+}
+
 bool FirmwarePlugin::supportsRadio(void)
 {
     return true;

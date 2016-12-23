@@ -47,6 +47,7 @@ public:
     bool                isGuidedMode                    (const Vehicle* vehicle) const;
     int                 manualControlReservedButtonCount(void) final;
     bool                supportsManualControl           (void) final;
+    bool                supportsRCOverRide              (void) final;
     void                initializeVehicle               (Vehicle* vehicle) final;
     bool                sendHomePositionToVehicle       (void) final;
     void                addMetaDataToFact               (QObject* parameterMetaData, Fact* fact, MAV_TYPE vehicleType) final;

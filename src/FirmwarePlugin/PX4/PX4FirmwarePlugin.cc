@@ -191,6 +191,11 @@ bool PX4FirmwarePlugin::supportsManualControl(void)
     return true;
 }
 
+bool PX4FirmwarePlugin::supportsRCOverRide(void)
+{
+    return false;
+}
+
 bool PX4FirmwarePlugin::isCapable(const Vehicle *vehicle, FirmwareCapabilities capabilities)
 {
     if (vehicle->multiRotor()) {
