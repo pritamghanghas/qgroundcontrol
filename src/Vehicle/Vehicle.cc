@@ -560,8 +560,8 @@ void Vehicle::_handleAltitude(mavlink_message_t& message)
 
     _useAltitudeForAltitude = true;
     _useGpsRawIntForAltitude = false;
-    _altitudeRelativeFact.setRawValue(altitude.altitude_relative / 1000.0);
-    _altitudeAMSLFact.setRawValue(altitude.altitude_amsl / 1000.0);
+    _altitudeRelativeFact.setRawValue(altitude.altitude_relative);
+    _altitudeAMSLFact.setRawValue(altitude.altitude_amsl);
 
 }
 
@@ -714,7 +714,7 @@ void Vehicle::_handleSysStatus(mavlink_message_t& message)
         _batteryFactGroup.current()->setRawValue(VehicleBatteryFactGroup::_currentUnavailable);
     } else {
         // Current is in Amps, current_battery is 10 * milliamperes (1 = 10 milliampere)
-        _batteryFactGroup.current()->setRawValue((int)(sysStatus.current_battery / 100));
+        _batteryFactGroup.current()->setRawValue((float)sysStatus.current_battery / 100.0f);
     }
     if (sysStatus.voltage_battery == UINT16_MAX) {
         _batteryFactGroup.voltage()->setRawValue(VehicleBatteryFactGroup::_voltageUnavailable);
