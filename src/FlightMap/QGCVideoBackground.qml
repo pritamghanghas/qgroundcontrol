@@ -191,6 +191,13 @@ VideoItem {
             bitrate:        30000;
             fps:            8;
         }
+        ListElement {
+            text:           "nostream";
+            width:          160;
+            height:         120;
+            bitrate:        30000;
+            fps:            -1;
+        }
     }
 
     ListModel {
@@ -235,6 +242,12 @@ VideoItem {
     }
 
     ListModel {
+        id: recordingModesList
+        ListElement { text: "rec on"; }
+        ListElement { text: "rec off"; }
+    }
+
+    ListModel {
         id: orientationModeList
 
         ListElement {
@@ -269,9 +282,10 @@ VideoItem {
             var fps = resolutionList.get(resolutionSelectionComboBox.currentIndex).fps;
             var bitrate = resolutionList.get(resolutionSelectionComboBox.currentIndex).bitrate;
             var flipMode = orientationModeList.get(orientationSelectionComboBox.currentIndex).command;
+            var recording = recordingModesList.get(recordingComboBox.currentIndex).text;
             var optString = "-mm " + metringMode + " -awb " + awbMode + " -ex " + exposureMode + " -w " + width + " -h " + height + " -fps " + fps + " -b " + bitrate + flipMode;
             console.log("lets start the video with following optons: " + optString);
-            videoBackground.receiver.start(optString)
+            videoBackground.receiver.start(optString, recording == "rec on");
         }
     }
 
@@ -291,8 +305,19 @@ VideoItem {
             QGCComboBox {
                 id:         meteringComboBox
                 width: combo.width*0.17
-                visible:    true
+                visible:    false
                 model:      meteringModesList
+
+                onCurrentIndexChanged: {
+                    onModeChange();
+                }
+            }
+
+            QGCComboBox {
+                id:    recordingComboBox
+                width: combo.width*0.17
+                visible:    true
+                model:      recordingModesList
 
                 onCurrentIndexChanged: {
                     onModeChange();
@@ -352,6 +377,8 @@ VideoItem {
         videoBackground.visible = false;
         meteringComboBox.currentIndex = 1;
         meteringComboBox.currentIndex = 0;
+        recordingComboBox.currentIndex = 1;
+//        recordingComboBox.currentIndex = 0;
         exposureComboBox.currentIndex = 1;
         exposureComboBox.currentIndex = 0;
         awbComboBox.currentIndex = 1;

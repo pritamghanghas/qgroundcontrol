@@ -133,7 +133,7 @@ void VideoReceiver::_timeout()
 }
 #endif
 
-void VideoReceiver::start(const QString &optionsString)
+void VideoReceiver::start(const QString &optionsString, bool recording)
 {
 #if defined(QGC_GST_STREAMING)
 
@@ -159,12 +159,13 @@ void VideoReceiver::start(const QString &optionsString)
     //-- For RTSP, check to see if server is there first
     if(!_serverPresent && !isUdp) {
         _timer.start(100);
+        qDebug() << "rtsp server not preset, not procceding";
         return;
     }
 
     if (!optionsString.isEmpty()) {
         // start new stream
-        _nodeSelector->startStreaming(_nodeSelector->currentNode(), optionsString);
+        _nodeSelector->startStreaming(_nodeSelector->currentNode(), optionsString, recording);
     }
 
     bool running = false;

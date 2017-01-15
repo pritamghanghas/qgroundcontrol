@@ -4,7 +4,9 @@
 #include <QNetworkReply>
 
 static const QString PLAY_CMD("udpsrc port=$PORT ! application/x-rtp,encoding-name=H264,payload=96 ! rtph264depay ! h264parse ! avdec_h264");
-static const QString PICAM_REMOTE_CMD("raspivid -t 0 $OPT_STRING -o - | gst-launch-1.0 -v fdsrc ! h264parse ! rtph264pay config-interval=1 pt=96 ! udpsink host=$CLIENT_IP port=$UDP_PORT");
+static const QString PICAM_REMOTE_CMD("raspivid -t 0 $OPT_STRING -o - | gst-launch-1.0 fdsrc ! h264parse ! rtph264pay config-interval=1 pt=96 ! udpsink host=$CLIENT_IP port=$UDP_PORT");
+static const QString PICAM_REMOTE_CMD_RECORDING("raspivid -t 0 $OPT_STRING -o - | gst-launch-1.0 fdsrc ! tee name=t t. ! queue ! filesink location=/home/pi/media/videos/$TIMESTAMP.h264 t. ! queue ! h264parse ! rtph264pay config-interval=1 pt=96 ! udpsink host=$CLIENT_IP port=$UDP_PORT");
+
 //static const QString MAVPROXY_REMOTE_CMD("screen -S MAVPROXY /usr/local/bin/mavproxy.py --master=127.0.0.1:1440 --baudrate 57600 --out $CLIENT_IP:14550 --aircraft MyCopter");
 static const QString MAVPROXY_REMOTE_CMD("/home/pi/ardupilot/bin/start_ardupilot.sh $CLIENT_IP");
 
@@ -212,24 +214,34 @@ int NodeSelector::startStreaming(int nodeIndex, const QString &optionsString)
     return startStreaming(nodes.at(nodeIndex), optionsString);
 }
 
-int NodeSelector::startStreaming(const PiNode &node, const QString &optionsString)
+int NodeSelector::startStreaming(const PiNode &node, const QString &optionsString, bool recording)
 {
+    QString picamRemoteCommand = PICAM_REMOTE_CMD;
+    if (recording) {
+        qDebug() << "recording is on";
+        picamRemoteCommand = PICAM_REMOTE_CMD_RECORDING;
+        picamRemoteCommand.replace("$TIMESTAMP", QDateTime::currentDateTime().toString("dd.MM.yyyy.hh.mm.ss"));
+    }
+
+    QString servercmd;
     if (node.caps & PiNode::PiCam) { // has picam capability
-            if (!(node.capsRunning & PiNode::PiCam)) { //picam is not running
-                QString servercmd = "http://$SERVER_IP:8080/picam/?command=" + PICAM_REMOTE_CMD;
-                servercmd = servercmd.replace("$SERVER_IP", node.addressString);
-                servercmd = servercmd.replace("$CLIENT_IP", deviceAddress(node));
-                servercmd = servercmd.replace("$UDP_PORT", QString::number(node.targetStreamingPort));
-                servercmd = servercmd.replace("$OPT_STRING", optionsString);
-                qDebug() << "SERVER CMD: " << servercmd;
-                QVariantMap map;
-                map.insert("requestFor", PiNode::PiCam);
-                map.insert("nodeIndex", m_currentIndex);
-                sendRequest(servercmd, map);
-            }
-            return node.targetStreamingPort;
+        if (optionsString.contains("-1")) {
+            servercmd = "http://$SERVER_IP:8080/picam/?command=terminate";
+        } else {
+            servercmd = "http://$SERVER_IP:8080/picam/?command=" + picamRemoteCommand;
+            servercmd = servercmd.replace("$SERVER_IP", node.addressString);
+            servercmd = servercmd.replace("$CLIENT_IP", deviceAddress(node));
+            servercmd = servercmd.replace("$UDP_PORT", QString::number(node.targetStreamingPort));
+            servercmd = servercmd.replace("$OPT_STRING", optionsString);
         }
-        return -1;
+        QVariantMap map;
+        map.insert("requestFor", PiNode::PiCam);
+        map.insert("nodeIndex", m_currentIndex);
+        qDebug() << "sending out new streaming command " << servercmd;
+        sendRequest(servercmd, map);
+        return node.targetStreamingPort;
+    }
+    return -1;
 }
 
 void NodeSelector::stopStreaming(int nodeIndex)

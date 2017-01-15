@@ -38,7 +38,7 @@ public:
 #endif
 
 public slots:
-        void start    (const QString& optionsString = QString());
+        void start    (const QString& optionsString = QString(), bool recording = false);
         void stop     ();
         void setUri   (const QString& uri);
         void next     ();
