@@ -39,6 +39,9 @@ SetupPage {
             property real _hoverTuneMax:    _throttleMidExists ? 800 : 1
             property real _hoverTuneStep:   _throttleMidExists ? 10 : 0.01
 
+            property Fact _maxAngleParam: controller.getParameterFact(-1, "ANGLE_MAX")
+            readonly property string _maxAngleDesText: qsTr("Maximum angle that copter can take while moving, higher is faster")
+
             property Fact _rcFeel:          controller.getParameterFact(-1, "RC_FEEL_RP")
             property Fact _rateRollP:       controller.getParameterFact(-1, "r.ATC_RAT_RLL_P")
             property Fact _rateRollI:       controller.getParameterFact(-1, "r.ATC_RAT_RLL_I")
@@ -79,6 +82,7 @@ SetupPage {
                 rollPitch.value = _rateRollP.value
                 climb.value = _rateClimbP.value
                 rcFeel.value = _rcFeel.value
+                maxAngle.value = _maxAngleParam.value
                 _loadComplete = true
 
                 calcAutoTuneChannel()
@@ -152,6 +156,7 @@ SetupPage {
                         }
 
                         QGCLabel {
+                            id: throttleMidDesc
                             text: qsTr("How much throttle is needed to maintain a steady hover")
                         }
 
@@ -262,6 +267,38 @@ SetupPage {
                             onValueChanged: {
                                 if (_loadComplete) {
                                     _rcFeel.value = value
+                                }
+                            }
+                        }
+                    }
+
+                    Column {
+                        anchors.left:   parent.left
+                        anchors.right:  parent.right
+
+                        QGCLabel {
+                            text:       qsTr("Max Bank Angle")
+                            font.family: ScreenTools.demiboldFontFamily
+                        }
+
+                        QGCLabel {
+                            id: maxAngleSlider
+                            text: _maxAngleDesText + "(" + _maxAngleParam.value + ")"
+                        }
+
+                        Slider {
+                            id:                 maxAngle
+                            anchors.left:       parent.left
+                            anchors.right:      parent.right
+                            minimumValue:       0
+                            maximumValue:       45
+                            stepSize:           5.0
+                            tickmarksEnabled:   true
+
+                            onValueChanged: {
+                                if (_loadComplete) {
+                                    _maxAngleParam.value = value
+                                    maxAngleSlider.text = _maxAngleDesText + "(" + _maxAngleParam.value + ")"
                                 }
                             }
                         }
