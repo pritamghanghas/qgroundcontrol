@@ -199,6 +199,10 @@ void NodeSelector::onNewNodeDiscovered(const PiNode &node)
             hostapdget();
         }
 
+        if (node.caps & PiNode::PiCam) {
+            startStreaming(node, m_picamOptString, m_recordingStatus);
+        }
+
         // check if its thermal module, if so start thermal
         startThermal(node);
 }
@@ -211,11 +215,15 @@ int NodeSelector::startStreaming(int nodeIndex, const QString &optionsString)
         return -1;
     }
 
-    return startStreaming(nodes.at(nodeIndex), optionsString);
+    return startStreaming(nodes.at(nodeIndex), optionsString, m_recordingStatus);
 }
 
 int NodeSelector::startStreaming(const PiNode &node, const QString &optionsString, bool recording)
 {
+    // store for cold start when node appears
+    m_picamOptString = optionsString;
+    m_recordingStatus = recording;
+
     QString picamRemoteCommand = PICAM_REMOTE_CMD;
     if (recording) {
         qDebug() << "recording is on";
@@ -225,7 +233,7 @@ int NodeSelector::startStreaming(const PiNode &node, const QString &optionsStrin
 
     QString servercmd;
     if (node.caps & PiNode::PiCam) { // has picam capability
-        if (optionsString.contains("-1")) {
+        if (optionsString.contains("nostream")) { // check if this goes well with wiered
             servercmd = "http://$SERVER_IP:8080/picam/?command=terminate";
         } else {
             servercmd = "http://$SERVER_IP:8080/picam/?command=" + picamRemoteCommand;

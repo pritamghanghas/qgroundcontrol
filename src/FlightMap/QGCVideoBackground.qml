@@ -28,175 +28,82 @@ VideoItem {
     surface: display
 
     ListModel {
+        id: bitrateList
+
+        ListElement {
+            text: "4mbps"
+            bitrate: 4000000
+        }
+        ListElement {
+            text: "2mbps"
+            bitrate: 2000000
+        }
+        ListElement {
+            text: "1mbps"
+            bitrate: 1000000
+        }
+        ListElement {
+            text: "0.7mbps"
+            bitrate: 700000
+        }
+        ListElement {
+            text: "0.5mbps"
+            bitrate: 500000
+        }
+        ListElement {
+            text: "0.2mbps"
+            bitrate: 200000
+        }
+    }
+
+    ListModel {
+        id: iframeList
+
+        ListElement { text: "i30"; frames: 30; }
+        ListElement { text: "i20"; frames: 20; }
+        ListElement { text: "i10"; frames: 10; }
+        ListElement { text: "i5"; frames: 5; }
+    }
+
+    ListModel {
         id: resolutionList
 
         ListElement {
-            text:           "1080 30p 4mbps";
+            text:           "1080p30f";
             width:          1920;
             height:         1080;
-            bitrate:        4000000;
             fps:            30;
         }
+
         ListElement {
-            text:           "1080 30p 2mbps";
-            width:          1920;
-            height:         1080;
-            bitrate:        2000000;
-            fps:            30;
-        }
-        ListElement {
-            text:           "1080 10p 1mbps";
-            width:          1920;
-            height:         1080;
-            bitrate:        2000000;
-            fps:            30;
-        }
-        ListElement {
-            text:           "1080 4p 0.5mbps";
-            width:          1920;
-            height:         1080;
-            bitrate:        2000000;
-            fps:            30;
-        }
-        ListElement {
-            text:           "720 49p 4mbps";
+            text:           "720p49f";
             width:          1296;
             height:          730;
-            bitrate:        4000000;
             fps:             49;
         }
         ListElement {
-            text:           "720 49p 2mbps";
+            text:           "720p30f";
             width:          1296;
             height:          730;
-            bitrate:        2000000;
-            fps:             49;
+            fps:             30;
         }
         ListElement {
-            text:           "720 49p 1mbps";
-            width:          1296;
-            height:          730;
-            bitrate:        1000000;
-            fps:             49;
-        }
-        ListElement {
-            text:           "720 30p 1mbps";
-            width:          1296;
-            height:          730;
-            bitrate:        1000000;
-            fps:             49;
-        }
-        ListElement {
-            text:           "720 15p 0.7mbps";
-            width:          1296;
-            height:          730;
-            bitrate:        1000000;
-            fps:             49;
-        }
-        ListElement {
-            text:           "720 4p 0.5mbps";
-            width:          1296;
-            height:          730;
-            bitrate:        1000000;
-            fps:             49;
-        }
-        ListElement {
-            text:           "640 60p 0.7mbps";
+            text:           "640p60f";
             width:          640;
             height:         480;
-            bitrate:        700000;
-            fps:            90;
-        }
-        ListElement {
-            text:           "640 30p 0.5mbps";
-            width:          640;
-            height:         480;
-            bitrate:        500000;
-            fps:            30;
-        }
-        ListElement {
-            text:           "640 15p 0.5mbps";
-            width:          640;
-            height:         480;
-            bitrate:        300000;
-            fps:            15;
-        }
-        ListElement {
-            text:           "640 15p 0.3mbps";
-            width:          640;
-            height:         480;
-            bitrate:        300000;
-            fps:            15;
-        }
-        ListElement {
-            text:           "320 90p 0.5mbps";
-            width:          320;
-            height:         240;
-            bitrate:        500000;
-            fps:            90;
-        }
-        ListElement {
-            text:           "320 60p 0.4mbps";
-            width:          320;
-            height:         240;
-            bitrate:        400000;
             fps:            60;
         }
         ListElement {
-            text:           "320 30p 0.3mbps";
-            width:          320;
-            height:         240;
-            bitrate:        300000;
+            text:           "640p30f";
+            width:          640;
+            height:         480;
             fps:            30;
         }
         ListElement {
-            text:           "320 15p 0.1mbps";
-            width:          320;
-            height:         240;
-            bitrate:        100000;
+            text:           "640p15f";
+            width:          640;
+            height:         480;
             fps:            15;
-        }
-        ListElement {
-            text:           "160 90p 0.2mbps";
-            width:          160;
-            height:         120;
-            bitrate:        100000;
-            fps:            90;
-        }
-        ListElement {
-            text:           "160 60p 0.15mbps";
-            width:          160;
-            height:         120;
-            bitrate:        100000;
-            fps:            90;
-        }
-        ListElement {
-            text:           "160 30p 0.1mbps";
-            width:          160;
-            height:         120;
-            bitrate:        100000;
-            fps:            30;
-        }
-        ListElement {
-            text:           "160 15p 0.05mbps";
-            width:          160;
-            height:         120;
-            bitrate:        50000;
-            fps:            15;
-        }
-        ListElement {
-            text:           "160 15p 0.03mbps";
-            width:          160;
-            height:         120;
-            bitrate:        30000;
-            fps:            8;
-        }
-        ListElement {
-            text:           "nostream";
-            width:          160;
-            height:         120;
-            bitrate:        30000;
-            fps:            -1;
         }
     }
 
@@ -280,10 +187,11 @@ VideoItem {
             var width = resolutionList.get(resolutionSelectionComboBox.currentIndex).width;
             var height = resolutionList.get(resolutionSelectionComboBox.currentIndex).height;
             var fps = resolutionList.get(resolutionSelectionComboBox.currentIndex).fps;
-            var bitrate = resolutionList.get(resolutionSelectionComboBox.currentIndex).bitrate;
+            var bitrate = bitrateList.get(resolutionSelectionComboBox.currentIndex).bitrate;
+            var iframeRate = iframeList.get(iframeSelectionComboBox.currentIndex).frames;
             var flipMode = orientationModeList.get(orientationSelectionComboBox.currentIndex).command;
             var recording = recordingModesList.get(recordingComboBox.currentIndex).text;
-            var optString = "-mm " + metringMode + " -awb " + awbMode + " -ex " + exposureMode + " -w " + width + " -h " + height + " -fps " + fps + " -b " + bitrate + flipMode;
+            var optString = "-mm " + metringMode + " -awb " + awbMode + " -g " + iframeRate + " -ex " + exposureMode + " -w " + width + " -h " + height + " -fps " + fps + " -b " + bitrate + flipMode;
             console.log("lets start the video with following optons: " + optString);
             videoBackground.receiver.start(optString, recording == "rec on");
         }
@@ -291,7 +199,7 @@ VideoItem {
 
     Item {
         id : combo
-        width: parent.width*0.43
+        width: parent.width*0.47
         anchors.right: parent.right
         x: parent.width - width;
         y: parent.height * 0.1;
@@ -315,7 +223,7 @@ VideoItem {
 
             QGCComboBox {
                 id:    recordingComboBox
-                width: combo.width*0.17
+                width: combo.width*0.12
                 visible:    true
                 model:      recordingModesList
 
@@ -326,7 +234,7 @@ VideoItem {
 
             QGCComboBox {
                 id:         exposureComboBox
-                width: combo.width*0.2
+                width: combo.width*0.16
                 visible:    true
                 model:      exposureModesList
 
@@ -337,7 +245,7 @@ VideoItem {
 
             QGCComboBox {
                 id:         awbComboBox
-                width: combo.width*0.17
+                width: combo.width*0.13
                 visible:    true
                 model:      awbModesList
 
@@ -348,7 +256,7 @@ VideoItem {
 
             QGCComboBox {
                 id:         resolutionSelectionComboBox
-                width: combo.width*0.25
+                width:      combo.width*0.14
                 visible:    true
                 model:      resolutionList
 
@@ -358,8 +266,30 @@ VideoItem {
             }
 
             QGCComboBox {
+                id:         bitrateSelectionComboBox
+                width: combo.width*0.13
+                visible:    true
+                model:      bitrateList
+
+                onCurrentIndexChanged: {
+                    onModeChange();
+                }
+            }
+
+            QGCComboBox {
+                id:         iframeSelectionComboBox
+                width: combo.width*0.08
+                visible:    true
+                model:      iframeList
+
+                onCurrentIndexChanged: {
+                    onModeChange();
+                }
+            }
+
+            QGCComboBox {
                 id: orientationSelectionComboBox
-                width: combo.width*0.12
+                width: combo.width*0.11
                 visible: true
                 model: orientationModeList
 
@@ -383,14 +313,16 @@ VideoItem {
         exposureComboBox.currentIndex = 0;
         awbComboBox.currentIndex = 1;
         awbComboBox.currentIndex = 0;
-        resolutionSelectionComboBox.currentIndex = 1;
-        resolutionSelectionComboBox.currentIndex = 7;
+        resolutionSelectionComboBox.currentIndex = 4;
+        bitrateSelectionComboBox.currentIndex = 2;
+        iframeSelectionComboBox.currentIndex = 1;
+        iframeSelectionComboBox.currentIndex = 0;
         orientationSelectionComboBox.currentIndex = 1;
         orientationSelectionComboBox.currentIndex = 0;
         videoBackground.visible = true;
 
         if(videoBackground.display && videoBackground.receiver) {
-            resolutionSelectionComboBox.currentIndex = 7;
+            resolutionSelectionComboBox.currentIndex = 4;
         }
 
         if(videoBackground.runVideo && videoBackground.receiver) {

@@ -54,6 +54,8 @@ private:
     PiDiscoverer            *m_discoverer;
     QNetworkAccessManager   *m_nam;
     int                      m_currentIndex;
+    QString                  m_picamOptString;
+    bool                     m_recordingStatus;
 };
 
 #endif // NODESELECTOR_H
