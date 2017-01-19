@@ -157,7 +157,7 @@ SetupPage {
 
                         QGCLabel {
                             id: throttleMidDesc
-                            text: qsTr("How much throttle is needed to maintain a steady hover")
+                            text: qsTr("How much throttle is needed to maintain a steady hover") + " : " +  _hoverTuneParam.value
                         }
 
                         Slider {
@@ -283,7 +283,7 @@ SetupPage {
 
                         QGCLabel {
                             id: maxAngleSlider
-                            text: _maxAngleDesText + "(" + _maxAngleParam.value + ")"
+                            text: _maxAngleDesText + " : " +  _maxAngleParam.value
                         }
 
                         Slider {
@@ -298,7 +298,6 @@ SetupPage {
                             onValueChanged: {
                                 if (_loadComplete) {
                                     _maxAngleParam.value = value
-                                    maxAngleSlider.text = _maxAngleDesText + "(" + _maxAngleParam.value + ")"
                                 }
                             }
                         }
