@@ -96,7 +96,7 @@ Item {
     QGCInstrumentWidgetAlternate {
         id:                     instrumentGadgetAlternate
         anchors.margins:        ScreenTools.defaultFontPixelHeight / 2
-        anchors.top:            parent.top
+        anchors.verticalCenter: parent.verticalCenter
         anchors.right:          altitudeSlider.visible ? altitudeSlider.left : parent.right
         visible:                _useAlternateInstruments
         width:                  ScreenTools.isTinyScreen ? getGadgetWidth() * 1.5 : getGadgetWidth()
