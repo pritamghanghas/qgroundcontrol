@@ -187,7 +187,7 @@ SetupPage {
                         }
 
                         QGCLabel {
-                            text: qsTr("Slide to the right if the copter is sluggish or slide to the left if the copter is twitchy")
+                            text: qsTr("Slide to the right if the copter is sluggish or slide to the left if the copter is twitchy") + " : " +  rollPitch.value
                         }
 
                         Slider {
@@ -220,7 +220,7 @@ SetupPage {
                         }
 
                         QGCLabel {
-                            text: qsTr("Slide to the right to climb more aggressively or slide to the left to climb more gently")
+                            text: qsTr("Slide to the right to climb more aggressively or slide to the left to climb more gently")  + " : " +  climb.value
                         }
 
                         Slider {
@@ -252,7 +252,7 @@ SetupPage {
                         }
 
                         QGCLabel {
-                            text: qsTr("Slide to the left for soft control, slide to the right for crisp control")
+                            text: qsTr("Slide to the left for soft control, slide to the right for crisp control") + " : " +  rcFeel.value
                         }
 
                         Slider {
