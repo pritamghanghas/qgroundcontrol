@@ -93,7 +93,7 @@ void VideoReceiver::_connected()
 {
     //-- Server showed up. Now we start the stream.
     _timer.stop();
-    delete _socket;
+    _socket->deleteLater();
     _socket = NULL;
     _serverPresent = true;
     start();
@@ -104,7 +104,7 @@ void VideoReceiver::_connected()
 void VideoReceiver::_socketError(QAbstractSocket::SocketError socketError)
 {
     Q_UNUSED(socketError);
-    delete _socket;
+    _socket->deleteLater();
     _socket = NULL;
     //-- Try again in 5 seconds
     _timer.start(5000);
