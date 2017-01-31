@@ -29,6 +29,7 @@
 #endif
 
 class QGCToolbox;
+class HBSettings;
 
 class QGroundControlQmlGlobal : public QGCTool
 {
@@ -64,6 +65,7 @@ public:
     Q_ENUMS(AreaUnits)
     Q_ENUMS(SpeedUnits)
 
+    Q_PROPERTY(HBSettings*          hbSettings          READ hbSettings             CONSTANT)
     Q_PROPERTY(FlightMapSettings*   flightMapSettings   READ flightMapSettings      CONSTANT)
     Q_PROPERTY(LinkManager*         linkManager         READ linkManager            CONSTANT)
     Q_PROPERTY(MultiVehicleManager* multiVehicleManager READ multiVehicleManager    CONSTANT)
@@ -116,6 +118,7 @@ public:
 
     Q_PROPERTY(QString qgcVersion READ qgcVersion CONSTANT)
 
+    Q_PROPERTY(NodeSelector*        nodeSelector        READ nodeSelector           CONSTANT)
     Q_INVOKABLE void    saveGlobalSetting       (const QString& key, const QString& value);
     Q_INVOKABLE QString loadGlobalSetting       (const QString& key, const QString& defaultValue);
     Q_INVOKABLE void    saveBoolGlobalSetting   (const QString& key, bool value);
@@ -163,6 +166,7 @@ public:
 
     // Property accesors
 
+    HBSettings*             hbSettings()                { return _hbSettings;       }
     FlightMapSettings*      flightMapSettings   ()      { return _flightMapSettings; }
     LinkManager*            linkManager         ()      { return _linkManager; }
     MultiVehicleManager*    multiVehicleManager ()      { return _multiVehicleManager; }
@@ -240,6 +244,7 @@ private:
     static SettingsFact* _createSettingsFact(const QString& name);
     static QMap<QString, FactMetaData*>& nameToMetaDataMap(void);
 
+    HBSettings*             _hbSettings;
     FlightMapSettings*      _flightMapSettings;
     LinkManager*            _linkManager;
     MultiVehicleManager*    _multiVehicleManager;

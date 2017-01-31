@@ -265,6 +265,7 @@ public:
     Q_PROPERTY(QString              firmwareTypeString      READ firmwareTypeString                                     NOTIFY firmwareTypeChanged)
     Q_PROPERTY(QString              vehicleTypeString       READ vehicleTypeString                                      NOTIFY vehicleTypeChanged)
 
+
     /// true: Vehicle is flying, false: Vehicle is on ground
     Q_PROPERTY(bool flying      READ flying     WRITE setFlying     NOTIFY flyingChanged)
 
@@ -320,6 +321,10 @@ public:
 
     Q_INVOKABLE void virtualTabletJoystickValue(double roll, double pitch, double yaw, double thrust);
     Q_INVOKABLE void disconnectInactiveVehicle(void);
+    Q_INVOKABLE void doGuidedTakeoff(int height); // height in meters
+    Q_INVOKABLE void doChangeAltitude(int height);
+    Q_INVOKABLE void doChangeYaw(float angle, float speed, bool relative, int direction); // true relative false absolute
+    Q_INVOKABLE void doSweepYaw(float sweepAngle, float sweepSpeed);
 
     Q_INVOKABLE void clearTrajectoryPoints(void);
 
@@ -441,6 +446,7 @@ public:
 
     bool armed(void) { return _armed; }
     void setArmed(bool armed);
+    bool flying();
 
     bool flightModeSetAvailable(void);
     QStringList flightModes(void);
@@ -599,6 +605,7 @@ signals:
     void homePositionAvailableChanged(bool homePositionAvailable);
     void homePositionChanged(const QGeoCoordinate& homePosition);
     void armedChanged(bool armed);
+    void flyingChanged(bool flying);
     void flightModeChanged(const QString& flightMode);
     void hilModeChanged(bool hilMode);
     /** @brief HIL actuator controls (replaces HIL controls) */
@@ -606,7 +613,6 @@ signals:
     void connectionLostChanged(bool connectionLost);
     void connectionLostEnabledChanged(bool connectionLostEnabled);
     void autoDisconnectChanged(bool autoDisconnectChanged);
-    void flyingChanged(bool flying);
     void guidedModeChanged(bool guidedMode);
     void prearmErrorChanged(const QString& prearmError);
     void soloFirmwareChanged(bool soloFirmware);
@@ -677,6 +683,7 @@ private slots:
     void _offlineVehicleTypeSettingChanged(QVariant value);
     void _offlineCruiseSpeedSettingChanged(QVariant value);
     void _offlineHoverSpeedSettingChanged(QVariant value);
+    void flyToLocation(const QGeoCoordinate& coord, double altitudeRel);
 
     void _handleTextMessage                 (int newCount);
     void _handletextMessageReceived         (UASMessage* message);
@@ -691,6 +698,11 @@ private slots:
     void _newMissionItemsAvailable(void);
     void _newGeoFenceAvailable(void);
     void _sendMavCommandAgain(void);
+
+    void _onHeadingChanged();
+    void _on1STimerTimeout();
+    void _onArmedChangedActions();
+    void _onGuidedModeChanged(bool isGuided);
 
 private:
     bool _containsLink(LinkInterface* link);
@@ -731,6 +743,11 @@ private:
     void _commonInit(void);
 
     int     _id;                    ///< Mavlink system id
+    void _checkFlying();
+    void _checkDesiredAlitude();
+    void _resetBreachflytoLocationOnModeChange();
+
+private:
     bool    _active;
     bool    _offlineEditingVehicle; ///< This Vehicle is a "disconnected" vehicle for ui use while offline editing
 
@@ -898,5 +915,18 @@ private:
     static const char* _joystickModeSettingsKey;
     static const char* _joystickEnabledSettingsKey;
 
+    // sweep support
+    float _headingMid;
+    float _sweepAngle;
+    float _sweepSpeed;
+    float _headingLeft;
+    float _headingRight;
+    int   _currentDirection;
+
+    // takeoff and goto support
+    QGeoCoordinate _flyToCoord;
+    double         _flyToRelAltitude;
+    QTimer         _1STimer;
+    int            _1STimerSecsCount;
 };
 #endif

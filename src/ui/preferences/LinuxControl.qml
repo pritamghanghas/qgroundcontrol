@@ -44,10 +44,6 @@ QGCView {
 
     property int    confirmActionCode
 
-    function hostapdget() {
-
-    }
-
     Timer {
         id:             confirmSlideHideTimer
         interval:       7000
@@ -110,10 +106,11 @@ QGCView {
     }
 
 
-
     QGCViewPanel {
         id:             panel
         anchors.fill:   parent
+
+//        anchors.margins: _margins
 
         QGCFlickable {
             clip:               true
@@ -227,8 +224,135 @@ QGCView {
                     } // Rectangle - System Control
                 } // AP column
 
+                //start wired specific settings in a column
+                Column {
+                    spacing: _margins / 2
+
+                    QGCLabel {
+                        id:         _wiredConfColumn
+                        text:       "Wired Settings"
+                        font.family: ScreenTools.demiboldFontFamily
+                    }
+
+
+                    Rectangle {
+                        id:                     _wiredConf
+                        width:                  _wiredConfLayout.width + _margins
+                        height:                 _wiredConfLayout.height + _margins
+                        color:                  qgcPal.windowShade
+                        anchors.margins:        _margins/2
+
+                        Grid {
+                            id:                _wiredConfLayout
+                            spacing:           _margins / 2
+                            anchors.margins :  _margins/2
+                            anchors.centerIn:  parent
+                            columns: 2
+
+                            QGCLabel {
+                                text: "Sweep Angle (degrees)"
+                            }
+                            QGCTextField {
+                                text: QGroundControl.hbSettings.value("panSweepAngle", 20)
+                                maximumLength:  3
+                                validator: IntValidator { bottom: 5; top: 160 }
+                                onEditingFinished: {
+                                    QGroundControl.hbSettings.setValue("panSweepAngle", text);
+                                }
+                            }
+
+                            QGCLabel {
+                                text : "weep speed (degree/s)"
+                            }
+                            QGCTextField {
+                                validator: IntValidator { bottom: 1; top: 20 }
+                                maximumLength: 2
+                                text: QGroundControl.hbSettings.value("panSweepSpeed", 5)
+                                onEditingFinished: {
+                                    QGroundControl.hbSettings.setValue("panSweepSpeed", text);
+                                }
+                            }
+                            QGCLabel {
+                                text : "Wired Min Alt"
+                            }
+                            QGCTextField {
+                                text: QGroundControl.hbSettings.value("wiredMinAltitude", 5)
+                                maximumLength:  4
+                                validator: IntValidator { bottom: 5; top: 2000 }
+                                onEditingFinished: {
+                                    QGroundControl.hbSettings.setValue("wiredMinAltitude", text);
+                                }
+                            }
+
+                            QGCLabel {
+                                text : "Wired Max Alt"
+                            }
+                            QGCTextField {
+                                text: QGroundControl.hbSettings.value("wiredMaxAltitude", 60)
+                                maximumLength: 4
+                                validator: IntValidator { bottom: 5; top: 2000 }
+                                onEditingFinished: {
+                                    QGroundControl.hbSettings.setValue("wiredMaxAltitude", text);
+                                }
+                            }
+                        }
+                    } // Rectangle - Wired conf
+                } // wired column
+
+                //start scout column
+                Column {
+                    spacing: _margins / 2
+
+                    QGCLabel {
+                        id:         _scoutConfColumn
+                        text:       "Scout Settings"
+                        font.family: ScreenTools.demiboldFontFamily
+                    }
+
+
+                    Rectangle {
+                        id:                     _scoutConf
+                        width:                  _scoutConfLayout.width + _margins
+                        height:                 _scoutConfLayout.height + _margins
+                        color:                  qgcPal.windowShade
+                        anchors.margins:        _margins/2
+
+                        Grid {
+                            id:                _scoutConfLayout
+                            spacing:           _margins / 2
+                            anchors.margins :  _margins/2
+                            anchors.centerIn:  parent
+                            columns: 2
+
+                            QGCLabel {
+                                text: qsTr("Fence Breach Mode")
+                            }
+                            QGCCheckBox {
+                                id:                 scoutMode
+                                text:               " "
+                                checked:    QGroundControl.hbSettings.value("scoutMode", false)
+                                onClicked:  QGroundControl.hbSettings.setValue("scoutMode", checked ? true : false)
+                            }
+
+
+                            QGCLabel {
+                                text : "Scout Alt"
+                            }
+                            QGCTextField {
+                                validator: IntValidator { bottom: 1; top: 100 }
+                                maximumLength: 3
+                                enabled: scoutMode.checked
+                                text: QGroundControl.hbSettings.value("scoutAltitude", 60)
+                                onEditingFinished: {
+                                    QGroundControl.hbSettings.setValue("scoutAltitude", text);
+                                }
+                            }
+                        }
+                    } // Rectangle - scout conf
+                } // scout column
 
             } // flow
         } // QGCFlickable
+
     } // QGCViewPanel
 } // QGCView

@@ -17,6 +17,7 @@
 import QtQuick 2.4
 import QtQuick.Controls 1.3
 import QtQuick.Controls.Styles 1.2
+import QGroundControl                1.0
 import QGroundControl.QgcQtGStreamer 1.0
 import QGroundControl.ScreenTools    1.0
 import QGroundControl.Controls       1.0
@@ -25,6 +26,21 @@ VideoItem {
     id: videoBackground
     property var display
     property var receiver
+
+    // FIXME:: doubt about these two variables, should not be needed anymore.
+    property var runVideo:  false
+    property real _margins: ScreenTools.defaultFontPixelHeight
+    property int  cameraControlPressedSince: 0 // miliseconds
+
+    // enums for camera control
+    readonly property int controlTypeNone: 0
+    readonly property int controlTypePitchDown: 1
+    readonly property int controlTypePitchUp: 2
+    readonly property int controlTypeYawRight: 3
+    readonly property int controlTypeYawLeft: 4
+
+    property int controlType: controlTypeNone
+
     surface: display
 
     ListModel {
@@ -105,6 +121,9 @@ VideoItem {
             height:         480;
             fps:            15;
         }
+//        ListElement {
+//            text: "photo";
+//        }
     }
 
     ListModel {
@@ -197,16 +216,281 @@ VideoItem {
         }
     }
 
+    function calculateMovement()
+    {
+        console.log("calculating next move");
+        cameraControlPressedSince += pressTimer.interval
+        switch(controlType)
+        {
+        case controlTypePitchDown:
+            onIncrementPitch()
+            break
+        case controlTypePitchDown:
+            onDecrementPitch()
+            break
+        case controlTypeYawRight:
+            onIncrementYaw()
+            break
+        case controlTypeYawLeft:
+            onDecrementYaw()
+            break;
+        case controlTypeNone:
+        default:
+            break
+        }
+    }
+
+    function stepSize()
+    {
+        if (cameraControlPressedSince < 500) {
+            return 1;
+        } else {
+            return 3;
+        }
+    }
+
+    function onIncrementYaw()
+    {
+        console.log("move yaw right by ", stepSize())
+        multiVehicleManager.activeVehicle.doChangeYaw(stepSize(), 0.0, true, 1);
+    }
+
+    function onDecrementYaw()
+    {
+        console.log("move yaw left by ", stepSize())
+        multiVehicleManager.activeVehicle.doChangeYaw(stepSize(), 0.0, true, -1);
+    }
+
+    function onIncrementPitch()
+    {
+        console.log("move pitch down by ", stepSize())
+    }
+
+    function onDecrementPitch()
+    {
+        console.log("move pitch up by ", stepSize())
+    }
+
+    function startPressTimer()
+    {
+        if(!pressTimer.running) {
+            cameraControlPressedSince = 0
+            calculateMovement()
+            pressTimer.start()
+        }
+    }
+
+    function stopPressTimer()
+    {
+        if(pressTimer.running) {
+            cameraControlPressedSince = 0
+            pressTimer.stop()
+        }
+    }
+
+    Timer {
+        id: pressTimer
+        interval: 20
+        running:  false
+        repeat:   true
+        onTriggered: {
+           calculateMovement();
+        }
+    }
+
+    Column {
+        id:                         toolColumn
+        visible:                    !_mainIsMap
+        anchors.leftMargin:         _margins
+        anchors.topMargin:          _margins*5
+        anchors.left:               parent.left
+        anchors.top:                parent.top
+        spacing:                    ScreenTools.defaultFontPixelHeight
+
+        RoundButton {
+            id: videoSettings
+            buttonImage: "/qmlimages/cameraSettings.svg"
+            buttonAnchors.margins:  width*0.15
+            z:            QGroundControl.zOrderWidgets
+        }
+
+        RoundButton {
+            id: cameraAngleControlButton
+            buttonImage: "/qmlimages/look.svg"
+            buttonAnchors.margins:  width*0.15
+            z:            QGroundControl.zOrderWidgets
+        }
+
+        RoundButton {
+            id: panSweepButton
+            buttonImage: "/qmlimages/rotate.svg"
+            buttonAnchors.margins:  width*0.15
+            z:            QGroundControl.zOrderWidgets
+            onClicked: {
+                if(checked) {
+                    multiVehicleManager.activeVehicle.doSweepYaw(QGroundControl.hbSettings.value("panSweepAngle", 20), QGroundControl.hbSettings.value("panSweepAngle", 5));
+                } else {
+                    multiVehicleManager.activeVehicle.doSweepYaw(0, 0);
+                }
+            }
+        }
+    }
+
+    Rectangle {
+        id: cameraControls
+        radius:         ScreenTools.defaultFontPixelHeight
+        border.width:   ScreenTools.defaultFontPixelHeight * 0.0625
+        border.color:   "white"
+        anchors.left: toolColumn.right
+        anchors.verticalCenter: toolColumn.verticalCenter
+        anchors.margins: _margins
+        height: parent.height/5
+        width: parent.height/5
+        color: "transparent"
+        visible: cameraAngleControlButton.checked && !_mainIsMap
+
+        Item {
+            anchors.left: parent.left
+            width: parent.width/3
+            height: parent.height/3
+            anchors.verticalCenter: parent.verticalCenter
+            Image {
+                id: leftArrow
+                rotation: 90
+                width: parent.width/1.5
+                height: parent.height/1.5
+                fillMode: Qt.KeepAspectRatio
+                anchors.verticalCenter: parent.verticalCenter
+                anchors.left: parent.left
+                source: "/qmlimages/arrow_dark.svg"
+            }
+            MouseArea {
+                anchors.fill: parent
+                onPressed: {
+                    console.log("left pressed")
+                    mouse.accepted = true
+                    controlType = controlTypeYawLeft
+                    startPressTimer()
+                }
+                onReleased: {
+                    console.log("left released")
+                    mouse.accepted = true
+                    controlType = controlTypeNone
+                    stopPressTimer()
+                }
+            }
+        }
+
+
+        Item {
+            anchors.top: parent.top
+            width: parent.width/3
+            height: parent.height/3
+            anchors.horizontalCenter: parent.horizontalCenter
+            Image {
+                id: topArrow
+                rotation: 180
+                anchors.top: parent.top
+                anchors.horizontalCenter: parent.horizontalCenter
+                width: parent.width/1.5
+                height: parent.height/1.5
+                fillMode: Qt.KeepAspectRatio
+                source: "/qmlimages/arrow_dark.svg"
+            }
+            MouseArea {
+                anchors.fill: parent
+                onPressed: {
+                    console.log("top pressed")
+                    mouse.accepted = true
+                    controlType = controlTypePitchUp
+                    startPressTimer()
+                }
+                onReleased: {
+                    console.log("top released")
+                    mouse.accepted = true
+                    controlType = controlTypeNone
+                    stopPressTimer()
+                }
+            }
+        }
+
+        Item {
+            anchors.right: parent.right
+            width: parent.width/3
+            height: parent.height/3
+            anchors.verticalCenter: parent.verticalCenter
+            Image {
+                id: rightArrow
+                rotation: 270
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                width: parent.width/1.5
+                height: parent.height/1.5
+                fillMode: Qt.KeepAspectRatio
+                source: "/qmlimages/arrow_dark.svg"
+            }
+            MouseArea {
+                anchors.fill: parent
+                onPressed: {
+                    console.log("right pressed")
+                    mouse.accepted = true
+                    controlType = controlTypeYawRight
+                    startPressTimer()
+                }
+                onReleased: {
+                    console.log("right released")
+                    mouse.accepted = true
+                    controlType = controlTypeNone
+                    stopPressTimer()
+                }
+            }
+        }
+
+        Item {
+            anchors.bottom: parent.bottom
+            width: parent.width/3
+            height: parent.height/3
+            anchors.horizontalCenter: parent.horizontalCenter
+            Image {
+                id: downArrow
+                fillMode: Qt.KeepAspectRatio
+                anchors.bottom: parent.bottom
+                anchors.horizontalCenter: parent.horizontalCenter
+                width: parent.width/1.5
+                height: parent.height/1.5
+                source: "/qmlimages/arrow_dark.svg"
+            }
+            MouseArea {
+                anchors.fill: parent
+                onPressed: {
+                    console.log("down pressed")
+                    mouse.accepted = true
+                    controlType = controlTypePitchUp
+                    startPressTimer()
+                }
+                onReleased: {
+                    console.log("down released")
+                    mouse.accepted = true
+                    controlType = controlTypeNone
+                    stopPressTimer()
+                }
+            }
+        }
+    }
+
     Item {
         id : combo
         width: parent.width*0.47
         anchors.right: parent.right
+//        anchors.leftMargin: _margins
+//        anchors.top: toolColumn.top
+//        anchors.left: toolColumn.right
         x: parent.width - width;
         y: parent.height * 0.12;
         visible: !_mainIsMap;
 
         Row {
-            spacing: 10
+            spacing: _margins
             layoutDirection: Qt.LeftToRight
 
 

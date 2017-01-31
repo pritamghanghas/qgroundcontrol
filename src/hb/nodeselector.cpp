@@ -9,6 +9,8 @@ static const QString PICAM_REMOTE_CMD_RECORDING("raspivid -t 0 $OPT_STRING -o - 
 
 //static const QString MAVPROXY_REMOTE_CMD("screen -S MAVPROXY /usr/local/bin/mavproxy.py --master=127.0.0.1:1440 --baudrate 57600 --out $CLIENT_IP:14550 --aircraft MyCopter");
 static const QString MAVPROXY_REMOTE_CMD("/home/pi/ardupilot/bin/start_ardupilot.sh $CLIENT_IP");
+// FIXME:: Find a way to fix this with respect to wired
+//static const QString MAVPROXY_REMOTE_CMD("/home/pi/bin/mavproxy_wrapper.sh $CLIENT_IP");
 
 NodeSelector* NodeSelector::instance(QNetworkAccessManager *nam)
 {

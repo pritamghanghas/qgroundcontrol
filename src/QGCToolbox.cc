@@ -29,6 +29,7 @@
 #include "MAVLinkLogManager.h"
 #include "QGCCorePlugin.h"
 #include "QGCOptions.h"
+#include "hbsettings.h"
 
 #if defined(QGC_CUSTOM_BUILD)
 #include CUSTOMHEADER
@@ -55,6 +56,7 @@ QGCToolbox::QGCToolbox(QGCApplication* app)
     , _videoManager(NULL)
     , _mavlinkLogManager(NULL)
     , _corePlugin(NULL)
+    , _hbSettings(NULL)
 {
     //-- Scan and load plugins
     _scanAndLoadPlugins(app);
@@ -77,6 +79,7 @@ QGCToolbox::QGCToolbox(QGCApplication* app)
     _followMe =                 new FollowMe(app);
     _videoManager =             new VideoManager(app);
     _mavlinkLogManager =        new MAVLinkLogManager(app);
+    _hbSettings =               new HBSettings(app);
 }
 
 void QGCToolbox::setChildToolboxes(void)
@@ -101,6 +104,7 @@ void QGCToolbox::setChildToolboxes(void)
     _qgcPositionManager->setToolbox(this);
     _videoManager->setToolbox(this);
     _mavlinkLogManager->setToolbox(this);
+    _hbSettings->setToolbox(this);
 }
 
 QGCToolbox::~QGCToolbox()
@@ -121,6 +125,7 @@ QGCToolbox::~QGCToolbox()
     delete _followMe;
     delete _qgcPositionManager;
     delete _corePlugin;
+    delete _hbSettings;
 }
 
 void QGCToolbox::_scanAndLoadPlugins(QGCApplication* app)

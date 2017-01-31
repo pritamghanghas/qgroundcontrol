@@ -32,6 +32,7 @@ class QGCPositionManager;
 class VideoManager;
 class MAVLinkLogManager;
 class QGCCorePlugin;
+class HBSettings;
 
 /// This is used to manage all of our top level services/tools
 class QGCToolbox {
@@ -60,6 +61,7 @@ public:
 #ifndef __mobile__
     GPSManager*                 gpsManager(void)                { return _gpsManager; }
 #endif
+    HBSettings*                 hbSettings(void)                { return _hbSettings; }
 
 private:
     void setChildToolboxes(void);
@@ -86,6 +88,8 @@ private:
     VideoManager*               _videoManager;
     MAVLinkLogManager*          _mavlinkLogManager;
     QGCCorePlugin*              _corePlugin;
+
+    HBSettings*                 _hbSettings;
 
     friend class QGCApplication;
 };

@@ -9,10 +9,12 @@ Item {
     id: _root
 
     signal          clicked()
+
     property alias  buttonImage:    button.source
     property real   radius:         ScreenTools.isMobile ? ScreenTools.defaultFontPixelHeight * 1.75 : ScreenTools.defaultFontPixelHeight * 1.25
     property bool   rotateImage:    false
     property bool   lightBorders:   true
+    property alias  buttonAnchors:  button.anchors
 
     width:  radius * 2
     height: radius * 2

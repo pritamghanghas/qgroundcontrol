@@ -12,6 +12,7 @@
 ///     @author Don Gagne <don@thegagnes.com>
 
 #include "QGroundControlQmlGlobal.h"
+#include "hbsettings.h"
 
 #include <QSettings>
 #include <QLineF>
@@ -37,6 +38,7 @@ const char* QGroundControlQmlGlobal::_missionAutoLoadDirKey     = "MissionAutoLo
 
 QGroundControlQmlGlobal::QGroundControlQmlGlobal(QGCApplication* app)
     : QGCTool(app)
+    , _hbSettings(NULL)
     , _flightMapSettings(NULL)
     , _linkManager(NULL)
     , _multiVehicleManager(NULL)
@@ -65,6 +67,7 @@ QGroundControlQmlGlobal::~QGroundControlQmlGlobal()
 void QGroundControlQmlGlobal::setToolbox(QGCToolbox* toolbox)
 {
     QGCTool::setToolbox(toolbox);
+
     _flightMapSettings      = toolbox->flightMapSettings();
     _linkManager            = toolbox->linkManager();
     _multiVehicleManager    = toolbox->multiVehicleManager();
@@ -74,6 +77,7 @@ void QGroundControlQmlGlobal::setToolbox(QGCToolbox* toolbox)
     _videoManager           = toolbox->videoManager();
     _mavlinkLogManager      = toolbox->mavlinkLogManager();
     _corePlugin             = toolbox->corePlugin();
+    _hbSettings          = toolbox->hbSettings();
 }
 
 void QGroundControlQmlGlobal::saveGlobalSetting (const QString& key, const QString& value)
@@ -159,7 +163,7 @@ void QGroundControlQmlGlobal::stopAllMockLinks(void)
         MockLink* mockLink = qobject_cast<MockLink*>(link);
 
         if (mockLink) {
-            linkManager->disconnectLink(mockLink);
+                    linkManager->disconnectLink(mockLink);
         }
     }
 #endif

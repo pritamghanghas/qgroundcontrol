@@ -146,3 +146,7 @@ contains (DEFINES, DISABLE_ZEROCONF) {
     message("Skipping support for Zeroconf (unsupported platform)")
 }
 
+#including support for receiving mail
+message("including support for reciving mail support unconditionally")
+include(libs/qtmail/src/mail/qtmail.pri)
+
