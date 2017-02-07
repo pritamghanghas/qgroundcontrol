@@ -30,7 +30,8 @@ VideoItem {
     // FIXME:: doubt about these two variables, should not be needed anymore.
     property var runVideo:  false
     property real _margins: ScreenTools.defaultFontPixelHeight
-    property int  cameraControlPressedSince: 0 // miliseconds
+    property int  _cameraControlPressedSince: 0 // miliseconds
+    property var  _activeVehicle:                 QGroundControl.multiVehicleManager.activeVehicle
 
     // enums for camera control
     readonly property int controlTypeNone: 0
@@ -219,7 +220,7 @@ VideoItem {
     function calculateMovement()
     {
         console.log("calculating next move");
-        cameraControlPressedSince += pressTimer.interval
+        _cameraControlPressedSince += pressTimer.interval
         switch(controlType)
         {
         case controlTypePitchDown:
@@ -242,7 +243,7 @@ VideoItem {
 
     function stepSize()
     {
-        if (cameraControlPressedSince < 500) {
+        if (_cameraControlPressedSince < 500) {
             return 1;
         } else {
             return 3;
@@ -252,13 +253,13 @@ VideoItem {
     function onIncrementYaw()
     {
         console.log("move yaw right by ", stepSize())
-        multiVehicleManager.activeVehicle.doChangeYaw(stepSize(), 0.0, true, 1);
+        _activeVehicle.doChangeYaw(stepSize(), 0.0, true, 1);
     }
 
     function onDecrementYaw()
     {
         console.log("move yaw left by ", stepSize())
-        multiVehicleManager.activeVehicle.doChangeYaw(stepSize(), 0.0, true, -1);
+        _activeVehicle.doChangeYaw(stepSize(), 0.0, true, -1);
     }
 
     function onIncrementPitch()
@@ -274,7 +275,7 @@ VideoItem {
     function startPressTimer()
     {
         if(!pressTimer.running) {
-            cameraControlPressedSince = 0
+            _cameraControlPressedSince = 0
             calculateMovement()
             pressTimer.start()
         }
@@ -283,7 +284,7 @@ VideoItem {
     function stopPressTimer()
     {
         if(pressTimer.running) {
-            cameraControlPressedSince = 0
+            _cameraControlPressedSince = 0
             pressTimer.stop()
         }
     }
@@ -328,9 +329,9 @@ VideoItem {
             z:            QGroundControl.zOrderWidgets
             onClicked: {
                 if(checked) {
-                    multiVehicleManager.activeVehicle.doSweepYaw(QGroundControl.hbSettings.value("panSweepAngle", 20), QGroundControl.hbSettings.value("panSweepAngle", 5));
+                    _activeVehicle.doSweepYaw(QGroundControl.hbSettings.value("panSweepAngle", 20), QGroundControl.hbSettings.value("panSweepAngle", 5));
                 } else {
-                    multiVehicleManager.activeVehicle.doSweepYaw(0, 0);
+                    _activeVehicle.doSweepYaw(0, 0);
                 }
             }
         }
@@ -342,7 +343,7 @@ VideoItem {
         border.width:   ScreenTools.defaultFontPixelHeight * 0.0625
         border.color:   "white"
         anchors.left: toolColumn.right
-        anchors.verticalCenter: toolColumn.verticalCenter
+        anchors.top: toolColumn.top
         anchors.margins: _margins
         height: parent.height/5
         width: parent.height/5
@@ -481,13 +482,12 @@ VideoItem {
     Item {
         id : combo
         width: parent.width*0.47
-        anchors.right: parent.right
-//        anchors.leftMargin: _margins
-//        anchors.top: toolColumn.top
-//        anchors.left: toolColumn.right
+        anchors.left: toolColumn.right
+        anchors.top: toolColumn.top
+        anchors.leftMargin: _margins
         x: parent.width - width;
         y: parent.height * 0.12;
-        visible: !_mainIsMap;
+        visible: videoSettings.checked && !_mainIsMap;
 
         Row {
             spacing: _margins
