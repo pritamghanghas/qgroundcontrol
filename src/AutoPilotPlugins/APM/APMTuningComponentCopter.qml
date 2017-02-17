@@ -42,6 +42,10 @@ SetupPage {
             property Fact _maxAngleParam: controller.getParameterFact(-1, "ANGLE_MAX")
             readonly property string _maxAngleDesText: qsTr("Maximum angle that copter can take while moving, higher is faster")
 
+            property Fact _angularRollP: controller.getParameterFact(-1, "ATC_ANG_RLL_P");
+            property Fact _angularPitchP: controller.getParameterFact(-1, "ATC_ANG_PIT_P");
+            readonly property string _angularPIDesText: qsTr("Maximum angular correction sensitivity, higher for wind jolt resistance");
+
             property Fact _rcFeel:          controller.getParameterFact(-1, "RC_FEEL_RP")
             property Fact _rateRollP:       controller.getParameterFact(-1, "r.ATC_RAT_RLL_P")
             property Fact _rateRollI:       controller.getParameterFact(-1, "r.ATC_RAT_RLL_I")
@@ -83,6 +87,7 @@ SetupPage {
                 climb.value = _rateClimbP.value
                 rcFeel.value = _rcFeel.value
                 maxAngle.value = _maxAngleParam.value
+                angularPI.value = _angularRollP.value
                 _loadComplete = true
 
                 calcAutoTuneChannel()
@@ -298,6 +303,38 @@ SetupPage {
                             onValueChanged: {
                                 if (_loadComplete) {
                                     _maxAngleParam.value = value
+                                }
+                            }
+                        }
+                    }
+
+                    Column {
+                        anchors.left:   parent.left
+                        anchors.right:  parent.right
+
+                        QGCLabel {
+                            text:       qsTr("Stabilize Sensitivity")
+                            font.family: ScreenTools.demiboldFontFamily
+                        }
+
+                        QGCLabel {
+                            id: angularSlider
+                            text: _angularPIDesText + " : " +  _angularRollP.value
+                        }
+
+                        Slider {
+                            id:                 angularPI
+                            anchors.left:       parent.left
+                            anchors.right:      parent.right
+                            minimumValue:       2
+                            maximumValue:       10
+                            stepSize:           0.5
+                            tickmarksEnabled:   true
+
+                            onValueChanged: {
+                                if (_loadComplete) {
+                                    _angularRollP.value = value
+                                    _angularPitchP.value = value
                                 }
                             }
                         }
