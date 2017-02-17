@@ -81,7 +81,7 @@ private:
     MAVLinkProtocol*            _mavlinkProtocol;
     MissionCommandTree*         _missionCommandTree;
     MultiVehicleManager*        _multiVehicleManager;
-    QGCMapEngineManager*         _mapEngineManager;
+    QGCMapEngineManager*        _mapEngineManager;
     UASMessageHandler*          _uasMessageHandler;
     FollowMe*                   _followMe;
     QGCPositionManager*         _qgcPositionManager;

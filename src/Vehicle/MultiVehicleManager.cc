@@ -68,16 +68,28 @@ void MultiVehicleManager::setToolbox(QGCToolbox *toolbox)
                                         this);
 }
 
-void MultiVehicleManager::_vehicleHeartbeatInfo(LinkInterface* link, int vehicleId, int vehicleMavlinkVersion, int vehicleFirmwareType, int vehicleType)
+void MultiVehicleManager::_vehicleHeartbeatInfo(LinkInterface* link, int vehicleId, int componentId, int vehicleMavlinkVersion, int vehicleFirmwareType, int vehicleType)
 {
-    if (_ignoreVehicleIds.contains(vehicleId) || getVehicleById(vehicleId)
-            || vehicleId == 0) {
+    if (_ignoreVehicleIds.contains(vehicleId) || getVehicleById(vehicleId) || vehicleId == 0) {
         return;
     }
 
-    qCDebug(MultiVehicleManagerLog()) << "Adding new vehicle link:vehicleId:vehicleMavlinkVersion:vehicleFirmwareType:vehicleType "
+    switch (vehicleType) {
+    case MAV_TYPE_GCS:
+    case MAV_TYPE_ONBOARD_CONTROLLER:
+    case MAV_TYPE_GIMBAL:
+    case MAV_TYPE_ADSB:
+        // These are not vehicles, so don't create a vehicle for them
+        return;
+    default:
+        // All other MAV_TYPEs create vehicles
+        break;
+    }
+
+    qCDebug(MultiVehicleManagerLog()) << "Adding new vehicle link:vehicleId:componentId:vehicleMavlinkVersion:vehicleFirmwareType:vehicleType "
                                       << link->getName()
                                       << vehicleId
+                                      << componentId
                                       << vehicleMavlinkVersion
                                       << vehicleFirmwareType
                                       << vehicleType;
@@ -96,7 +108,7 @@ void MultiVehicleManager::_vehicleHeartbeatInfo(LinkInterface* link, int vehicle
 //        return;
 //    }
 
-    Vehicle* vehicle = new Vehicle(link, vehicleId, (MAV_AUTOPILOT)vehicleFirmwareType, (MAV_TYPE)vehicleType, _firmwarePluginManager, _joystickManager);
+    Vehicle* vehicle = new Vehicle(link, vehicleId, componentId, (MAV_AUTOPILOT)vehicleFirmwareType, (MAV_TYPE)vehicleType, _firmwarePluginManager, _joystickManager);
     connect(vehicle, &Vehicle::allLinksInactive, this, &MultiVehicleManager::_deleteVehiclePhase1);
     connect(vehicle->parameterManager(), &ParameterManager::parametersReadyChanged, this, &MultiVehicleManager::_vehicleParametersReadyChanged);
 

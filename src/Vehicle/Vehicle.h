@@ -191,6 +191,7 @@ class Vehicle : public FactGroup
 public:
     Vehicle(LinkInterface*          link,
             int                     vehicleId,
+            int                     defaultComponentId,
             MAV_AUTOPILOT           firmwareType,
             MAV_TYPE                vehicleType,
             FirmwarePluginManager*  firmwarePluginManager,
@@ -264,6 +265,9 @@ public:
     Q_PROPERTY(QString              takeControlFlightMode   READ takeControlFlightMode                                  CONSTANT)
     Q_PROPERTY(QString              firmwareTypeString      READ firmwareTypeString                                     NOTIFY firmwareTypeChanged)
     Q_PROPERTY(QString              vehicleTypeString       READ vehicleTypeString                                      NOTIFY vehicleTypeChanged)
+    Q_PROPERTY(QString              vehicleImageOpaque      READ vehicleImageOpaque                                     CONSTANT)
+    Q_PROPERTY(QString              vehicleImageOutline     READ vehicleImageOutline                                    CONSTANT)
+    Q_PROPERTY(QString              vehicleImageCompass     READ vehicleImageCompass                                    CONSTANT)
 
 
     /// true: Vehicle is flying, false: Vehicle is on ground
@@ -572,7 +576,10 @@ public:
     bool soloFirmware(void) const { return _soloFirmware; }
     void setSoloFirmware(bool soloFirmware);
 
-    int defaultComponentId(void);
+    int defaultComponentId(void) { return _defaultComponentId; }
+
+    /// Sets the default component id for an offline editing vehicle
+    void setOfflineEditingDefaultComponentId(int defaultComponentId);
 
     /// @return -1 = Unknown, Number of motors on vehicle
     int motorCount(void);
@@ -589,6 +596,10 @@ public:
     /// Sets the firmware plugin instance data associated with this Vehicle. This object will be parented to the Vehicle
     /// and destroyed when the vehicle goes away.
     void setFirmwarePluginInstanceData(QObject* firmwarePluginInstanceData);
+
+    QString vehicleImageOpaque  () const;
+    QString vehicleImageOutline () const;
+    QString vehicleImageCompass () const;
 
 public slots:
     void setLatitude(double latitude);
@@ -698,6 +709,7 @@ private slots:
     void _newMissionItemsAvailable(void);
     void _newGeoFenceAvailable(void);
     void _sendMavCommandAgain(void);
+    void _activeJoystickChanged(void);
 
     void _onHeadingChanged();
     void _on1STimerTimeout();
@@ -741,13 +753,13 @@ private:
     void _sendNextQueuedMavCommand(void);
     void _updatePriorityLink(void);
     void _commonInit(void);
-
-    int     _id;                    ///< Mavlink system id
     void _checkFlying();
     void _checkDesiredAlitude();
     void _resetBreachflytoLocationOnModeChange();
 
-private:
+    int     _id;                    ///< Mavlink system id
+
+    int     _defaultComponentId;
     bool    _active;
     bool    _offlineEditingVehicle; ///< This Vehicle is a "disconnected" vehicle for ui use while offline editing
 

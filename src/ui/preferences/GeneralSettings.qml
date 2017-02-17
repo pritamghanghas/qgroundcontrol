@@ -39,6 +39,14 @@ QGCView {
 
     QGCPalette { id: qgcPal }
 
+    FileDialog {
+        id: fileDialog
+        title: "Choose a location to save video files."
+        folder: shortcuts.home
+        selectFolder: true
+        onAccepted: QGroundControl.videoManager.setVideoSavePathByUrl(fileDialog.fileUrl)
+    }
+
     QGCViewPanel {
         id:             panel
         anchors.fill:   parent
@@ -120,7 +128,7 @@ QGCView {
                     }
                 }
                 //-----------------------------------------------------------------
-                //-- Miscelanous
+                //-- Miscellanous
                 Item {
                     width:              qgcView.width * 0.8
                     height:             miscLabel.height
@@ -128,7 +136,7 @@ QGCView {
                     anchors.horizontalCenter: parent.horizontalCenter
                     QGCLabel {
                         id:             miscLabel
-                        text:           qsTr("Miscelaneous")
+                        text:           qsTr("Miscellaneous")
                         font.family:    ScreenTools.demiboldFontFamily
                     }
                 }
@@ -145,6 +153,7 @@ QGCView {
                         //-----------------------------------------------------------------
                         //-- Base UI Font Point Size
                         Row {
+                            visible: QGroundControl.corePlugin.options.defaultFontPointSize < 1.0
                             spacing: ScreenTools.defaultFontPixelWidth
                             QGCLabel {
                                 id:     baseFontLabel
@@ -194,6 +203,28 @@ QGCView {
                             QGCLabel {
                                 anchors.verticalCenter: parent.verticalCenter
                                 text:                   _requiresRestart
+                            }
+                        }
+                        //-----------------------------------------------------------------
+                        //-- Palette Styles
+                        Row {
+                            spacing: ScreenTools.defaultFontPixelWidth
+                            QGCLabel {
+                                anchors.baseline:   paletteCombo.baseline
+                                text:               qsTr("UI Style:")
+                                width:              _labelWidth
+                            }
+                            QGCComboBox {
+                                id:             paletteCombo
+                                width:          _editFieldWidth
+                                model:          [ qsTr("Indoor"), qsTr("Outdoor") ]
+                                currentIndex:   QGroundControl.isDarkStyle ? 0 : 1
+                                onActivated: {
+                                    if (index != -1) {
+                                        currentIndex = index
+                                        QGroundControl.isDarkStyle = index === 0 ? true : false
+                                    }
+                                }
                             }
                         }
                         //-----------------------------------------------------------------
@@ -286,6 +317,19 @@ QGCView {
                             visible:    QGroundControl.corePlugin.options.enableVirtualJoystick
                         }
                         //-----------------------------------------------------------------
+                        //-- Default mission item altitude
+                        Row {
+                            spacing:    ScreenTools.defaultFontPixelWidth
+                            QGCLabel {
+                                anchors.baseline:   defaultItemAltitudeField.baseline
+                                text:               qsTr("Default mission item altitude:")
+                            }
+                            FactTextField {
+                                id:     defaultItemAltitudeField
+                                fact:   QGroundControl.defaultMissionItemAltitude
+                            }
+                        }
+                        //-----------------------------------------------------------------
                         //-- AutoLoad
                         Row {
                             spacing: ScreenTools.defaultFontPixelWidth
@@ -345,28 +389,6 @@ QGCView {
                                         currentIndex = index
                                         console.log(qsTr("New map provider: ") + model[index])
                                         QGroundControl.flightMapSettings.mapProvider = model[index]
-                                    }
-                                }
-                            }
-                        }
-                        //-----------------------------------------------------------------
-                        //-- Palette Styles
-                        Row {
-                            spacing: ScreenTools.defaultFontPixelWidth
-                            QGCLabel {
-                                anchors.baseline:   paletteCombo.baseline
-                                text:               qsTr("UI Style:")
-                                width:              _labelWidth
-                            }
-                            QGCComboBox {
-                                id:             paletteCombo
-                                width:          _editFieldWidth
-                                model:          [ qsTr("Indoor"), qsTr("Outdoor") ]
-                                currentIndex:   QGroundControl.isDarkStyle ? 0 : 1
-                                onActivated: {
-                                    if (index != -1) {
-                                        currentIndex = index
-                                        QGroundControl.isDarkStyle = index === 0 ? true : false
                                     }
                                 }
                             }
@@ -522,6 +544,25 @@ QGCView {
                                 onEditingFinished: {
                                     QGroundControl.videoManager.rtspURL = text
                                 }
+                            }
+                        }
+                        Row {
+                            spacing:    ScreenTools.defaultFontPixelWidth
+                            visible:    QGroundControl.videoManager.isGStreamer && QGroundControl.videoManager.recordingEnabled
+                            QGCLabel {
+                                anchors.baseline:   pathField.baseline
+                                text:               qsTr("Save Path:")
+                                width:              _labelWidth
+                            }
+                            QGCTextField {
+                                id:                 pathField
+                                width:              _editFieldWidth
+                                readOnly:           true
+                                text:               QGroundControl.videoManager.videoSavePath
+                            }
+                            Button {
+                                text: "Browse"
+                                onClicked: fileDialog.visible = true
                             }
                         }
                     }

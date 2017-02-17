@@ -70,7 +70,9 @@ public:
     
     Q_PROPERTY(bool deadbandToggle            READ getDeadbandToggle        WRITE setDeadbandToggle    NOTIFY deadbandToggled)
 
+    Q_PROPERTY(int transmitterMode READ transmitterMode WRITE setTransmitterMode NOTIFY transmitterModeChanged)
     Q_PROPERTY(QString imageHelp MEMBER _imageHelp NOTIFY imageHelpChanged)
+    Q_PROPERTY(bool calibrating READ calibrating NOTIFY calibratingChanged)
     
     Q_INVOKABLE void cancelButtonClicked(void);
     Q_INVOKABLE void skipButtonClicked(void);
@@ -102,6 +104,11 @@ public:
     void setDeadbandToggle(bool);
 
     int axisCount(void);
+
+    int transmitterMode(void) { return _transmitterMode; }
+    void setTransmitterMode(int mode);
+
+    bool calibrating(void) { return _currentStep != -1; }
     
 signals:
     void axisValueChanged(int axis, int value);
@@ -129,6 +136,8 @@ signals:
     void deadbandToggled(bool value);
     
     void imageHelpChanged(QString source);
+    void transmitterModeChanged(int mode);
+    void calibratingChanged(void);
     
     // @brief Signalled when in unit test mode and a message box should be displayed by the next button
     void nextButtonMessageBoxDisplayed(void);
@@ -174,6 +183,7 @@ private:
     
     Joystick* _activeJoystick;
     
+    int _transmitterMode;
     int _currentStep;  ///< Current step of state machine
     
     const struct stateMachineEntry* _getStateMachineEntry(int step);
@@ -213,7 +223,10 @@ private:
     
     // Member variables
 
+    static const char* _imageFileMode1Dir;
     static const char* _imageFileMode2Dir;
+    static const char* _imageFileMode3Dir;
+    static const char* _imageFileMode4Dir;
     static const char* _imageFilePrefix;
     static const char* _imageCenter;
     static const char* _imageThrottleUp;

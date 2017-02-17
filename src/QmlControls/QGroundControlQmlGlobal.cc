@@ -31,6 +31,7 @@ SettingsFact* QGroundControlQmlGlobal::_offlineEditingVehicleTypeFact =         
 SettingsFact* QGroundControlQmlGlobal::_offlineEditingCruiseSpeedFact =             NULL;
 SettingsFact* QGroundControlQmlGlobal::_offlineEditingHoverSpeedFact =              NULL;
 SettingsFact* QGroundControlQmlGlobal::_batteryPercentRemainingAnnounceFact =       NULL;
+SettingsFact* QGroundControlQmlGlobal::_defaultMissionItemAltitudeFact =            NULL;
 
 const char* QGroundControlQmlGlobal::_virtualTabletJoystickKey  = "VirtualTabletJoystick";
 const char* QGroundControlQmlGlobal::_baseFontPointSizeKey      = "BaseDeviceFontPointSize";
@@ -48,6 +49,7 @@ QGroundControlQmlGlobal::QGroundControlQmlGlobal(QGCApplication* app)
     , _videoManager(NULL)
     , _mavlinkLogManager(NULL)
     , _corePlugin(NULL)
+    , _firmwarePluginManager(NULL)
     , _virtualTabletJoystick(false)
     , _baseFontPointSize(0.0)
 {
@@ -77,6 +79,7 @@ void QGroundControlQmlGlobal::setToolbox(QGCToolbox* toolbox)
     _videoManager           = toolbox->videoManager();
     _mavlinkLogManager      = toolbox->mavlinkLogManager();
     _corePlugin             = toolbox->corePlugin();
+    _firmwarePluginManager  = toolbox->firmwarePluginManager();
     _hbSettings          = toolbox->hbSettings();
 }
 
@@ -340,6 +343,21 @@ Fact* QGroundControlQmlGlobal::batteryPercentRemainingAnnounce(void)
 
     return _batteryPercentRemainingAnnounceFact;
 }
+
+Fact* QGroundControlQmlGlobal::defaultMissionItemAltitude(void)
+{
+    if (!_defaultMissionItemAltitudeFact) {
+        _defaultMissionItemAltitudeFact = _createSettingsFact(QStringLiteral("DefaultMissionItemAltitude"));
+    }
+
+    return _defaultMissionItemAltitudeFact;
+}
+
+int QGroundControlQmlGlobal::supportedFirmwareCount()
+{
+    return _firmwarePluginManager->knownFirmwareTypes().count();
+}
+
 
 bool QGroundControlQmlGlobal::linesIntersect(QPointF line1A, QPointF line1B, QPointF line2A, QPointF line2B)
 {

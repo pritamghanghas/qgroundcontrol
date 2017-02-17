@@ -102,6 +102,8 @@ public:
     Q_PROPERTY(Fact*    areaUnits                       READ areaUnits                          CONSTANT)
     Q_PROPERTY(Fact*    speedUnits                      READ speedUnits                         CONSTANT)
     Q_PROPERTY(Fact*    batteryPercentRemainingAnnounce READ batteryPercentRemainingAnnounce    CONSTANT)
+    Q_PROPERTY(Fact*    defaultMissionItemAltitude      READ defaultMissionItemAltitude         CONSTANT)
+    Q_PROPERTY(int      supportedFirmwareCount          READ supportedFirmwareCount             CONSTANT)
 
     Q_PROPERTY(QGeoCoordinate lastKnownHomePosition READ lastKnownHomePosition  CONSTANT)
     Q_PROPERTY(QGeoCoordinate flightMapPosition     MEMBER _flightMapPosition   NOTIFY flightMapPositionChanged)
@@ -201,6 +203,9 @@ public:
     static Fact* areaUnits                      (void);
     static Fact* speedUnits                     (void);
     static Fact* batteryPercentRemainingAnnounce(void);
+    static Fact* defaultMissionItemAltitude     (void);
+
+    int     supportedFirmwareCount      ();
 
     NodeSelector*         nodeSelector () { return NodeSelector::instance(); }
 
@@ -254,6 +259,7 @@ private:
     VideoManager*           _videoManager;
     MAVLinkLogManager*      _mavlinkLogManager;
     QGCCorePlugin*          _corePlugin;
+    FirmwarePluginManager*  _firmwarePluginManager;
 
     bool                    _virtualTabletJoystick;
     qreal                   _baseFontPointSize;
@@ -272,6 +278,7 @@ private:
     static SettingsFact*    _speedUnitsFact;
     static FactMetaData*    _speedUnitsMetaData;
     static SettingsFact*    _batteryPercentRemainingAnnounceFact;
+    static SettingsFact*    _defaultMissionItemAltitudeFact;
 
     static const char*  _virtualTabletJoystickKey;
     static const char*  _baseFontPointSizeKey;
