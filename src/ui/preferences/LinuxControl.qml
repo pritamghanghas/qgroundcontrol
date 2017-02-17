@@ -230,7 +230,7 @@ QGCView {
 
                     QGCLabel {
                         id:         _wiredConfColumn
-                        text:       "Wired Settings"
+                        text:       "Surveillance Settings"
                         font.family: ScreenTools.demiboldFontFamily
                     }
 
@@ -273,7 +273,7 @@ QGCView {
                                 }
                             }
                             QGCLabel {
-                                text : "Wired Min Alt"
+                                text : "Min Alt"
                             }
                             QGCTextField {
                                 text: QGroundControl.hbSettings.value("wiredMinAltitude", 5)
@@ -285,7 +285,7 @@ QGCView {
                             }
 
                             QGCLabel {
-                                text : "Wired Max Alt"
+                                text : "Max Alt"
                             }
                             QGCTextField {
                                 text: QGroundControl.hbSettings.value("wiredMaxAltitude", 60)
@@ -325,7 +325,7 @@ QGCView {
                             columns: 2
 
                             QGCLabel {
-                                text: qsTr("Fence Breach Mode")
+                                text: qsTr("DMZ Breach Mode")
                             }
                             QGCCheckBox {
                                 id:                 scoutMode
