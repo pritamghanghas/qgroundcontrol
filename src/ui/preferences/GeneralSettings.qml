@@ -23,6 +23,7 @@ import QGroundControl.ScreenTools           1.0
 import QGroundControl.MultiVehicleManager   1.0
 import QGroundControl.Palette               1.0
 import QGroundControl.Controllers           1.0
+import QGroundControl.SettingsManager       1.0
 
 QGCView {
     id:                 qgcView
@@ -31,7 +32,8 @@ QGCView {
     anchors.fill:       parent
     anchors.margins:    ScreenTools.defaultFontPixelWidth
 
-    property Fact _percentRemainingAnnounce:    QGroundControl.batteryPercentRemainingAnnounce
+    property Fact _percentRemainingAnnounce:    QGroundControl.settingsManager.batteryPercentRemainingAnnounce
+    property Fact _autoLoadDir:                 QGroundControl.settingsManager.missionAutoLoadDir
     property real _labelWidth:                  ScreenTools.defaultFontPixelWidth * 15
     property real _editFieldWidth:              ScreenTools.defaultFontPixelWidth * 30
 
@@ -93,7 +95,7 @@ QGCView {
                             FactComboBox {
                                 id:                 distanceUnitsCombo
                                 width:              _editFieldWidth
-                                fact:               QGroundControl.distanceUnits
+                                fact:               QGroundControl.settingsManager.distanceUnits
                                 indexModel:         false
                             }
                         }
@@ -107,7 +109,7 @@ QGCView {
                             FactComboBox {
                                 id:                 areaUnitsCombo
                                 width:              _editFieldWidth
-                                fact:               QGroundControl.areaUnits
+                                fact:               QGroundControl.settingsManager.areaUnits
                                 indexModel:         false
                             }
                         }
@@ -121,7 +123,7 @@ QGCView {
                             FactComboBox {
                                 id:                 speedUnitsCombo
                                 width:              _editFieldWidth
-                                fact:               QGroundControl.speedUnits
+                                fact:               QGroundControl.settingsManager.speedUnits
                                 indexModel:         false
                             }
                         }
@@ -326,34 +328,45 @@ QGCView {
                             }
                             FactTextField {
                                 id:     defaultItemAltitudeField
-                                fact:   QGroundControl.defaultMissionItemAltitude
+                                fact:   QGroundControl.settingsManager.defaultMissionItemAltitude
                             }
                         }
                         //-----------------------------------------------------------------
-                        //-- AutoLoad
+                        //-- Mission AutoLoad
                         Row {
                             spacing: ScreenTools.defaultFontPixelWidth
                             QGCCheckBox {
                                 id:                     autoLoadCheckbox
                                 anchors.verticalCenter: parent.verticalCenter
                                 text:                   qsTr("AutoLoad mission directory:")
-                                checked:                QGroundControl.missionAutoLoadDir != ""
+                                checked:                _autoLoadDir.valueString
 
                                 onClicked: {
-                                    autoLoadDir.enabled = checked
-                                    if (!checked) {
-                                        QGroundControl.missionAutoLoadDir = ""
-                                        autoLoadDir.text = ""
+                                    if (checked) {
+                                        _autoLoadDir.rawValue = QGroundControl.urlToLocalFile(autoloadDirPicker.shortcuts.home)
+                                    } else {
+                                        _autoLoadDir.rawValue = ""
                                     }
                                 }
                             }
-                            QGCTextField {
-                                id:                     autoLoadDir
+                            FactTextField {
+                                id:                     autoLoadDirField
                                 width:                  _editFieldWidth
                                 enabled:                autoLoadCheckbox.checked
                                 anchors.verticalCenter: parent.verticalCenter
-                                text:                   QGroundControl.missionAutoLoadDir
-                                onEditingFinished:      QGroundControl.missionAutoLoadDir = text
+                                fact:                   _autoLoadDir
+                            }
+                            QGCButton {
+                                text:       qsTr("Browse")
+                                onClicked:  autoloadDirPicker.visible = true
+
+                                FileDialog {
+                                    id:             autoloadDirPicker
+                                    title:          qsTr("Choose the location of mission file.")
+                                    folder:         shortcuts.home
+                                    selectFolder:   true
+                                    onAccepted:     _autoLoadDir.rawValue = QGroundControl.urlToLocalFile(autoloadDirPicker.fileUrl)
+                                }
                             }
                         }
                         //-----------------------------------------------------------------
@@ -560,7 +573,7 @@ QGCView {
                                 readOnly:           true
                                 text:               QGroundControl.videoManager.videoSavePath
                             }
-                            Button {
+                            QGCButton {
                                 text: "Browse"
                                 onClicked: fileDialog.visible = true
                             }

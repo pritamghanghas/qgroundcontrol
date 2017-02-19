@@ -18,6 +18,7 @@
 #include "MissionCommandTree.h"
 #include "MissionCommandUIInfo.h"
 #include "QGroundControlQmlGlobal.h"
+#include "SettingsManager.h"
 
 FactMetaData* SimpleMissionItem::_altitudeMetaData =        NULL;
 FactMetaData* SimpleMissionItem::_commandMetaData =         NULL;
@@ -64,6 +65,8 @@ SimpleMissionItem::SimpleMissionItem(Vehicle* vehicle, QObject* parent)
     , _syncingAltitudeRelativeToHomeAndFrame    (false)
     , _syncingHeadingDegreesAndParam4           (false)
 {
+    _editorQml = "qrc:/qml/SimpleItemEditor.qml";
+
     _altitudeRelativeToHomeFact.setRawValue(true);
 
     _setupMetaData();
@@ -527,7 +530,7 @@ void SimpleMissionItem::_syncFrameToAltitudeRelativeToHome(void)
 void SimpleMissionItem::setDefaultsForCommand(void)
 {
     // We set these global defaults first, then if there are param defaults they will get reset
-    _missionItem.setParam7(QGroundControlQmlGlobal::defaultMissionItemAltitude()->rawValue().toDouble());
+    _missionItem.setParam7(qgcApp()->toolbox()->settingsManager()->defaultMissionItemAltitude()->rawValue().toDouble());
 
     MAV_CMD command = (MAV_CMD)this->command();
     const MissionCommandUIInfo* uiInfo = _commandTree->getUIInfo(_vehicle, command);

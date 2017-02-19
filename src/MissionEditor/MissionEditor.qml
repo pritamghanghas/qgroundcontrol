@@ -89,15 +89,6 @@ QGCView {
         }
     }
 
-    function addSurveyItem() {
-            var coordinate = editorMap.center
-            coordinate.latitude = coordinate.latitude.toFixed(_decimalPlaces)
-            coordinate.longitude = coordinate.longitude.toFixed(_decimalPlaces)
-            coordinate.altitude = coordinate.altitude.toFixed(_decimalPlaces)
-            var sequenceNumber = missionController.insertComplexMissionItem(coordinate, missionController.visualItems.count)
-            setCurrentItem(sequenceNumber)
-    }
-
     MapFitFunctions {
         id:                         mapFitFunctions
         map:                        editorMap
@@ -109,7 +100,7 @@ QGCView {
 
         property real toolbarHeight:    qgcView.height - ScreenTools.availableHeight
         property real rightPanelWidth:  _rightPanelWidth
-        property real leftToolWidth:    mapFitFunctions.x + mapFitFunctions.width
+        property real leftToolWidth:    toolStrip.x + toolStrip.width
     }
 
     MissionController {
@@ -454,25 +445,12 @@ QGCView {
                     }
                 }
 
-                // Add the complex mission item polygon to the map
-                MapItemView {
+                // Add the complex mission item to the map
+                Repeater {
                     model: missionController.complexVisualItems
 
-                    delegate: MapPolygon {
-                        color:      'green'
-                        path:       object.polygonPath
-                        opacity:    0.5
-                    }
-                }
-
-                // Add the complex mission item grid to the map
-                MapItemView {
-                    model: missionController.complexVisualItems
-
-                    delegate: MapPolyline {
-                        line.color: "white"
-                        line.width: 2
-                        path:       object.gridPoints
+                    delegate: ComplexMissionItem {
+                        map: editorMap
                     }
                 }
 
@@ -819,46 +797,8 @@ QGCView {
                     }
                 }
 
-                /*
-
-                  FIXME: Need to put these back into ToolStrip
-
-                //-- Zoom Map In
-                RoundButton {
-                    id:                 mapZoomPlus
-                    anchors.topMargin:  ScreenTools.defaultFontPixelHeight
-                    anchors.top:        mapTypeButton.bottom
-                    anchors.left:       mapTypeButton.left
-                    visible:            !ScreenTools.isTinyScreen && !ScreenTools.isShortScreen
-                    buttonImage:        "/qmlimages/ZoomPlus.svg"
-                    lightBorders:   _lightWidgetBorders
-
-                    onClicked: {
-                        if(editorMap)
-                            editorMap.zoomLevel += 0.5
-                        checked = false
-                    }
-                }
-
-                //-- Zoom Map Out
-                RoundButton {
-                    id:                 mapZoomMinus
-                    anchors.topMargin:  ScreenTools.defaultFontPixelHeight
-                    anchors.top:        mapZoomPlus.bottom
-                    anchors.left:       mapZoomPlus.left
-                    visible:            !ScreenTools.isTinyScreen && !ScreenTools.isShortScreen
-                    buttonImage:        "/qmlimages/ZoomMinus.svg"
-                    lightBorders:       _lightWidgetBorders
-                    onClicked: {
-                        if(editorMap)
-                            editorMap.zoomLevel -= 0.5
-                        checked = false
-                    }
-                }
-
-                */
-
                 ToolStrip {
+                    id:                 toolStrip
                     anchors.leftMargin: ScreenTools.defaultFontPixelWidth
                     anchors.left:       parent.left
                     anchors.topMargin:  _toolButtonTopMargin
@@ -866,9 +806,12 @@ QGCView {
                     color:              qgcPal.window
                     title:              qsTr("Plan")
                     z:                  QGroundControl.zOrderWidgets
-                    showAlternateIcon:  [ false, false, _syncDropDownController.dirty, false, false ]
-                    rotateImage:        [ false, false, _syncDropDownController.syncInProgress, false, false ]
-                    buttonEnabled:      [ true, true, !_syncDropDownController.syncInProgress, true, true ]
+                    showAlternateIcon:  [ false, false, _syncDropDownController.dirty, false, false, false, false ]
+                    rotateImage:        [ false, false, _syncDropDownController.syncInProgress, false, false, false, false ]
+                    buttonEnabled:      [ true, true, !_syncDropDownController.syncInProgress, true, true, true, true ]
+                    buttonVisible:      [ true, true, true, true, true, _showZoom, _showZoom ]
+
+                    property bool _showZoom: !ScreenTools.isShortScreen
 
                     model: [
                         {
@@ -877,8 +820,9 @@ QGCView {
                             toggle:     true
                         },
                         {
-                            name:       "Pattern",
-                            iconSource: "/qmlimages/MapDrawShape.svg"
+                            name:               "Pattern",
+                            iconSource:         "/qmlimages/MapDrawShape.svg",
+                            dropPanelComponent: patternDropPanel
                         },
                         {
                             name:                   "Sync",
@@ -895,16 +839,33 @@ QGCView {
                             name:               "Map",
                             iconSource:         "/qmlimages/MapType.svg",
                             dropPanelComponent: mapTypeDropPanel
+                        },
+                        {
+                            name:               "In",
+                            iconSource:         "/qmlimages/ZoomPlus.svg"
+                        },
+                        {
+                            name:               "Out",
+                            iconSource:         "/qmlimages/ZoomMinus.svg"
                         }
                     ]
 
                     onClicked: {
-                        switch (index) {
+                        switch (index == 0) {
                         case 0:
                             _addWaypointOnClick = checked
                             break
-                        case 1:
-                            addSurveyItem()
+                        case 5:
+                            editorMap.zoomLevel += 0.5
+                            break
+                        case 6:
+                            editorMap.zoomLevel -= 0.5
+                            break
+                        case 5:
+                            editorMap.zoomLevel += 0.5
+                            break
+                        case 6:
+                            editorMap.zoomLevel -= 0.5
                             break
                         }
                     }
@@ -1084,6 +1045,7 @@ QGCView {
                         checked:        QGroundControl.flightMapSettings.mapType === text
                         text:           modelData
                         exclusiveGroup: _mapTypeButtonsExclusiveGroup
+
                         onClicked: {
                             QGroundControl.flightMapSettings.mapType = text
                             dropPanel.hide()
@@ -1092,5 +1054,34 @@ QGCView {
                 }
             }
         }
+    }
+
+    Component {
+        id: patternDropPanel
+
+        ColumnLayout {
+            spacing:    ScreenTools.defaultFontPixelWidth * 0.5
+
+            QGCLabel { text: qsTr("Create complex pattern:") }
+
+            Repeater {
+                model: missionController.complexMissionItemNames
+
+                QGCButton {
+                    text:               modelData
+                    Layout.fillWidth:   true
+
+                    onClicked: {
+                        var coordinate = editorMap.center
+                        coordinate.latitude = coordinate.latitude.toFixed(_decimalPlaces)
+                        coordinate.longitude = coordinate.longitude.toFixed(_decimalPlaces)
+                        coordinate.altitude = coordinate.altitude.toFixed(_decimalPlaces)
+                        var sequenceNumber = missionController.insertComplexMissionItem(modelData, coordinate, missionController.visualItems.count)
+                        setCurrentItem(sequenceNumber)
+                        dropPanel.hide()
+                    }
+                }
+            }
+        } // Column
     }
 } // QGCVIew
