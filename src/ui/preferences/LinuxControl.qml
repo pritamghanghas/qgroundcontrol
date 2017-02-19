@@ -262,7 +262,7 @@ QGCView {
                             }
 
                             QGCLabel {
-                                text : "weep speed (degree/s)"
+                                text : "sweep speed (degree/s)"
                             }
                             QGCTextField {
                                 validator: IntValidator { bottom: 1; top: 20 }

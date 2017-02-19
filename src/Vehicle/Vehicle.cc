@@ -35,7 +35,7 @@ QGC_LOGGING_CATEGORY(VehicleLog, "VehicleLog")
 #define UPDATE_TIMER 50
 #define DEFAULT_LAT  38.965767f
 #define DEFAULT_LON -120.083923f
-#define HEADING_MARGIN 1.0f
+#define HEADING_MARGIN 5.0f
 
 #define TRIGGER_EXECUTE_DELAY 5
 
@@ -1476,7 +1476,7 @@ void Vehicle::doSweepYaw(float sweepAngle, float sweepSpeed)
     qDebug(" we will sweep from angle %f to %f", _headingLeft, _headingRight);
 
     // start by sweeping right
-    doChangeYaw(sweepAngle/2, _sweepSpeed, true, 1);
+    doChangeYaw(_headingLeft, _sweepSpeed, true, 1);
 }
 
 void Vehicle::flyToLocation(const QGeoCoordinate &coord, double altitudeRel)
@@ -1539,12 +1539,12 @@ void Vehicle::_onHeadingChanged()
     if(_currentDirection == -1) { // ccw
         if (fabs(_headingFact.cookedValue().toFloat() - _headingLeft) < HEADING_MARGIN) {
 //            qDebug("reached left ccw angel %f, start moving right/cw now", _headingLeft);
-            doChangeYaw(_sweepAngle, _sweepSpeed, true, 1);
+            doChangeYaw(_headingRight, _sweepSpeed, false, 1);
         }
     } else if ( _currentDirection == 1) {
         if (fabs(_headingFact.cookedValue().toFloat() - _headingRight) < HEADING_MARGIN) {
 //            qDebug("reached right/cw angel %f, start moving left/ccw now", _headingRight);
-            doChangeYaw(_sweepAngle, _sweepSpeed, true, -1);
+            doChangeYaw(_headingLeft, _sweepSpeed, false, -1);
         }
     }
 }
