@@ -200,7 +200,7 @@ void QGroundControlQmlGlobal::setBaseFontPointSize(qreal size)
 
 int QGroundControlQmlGlobal::supportedFirmwareCount()
 {
-    return _firmwarePluginManager->knownFirmwareTypes().count();
+    return _firmwarePluginManager->supportedFirmwareTypes().count();
 }
 
 
