@@ -59,6 +59,7 @@ const char* Vehicle::_gpsFactGroupName =        "gps";
 const char* Vehicle::_batteryFactGroupName =    "battery";
 const char* Vehicle::_windFactGroupName =       "wind";
 const char* Vehicle::_vibrationFactGroupName =  "vibration";
+const char* Vehicle::_temperatureFactGroupName = "temperature";
 
 const int Vehicle::_lowBatteryAnnounceRepeatMSecs = 30 * 1000;
 
@@ -161,6 +162,7 @@ Vehicle::Vehicle(LinkInterface*             link,
     , _vibrationFactGroup(this)
     , _flyToRelAltitude(0)
     , _1STimerSecsCount(0)
+    , _temperatureFactGroup(this)
 {
     _addLink(link);
 
@@ -310,6 +312,7 @@ Vehicle::Vehicle(MAV_AUTOPILOT              firmwareType,
     , _firmwareMajorVersion(versionNotSetValue)
     , _firmwareMinorVersion(versionNotSetValue)
     , _firmwarePatchVersion(versionNotSetValue)
+    , _gitHash(versionNotSetValue)
     , _rollFact             (0, _rollFactName,              FactMetaData::valueTypeDouble)
     , _pitchFact            (0, _pitchFactName,             FactMetaData::valueTypeDouble)
     , _headingFact          (0, _headingFactName,           FactMetaData::valueTypeDouble)
@@ -365,6 +368,7 @@ void Vehicle::_commonInit(void)
     _addFactGroup(&_batteryFactGroup,   _batteryFactGroupName);
     _addFactGroup(&_windFactGroup,      _windFactGroupName);
     _addFactGroup(&_vibrationFactGroup, _vibrationFactGroupName);
+    _addFactGroup(&_temperatureFactGroup, _temperatureFactGroupName);
 }
 
 Vehicle::~Vehicle()
@@ -583,6 +587,15 @@ void Vehicle::_mavlinkMessageReceived(LinkInterface* link, mavlink_message_t mes
     case MAVLINK_MSG_ID_VFR_HUD:
         _handleVfrHud(message);
         break;
+    case MAVLINK_MSG_ID_SCALED_PRESSURE:
+        _handleScaledPressure(message);
+        break;
+    case MAVLINK_MSG_ID_SCALED_PRESSURE2:
+        _handleScaledPressure2(message);
+        break;
+    case MAVLINK_MSG_ID_SCALED_PRESSURE3:
+        _handleScaledPressure3(message);
+        break;
 
     // Following are ArduPilot dialect messages
 
@@ -615,8 +628,11 @@ void Vehicle::_handleGpsRawInt(mavlink_message_t& message)
 
     if (gpsRawInt.fix_type >= GPS_FIX_TYPE_3D_FIX) {
         if (!_globalPositionIntMessageAvailable) {
-            setLatitude(gpsRawInt.lat / (double)1E7);
-            setLongitude(gpsRawInt.lon / (double)1E7);
+            //-- Set these here and emit a single signal instead of 3 for the same variable (_coordinate)
+            _coordinate.setLatitude(gpsRawInt.lat  / (double)1E7);
+            _coordinate.setLongitude(gpsRawInt.lon / (double)1E7);
+            _coordinate.setAltitude(gpsRawInt.alt  / 1000.0);
+            emit coordinateChanged(_coordinate);
             _altitudeAMSLFact.setRawValue(gpsRawInt.alt / 1000.0);
         }
     }
@@ -638,9 +654,11 @@ void Vehicle::_handleGlobalPositionInt(mavlink_message_t& message)
     mavlink_msg_global_position_int_decode(&message, &globalPositionInt);
 
     _globalPositionIntMessageAvailable = true;
-
-    setLatitude(globalPositionInt.lat / (double)1E7);
-    setLongitude(globalPositionInt.lon / (double)1E7);
+    //-- Set these here and emit a single signal instead of 3 for the same variable (_coordinate)
+    _coordinate.setLatitude(globalPositionInt.lat  / (double)1E7);
+    _coordinate.setLongitude(globalPositionInt.lon / (double)1E7);
+    _coordinate.setAltitude(globalPositionInt.alt  / 1000.0);
+    emit coordinateChanged(_coordinate);
     _altitudeRelativeFact.setRawValue(globalPositionInt.relative_alt / 1000.0);
     _altitudeAMSLFact.setRawValue(globalPositionInt.alt / 1000.0);
 }
@@ -675,6 +693,12 @@ void Vehicle::_handleAutopilotVersion(LinkInterface *link, mavlink_message_t& me
         patchVersion = (autopilotVersion.flight_sw_version >> (8*1)) & 0xFF;
         versionType = (FIRMWARE_VERSION_TYPE)((autopilotVersion.flight_sw_version >> (8*0)) & 0xFF);
         setFirmwareVersion(majorVersion, minorVersion, patchVersion, versionType);
+    }
+
+    // Git hash
+    if (autopilotVersion.flight_custom_version[0] != 0) {
+        _gitHash = QString::fromUtf8((char*)autopilotVersion.flight_custom_version, 8);
+        emit gitHashChanged(_gitHash);
     }
 }
 
@@ -1012,6 +1036,24 @@ void Vehicle::_handleRCChannelsRaw(mavlink_message_t& message)
     emit rcChannelsChanged(channelCount, pwmValues);
 }
 
+void Vehicle::_handleScaledPressure(mavlink_message_t& message) {
+    mavlink_scaled_pressure_t pressure;
+    mavlink_msg_scaled_pressure_decode(&message, &pressure);
+    _temperatureFactGroup.temperature1()->setRawValue(pressure.temperature / 100.0);
+}
+
+void Vehicle::_handleScaledPressure2(mavlink_message_t& message) {
+    mavlink_scaled_pressure2_t pressure;
+    mavlink_msg_scaled_pressure2_decode(&message, &pressure);
+    _temperatureFactGroup.temperature2()->setRawValue(pressure.temperature / 100.0);
+}
+
+void Vehicle::_handleScaledPressure3(mavlink_message_t& message) {
+    mavlink_scaled_pressure3_t pressure;
+    mavlink_msg_scaled_pressure3_decode(&message, &pressure);
+    _temperatureFactGroup.temperature3()->setRawValue(pressure.temperature / 100.0);
+}
+
 bool Vehicle::_containsLink(LinkInterface* link)
 {
     return _links.contains(link);
@@ -1125,6 +1167,11 @@ void Vehicle::setLatitude(double latitude)
 
 void Vehicle::setLongitude(double longitude){
     _coordinate.setLongitude(longitude);
+    emit coordinateChanged(_coordinate);
+}
+
+void Vehicle::setAltitude(double altitude){
+    _coordinate.setAltitude(altitude);
     emit coordinateChanged(_coordinate);
 }
 
@@ -1978,6 +2025,16 @@ bool Vehicle::supportsJSButton(void) const
     return _firmwarePlugin->supportsJSButton();
 }
 
+bool Vehicle::supportsCalibratePressure(void) const
+{
+    return _firmwarePlugin->supportsCalibratePressure();
+}
+
+bool Vehicle::supportsMotorInterference(void) const
+{
+    return _firmwarePlugin->supportsMotorInterference();
+}
+
 void Vehicle::_setCoordinateValid(bool coordinateValid)
 {
     if (coordinateValid != _coordinateValid) {
@@ -2640,4 +2697,25 @@ VehicleVibrationFactGroup::VehicleVibrationFactGroup(QObject* parent)
     _xAxisFact.setRawValue(std::numeric_limits<float>::quiet_NaN());
     _yAxisFact.setRawValue(std::numeric_limits<float>::quiet_NaN());
     _zAxisFact.setRawValue(std::numeric_limits<float>::quiet_NaN());
+}
+
+
+const char* VehicleTemperatureFactGroup::_temperature1FactName =      "temperature1";
+const char* VehicleTemperatureFactGroup::_temperature2FactName =      "temperature2";
+const char* VehicleTemperatureFactGroup::_temperature3FactName =      "temperature3";
+
+VehicleTemperatureFactGroup::VehicleTemperatureFactGroup(QObject* parent)
+    : FactGroup(1000, ":/json/Vehicle/TemperatureFact.json", parent)
+    , _temperature1Fact    (0, _temperature1FactName,     FactMetaData::valueTypeDouble)
+    , _temperature2Fact    (0, _temperature2FactName,     FactMetaData::valueTypeDouble)
+    , _temperature3Fact    (0, _temperature3FactName,     FactMetaData::valueTypeDouble)
+{
+    _addFact(&_temperature1Fact,       _temperature1FactName);
+    _addFact(&_temperature2Fact,       _temperature2FactName);
+    _addFact(&_temperature3Fact,       _temperature3FactName);
+
+    // Start out as not available "--.--"
+    _temperature1Fact.setRawValue      (std::numeric_limits<float>::quiet_NaN());
+    _temperature2Fact.setRawValue      (std::numeric_limits<float>::quiet_NaN());
+    _temperature3Fact.setRawValue      (std::numeric_limits<float>::quiet_NaN());
 }

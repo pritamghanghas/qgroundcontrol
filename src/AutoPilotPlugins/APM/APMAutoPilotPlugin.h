@@ -27,6 +27,7 @@ class APMCameraComponent;
 class APMLightsComponent;
 class APMSubFrameComponent;
 class ESP8266Component;
+class MixersComponent;
 
 /// This is the APM specific implementation of the AutoPilot class.
 class APMAutoPilotPlugin : public AutoPilotPlugin
@@ -57,6 +58,7 @@ public:
     APMSensorsComponent*        sensorsComponent    (void) const { return _sensorsComponent; }
     APMTuningComponent*         tuningComponent     (void) const { return _tuningComponent; }
     ESP8266Component*           esp8266Component    (void) const { return _esp8266Component; }
+    MixersComponent*            mixersComponent     (void)       { return _mixersComponent; }
 
 private:
     bool                    _incorrectParameterVersion; ///< true: parameter version incorrect, setup not allowed
@@ -78,6 +80,7 @@ private:
     APMTuningComponent*         _tuningComponent;
     APMAirframeLoader*          _airframeFacts;
     ESP8266Component*           _esp8266Component;
+    MixersComponent*            _mixersComponent;
 };
 
 #endif

@@ -24,6 +24,29 @@ class FixedWingLandingComplexItem : public ComplexMissionItem
 public:
     FixedWingLandingComplexItem(Vehicle* vehicle, QObject* parent = NULL);
 
+    Q_PROPERTY(Fact*            loiterAltitude          READ    loiterAltitude                                  CONSTANT)
+    Q_PROPERTY(Fact*            loiterRadius            READ    loiterRadius                                    CONSTANT)
+    Q_PROPERTY(Fact*            landingAltitude         READ    landingAltitude                                 CONSTANT)
+    Q_PROPERTY(Fact*            landingDistance         READ    landingDistance                                 CONSTANT)
+    Q_PROPERTY(Fact*            landingHeading          READ    landingHeading                                  CONSTANT)
+    Q_PROPERTY(bool             loiterClockwise         MEMBER  _loiterClockwise                                NOTIFY loiterClockwiseChanged)
+    Q_PROPERTY(bool             loiterAltitudeRelative  MEMBER  _loiterAltitudeRelative                         NOTIFY loiterAltitudeRelativeChanged)
+    Q_PROPERTY(bool             landingAltitudeRelative MEMBER  _landingAltitudeRelative                        NOTIFY landingAltitudeRelativeChanged)
+    Q_PROPERTY(QGeoCoordinate   loiterCoordinate        READ    loiterCoordinate    WRITE setLoiterCoordinate   NOTIFY loiterCoordinateChanged)
+    Q_PROPERTY(QGeoCoordinate   landingCoordinate       READ    landingCoordinate   WRITE setLandingCoordinate  NOTIFY landingCoordinateChanged)
+    Q_PROPERTY(bool             landingCoordSet         MEMBER _landingCoordSet                                 NOTIFY landingCoordSetChanged)
+
+    Fact*           loiterAltitude      (void) { return &_loiterAltitudeFact; }
+    Fact*           loiterRadius        (void) { return &_loiterRadiusFact; }
+    Fact*           landingAltitude     (void) { return &_landingAltitudeFact; }
+    Fact*           landingDistance     (void) { return &_loiterToLandDistanceFact; }
+    Fact*           landingHeading      (void) { return &_landingHeadingFact; }
+    QGeoCoordinate  landingCoordinate   (void) const { return _landingCoordinate; }
+    QGeoCoordinate  loiterCoordinate    (void) const { return _loiterCoordinate; }
+
+    void setLandingCoordinate   (const QGeoCoordinate& coordinate);
+    void setLoiterCoordinate    (const QGeoCoordinate& coordinate);
+
     // Overrides from ComplexMissionItem
 
     double              complexDistance     (void) const final;
@@ -32,7 +55,7 @@ public:
     bool                load                (const QJsonObject& complexObject, int sequenceNumber, QString& errorString) final;
     double              greatestDistanceTo  (const QGeoCoordinate &other) const final;
     void                setCruiseSpeed      (double cruiseSpeed) final;
-    QString             mapVisualQML        (void) const final { return QString(); }
+    QString             mapVisualQML        (void) const final { return QStringLiteral("FWLandingPatternMapVisual.qml"); }
 
     // Overrides from VisualMissionItem
 
@@ -43,8 +66,8 @@ public:
     QString         commandDescription      (void) const final { return "Landing Pattern"; }
     QString         commandName             (void) const final { return "Landing Pattern"; }
     QString         abbreviation            (void) const final { return "L"; }
-    QGeoCoordinate  coordinate              (void) const final { return _coordinate; }
-    QGeoCoordinate  exitCoordinate          (void) const final { return _exitCoordinate; }
+    QGeoCoordinate  coordinate              (void) const final { return _loiterCoordinate; }
+    QGeoCoordinate  exitCoordinate          (void) const final { return _landingCoordinate; }
     int             sequenceNumber          (void) const final { return _sequenceNumber; }
     double          flightSpeed             (void) final { return std::numeric_limits<double>::quiet_NaN(); }
 
@@ -53,25 +76,51 @@ public:
     bool exitCoordinateSameAsEntry          (void) const final { return true; }
 
     void setDirty           (bool dirty) final;
-    void setCoordinate      (const QGeoCoordinate& coordinate) final;
+    void setCoordinate      (const QGeoCoordinate& coordinate) final { setLoiterCoordinate(coordinate); }
     void setSequenceNumber  (int sequenceNumber) final;
     void save               (QJsonObject& saveObject) const final;
 
     static const char* jsonComplexItemTypeValue;
 
 signals:
+    void loiterCoordinateChanged        (QGeoCoordinate coordinate);
+    void landingCoordinateChanged       (QGeoCoordinate coordinate);
+    void landingCoordSetChanged         (bool landingCoordSet);
+    void loiterClockwiseChanged         (bool loiterClockwise);
+    void loiterAltitudeRelativeChanged  (bool loiterAltitudeRelative);
+    void landingAltitudeRelativeChanged (bool loiterAltitudeRelative);
 
 private slots:
+    void _recalcLoiterCoordFromFacts(void);
+    void _recalcFactsFromCoords(void);
 
 private:
-    void _setExitCoordinate(const QGeoCoordinate& coordinate);
+    QPointF _rotatePoint(const QPointF& point, const QPointF& origin, double angle);
 
     int             _sequenceNumber;
     bool            _dirty;
-    QGeoCoordinate  _coordinate;
-    QGeoCoordinate  _exitCoordinate;
+    QGeoCoordinate  _loiterCoordinate;
+    QGeoCoordinate  _landingCoordinate;
+    bool            _landingCoordSet;
+    bool            _ignoreRecalcSignals;
+
+    Fact            _loiterToLandDistanceFact;
+    Fact            _loiterAltitudeFact;
+    Fact            _loiterRadiusFact;
+    Fact            _landingHeadingFact;
+    Fact            _landingAltitudeFact;
+
+    bool            _loiterClockwise;
+    bool            _loiterAltitudeRelative;
+    bool            _landingAltitudeRelative;
 
     static QMap<QString, FactMetaData*> _metaDataMap;
+
+    static const char* _loiterToLandDistanceName;
+    static const char* _loiterAltitudeName;
+    static const char* _loiterRadiusName;
+    static const char* _landingHeadingName;
+    static const char* _landingAltitudeName;
 };
 
 #endif

@@ -34,6 +34,7 @@ QGCView {
 
     property Fact _percentRemainingAnnounce:    QGroundControl.settingsManager.appSettings.batteryPercentRemainingAnnounce
     property Fact _autoLoadDir:                 QGroundControl.settingsManager.appSettings.missionAutoLoadDir
+    property Fact _appFontPointSize:            QGroundControl.settingsManager.appSettings.appFontPointSize
     property real _labelWidth:                  ScreenTools.defaultFontPixelWidth * 15
     property real _editFieldWidth:              ScreenTools.defaultFontPixelWidth * 30
 
@@ -54,6 +55,7 @@ QGCView {
                 width:              qgcView.width
                 spacing:            ScreenTools.defaultFontPixelHeight * 0.5
                 anchors.margins:    ScreenTools.defaultFontPixelWidth
+
                 //-----------------------------------------------------------------
                 //-- Units
                 Item {
@@ -79,50 +81,33 @@ QGCView {
                         id:         unitsCol
                         spacing:    ScreenTools.defaultFontPixelWidth
                         anchors.centerIn: parent
-                        Row {
-                            spacing:    ScreenTools.defaultFontPixelWidth
-                            QGCLabel {
-                                width:              _labelWidth
-                                anchors.baseline:   distanceUnitsCombo.baseline
-                                text:               qsTr("Distance:")
-                            }
-                            FactComboBox {
-                                id:                 distanceUnitsCombo
-                                width:              _editFieldWidth
-                                fact:               QGroundControl.settingsManager.unitsSettings.distanceUnits
-                                indexModel:         false
-                            }
-                        }
-                        Row {
-                            spacing:    ScreenTools.defaultFontPixelWidth
-                            QGCLabel {
-                                width:              _labelWidth
-                                anchors.baseline:   areaUnitsCombo.baseline
-                                text:               qsTr("Area:")
-                            }
-                            FactComboBox {
-                                id:                 areaUnitsCombo
-                                width:              _editFieldWidth
-                                fact:               QGroundControl.settingsManager.unitsSettings.areaUnits
-                                indexModel:         false
-                            }
-                        }
-                        Row {
-                            spacing:                ScreenTools.defaultFontPixelWidth
-                            QGCLabel {
-                                width:              _labelWidth
-                                anchors.baseline:   speedUnitsCombo.baseline
-                                text:               qsTr("Speed:")
-                            }
-                            FactComboBox {
-                                id:                 speedUnitsCombo
-                                width:              _editFieldWidth
-                                fact:               QGroundControl.settingsManager.unitsSettings.speedUnits
-                                indexModel:         false
+
+                        Repeater {
+                            id:     unitsRepeater
+                            model:  [ QGroundControl.settingsManager.unitsSettings.distanceUnits, QGroundControl.settingsManager.unitsSettings.areaUnits, QGroundControl.settingsManager.unitsSettings.speedUnits ]
+
+                            property var names: [ qsTr("Distance:"), qsTr("Area:"), qsTr("Speed:") ]
+
+                            Row {
+                                spacing:    ScreenTools.defaultFontPixelWidth
+                                visible:    modelData.visible
+
+                                QGCLabel {
+                                    width:              _labelWidth
+                                    anchors.baseline:   factCombo.baseline
+                                    text:               unitsRepeater.names[index]
+                                }
+                                FactComboBox {
+                                    id:                 factCombo
+                                    width:              _editFieldWidth
+                                    fact:               modelData
+                                    indexModel:         false
+                                }
                             }
                         }
                     }
                 }
+
                 //-----------------------------------------------------------------
                 //-- Miscellanous
                 Item {
@@ -151,11 +136,11 @@ QGCView {
                         //-----------------------------------------------------------------
                         //-- Base UI Font Point Size
                         Row {
-                            visible: QGroundControl.corePlugin.options.defaultFontPointSize < 1.0
+                            visible: _appFontPointSize.visible
                             spacing: ScreenTools.defaultFontPixelWidth
                             QGCLabel {
                                 id:     baseFontLabel
-                                text:   qsTr("Base UI font size:")
+                                text:   qsTr("Font size:")
                                 anchors.verticalCenter: parent.verticalCenter
                             }
                             Row {
@@ -168,32 +153,23 @@ QGCView {
                                     height: baseFontEdit.height
                                     text:   "-"
                                     onClicked: {
-                                        if(ScreenTools.defaultFontPointSize > 6) {
-                                            QGroundControl.baseFontPointSize = QGroundControl.baseFontPointSize - 1
+                                        if (_appFontPointSize.value > _appFontPointSize.min) {
+                                            _appFontPointSize.value = _appFontPointSize.value - 1
                                         }
                                     }
                                 }
-                                QGCTextField {
-                                    id:             baseFontEdit
-                                    width:          _editFieldWidth - (decrementButton.width * 2) - (baseFontRow.spacing * 2)
-                                    text:           QGroundControl.baseFontPointSize
-                                    showUnits:      true
-                                    unitsLabel:     "pt"
-                                    maximumLength:  6
-                                    validator:      DoubleValidator {bottom: 6.0; top: 48.0; decimals: 2;}
-                                    onEditingFinished: {
-                                        var point = parseFloat(text)
-                                        if(point >= 6.0 && point <= 48.0)
-                                            QGroundControl.baseFontPointSize = point;
-                                    }
+                                FactTextField {
+                                    id:     baseFontEdit
+                                    width:  _editFieldWidth - (decrementButton.width * 2) - (baseFontRow.spacing * 2)
+                                    fact:   QGroundControl.settingsManager.appSettings.appFontPointSize
                                 }
                                 QGCButton {
                                     width:  height
                                     height: baseFontEdit.height
                                     text:   "+"
                                     onClicked: {
-                                        if(ScreenTools.defaultFontPointSize < 49) {
-                                            QGroundControl.baseFontPointSize = QGroundControl.baseFontPointSize + 1
+                                        if (_appFontPointSize.value < _appFontPointSize.max) {
+                                            _appFontPointSize.value = _appFontPointSize.value + 1
                                         }
                                     }
                                 }
@@ -207,45 +183,47 @@ QGCView {
                         //-- Palette Styles
                         Row {
                             spacing: ScreenTools.defaultFontPixelWidth
+                            visible: QGroundControl.settingsManager.appSettings.indoorPalette.visible
                             QGCLabel {
                                 anchors.baseline:   paletteCombo.baseline
-                                text:               qsTr("UI Style:")
+                                text:               qsTr("Color scheme:")
                                 width:              _labelWidth
                             }
-                            QGCComboBox {
-                                id:             paletteCombo
-                                width:          _editFieldWidth
-                                model:          [ qsTr("Indoor"), qsTr("Outdoor") ]
-                                currentIndex:   QGroundControl.isDarkStyle ? 0 : 1
-                                onActivated: {
-                                    if (index != -1) {
-                                        currentIndex = index
-                                        QGroundControl.isDarkStyle = index === 0 ? true : false
-                                    }
-                                }
+                            FactComboBox {
+                                id:         paletteCombo
+                                width:      _editFieldWidth
+                                fact:       QGroundControl.settingsManager.appSettings.indoorPalette
+                                indexModel: false
                             }
                         }
                         //-----------------------------------------------------------------
                         //-- Audio preferences
                         FactCheckBox {
-                            text:   qsTr("Mute all audio output")
-                            fact:   QGroundControl.settingsManager.appSettings.audioMuted
+                            text:       qsTr("Mute all audio output")
+                            fact:       _audioMuted
+                            visible:    _audioMuted.visible
+
+                            property Fact _audioMuted: QGroundControl.settingsManager.appSettings.audioMuted
                         }
                         //-----------------------------------------------------------------
                         //-- Prompt Save Log
                         FactCheckBox {
                             id:         promptSaveLog
                             text:       qsTr("Prompt to save Flight Data Log after each flight")
-                            fact:       QGroundControl.settingsManager.appSettings.promptFlightTelemetrySave
-                            visible:    !ScreenTools.isMobile
+                            fact:       _promptFlightTelemetrySave
+                            visible:    !ScreenTools.isMobile && _promptFlightTelemetrySave.visible
+
+                            property Fact _promptFlightTelemetrySave: QGroundControl.settingsManager.appSettings.promptFlightTelemetrySave
                         }
                         //-----------------------------------------------------------------
                         //-- Prompt Save even if not armed
                         FactCheckBox {
                             text:       qsTr("Prompt to save Flight Data Log even if vehicle was not armed")
-                            fact:       QGroundControl.settingsManager.appSettings.promptFlightTelemetrySaveNotArmed
-                            visible:    !ScreenTools.isMobile
+                            fact:       _promptFlightTelemetrySaveNotArmed
+                            visible:    !ScreenTools.isMobile && _promptFlightTelemetrySaveNotArmed.visible
                             enabled:    promptSaveLog.checked
+
+                            property Fact _promptFlightTelemetrySaveNotArmed: QGroundControl.settingsManager.appSettings.promptFlightTelemetrySaveNotArmed
                         }
                         //-----------------------------------------------------------------
                         //-- Clear settings
@@ -299,11 +277,12 @@ QGCView {
                         }
                         //-----------------------------------------------------------------
                         //-- Virtual joystick settings
-                        QGCCheckBox {
+                        FactCheckBox {
                             text:       qsTr("Virtual Joystick")
-                            checked:    QGroundControl.virtualTabletJoystick
-                            onClicked:  QGroundControl.virtualTabletJoystick = checked
-                            visible:    QGroundControl.corePlugin.options.enableVirtualJoystick
+                            visible:    _virtualJoystick.visible
+                            fact:       _virtualJoystick
+
+                            property Fact _virtualJoystick: QGroundControl.settingsManager.appSettings.virtualJoystick
                         }
                         //-----------------------------------------------------------------
                         //-- Default mission item altitude
@@ -395,6 +374,7 @@ QGCView {
                         }
                     }
                 }
+
                 //-----------------------------------------------------------------
                 //-- Autoconnect settings
                 Item {
@@ -416,44 +396,37 @@ QGCView {
                     anchors.margins:            ScreenTools.defaultFontPixelWidth
                     anchors.horizontalCenter:   parent.horizontalCenter
                     visible:                    QGroundControl.settingsManager.autoConnectSettings.visible
+
                     Column {
                         id:         autoConnectCol
                         spacing:    ScreenTools.defaultFontPixelWidth
                         anchors.centerIn: parent
-                        //-----------------------------------------------------------------
-                        //-- Autoconnect settings
+
                         Row {
                             spacing: ScreenTools.defaultFontPixelWidth * 2
-                            FactCheckBox {
-                                text:       qsTr("Pixhawk")
-                                fact:       QGroundControl.settingsManager.autoConnectSettings.autoConnectPixhawk
-                                visible:    !ScreenTools.isiOS
-                            }
-                            FactCheckBox {
-                                text:       qsTr("SiK Radio")
-                                fact:       QGroundControl.settingsManager.autoConnectSettings.autoConnectSiKRadio
-                                visible:    !ScreenTools.isiOS
-                            }
-                            FactCheckBox {
-                                text:       qsTr("PX4 Flow")
-                                fact:       QGroundControl.settingsManager.autoConnectSettings.autoConnectPX4Flow
-                                visible:    !ScreenTools.isiOS
-                            }
-                            FactCheckBox {
-                                text:       qsTr("LibrePilot")
-                                fact:       QGroundControl.settingsManager.autoConnectSettings.autoConnectLibrePilot
-                            }
-                            FactCheckBox {
-                                text:       qsTr("UDP")
-                                fact:       QGroundControl.settingsManager.autoConnectSettings.autoConnectUDP
-                            }
-                            FactCheckBox {
-                                text:       qsTr("RTK GPS")
-                                fact:       QGroundControl.settingsManager.autoConnectSettings.autoConnectRTKGPS
+
+                            Repeater {
+                                id:     autoConnectRepeater
+                                model:  [ QGroundControl.settingsManager.autoConnectSettings.autoConnectPixhawk,
+                                    QGroundControl.settingsManager.autoConnectSettings.autoConnectSiKRadio,
+                                    QGroundControl.settingsManager.autoConnectSettings.autoConnectPX4Flow,
+                                    QGroundControl.settingsManager.autoConnectSettings.autoConnectLibrePilot,
+                                    QGroundControl.settingsManager.autoConnectSettings.autoConnectUDP,
+                                    QGroundControl.settingsManager.autoConnectSettings.autoConnectRTKGPS
+                                ]
+
+                                property var names: [ qsTr("Pixhawk"), qsTr("SiK Radio"), qsTr("PX4 Flow"), qsTr("LibrePilot"), qsTr("UDP"), qsTr("RTK GPS") ]
+
+                                FactCheckBox {
+                                    text:       autoConnectRepeater.names[index]
+                                    fact:       modelData
+                                    visible:    !ScreenTools.isiOS && modelData.visible
+                                }
                             }
                         }
                     }
                 }
+
                 //-----------------------------------------------------------------
                 //-- Video Source
                 Item {
@@ -475,84 +448,68 @@ QGCView {
                     anchors.margins:            ScreenTools.defaultFontPixelWidth
                     anchors.horizontalCenter:   parent.horizontalCenter
                     visible:                    QGroundControl.settingsManager.videoSettings.visible
+
                     Column {
                         id:         videoCol
                         spacing:    ScreenTools.defaultFontPixelWidth
                         anchors.centerIn: parent
+
+
                         Row {
                             spacing:    ScreenTools.defaultFontPixelWidth
+                            visible:    QGroundControl.settingsManager.videoSettings.videoSource.visible
                             QGCLabel {
                                 anchors.baseline:   videoSource.baseline
                                 text:               qsTr("Video Source:")
                                 width:              _labelWidth
                             }
-                            QGCComboBox {
-                                id:                 videoSource
-                                width:              _editFieldWidth
-                                model:              QGroundControl.videoManager.videoSourceList
-                                Component.onCompleted: {
-                                    var index = videoSource.find(QGroundControl.videoManager.videoSource)
-                                    if (index >= 0) {
-                                        videoSource.currentIndex = index
-                                    }
-                                }
-                                onActivated: {
-                                    if (index != -1) {
-                                        currentIndex = index
-                                        QGroundControl.videoManager.videoSource = model[index]
-                                    }
-                                }
+                            FactComboBox {
+                                id:         videoSource
+                                width:      _editFieldWidth
+                                indexModel: false
+                                fact:       QGroundControl.settingsManager.videoSettings.videoSource
                             }
                         }
                         Row {
                             spacing:    ScreenTools.defaultFontPixelWidth
-                            visible:    QGroundControl.videoManager.isGStreamer && videoSource.currentIndex === 0
+                            visible:    QGroundControl.settingsManager.videoSettings.udpPort.visible && QGroundControl.videoManager.isGStreamer && videoSource.currentIndex === 0
                             QGCLabel {
                                 anchors.baseline:   udpField.baseline
                                 text:               qsTr("UDP Port:")
                                 width:              _labelWidth
                             }
-                            QGCTextField {
+                            FactTextField {
                                 id:                 udpField
                                 width:              _editFieldWidth
-                                text:               QGroundControl.videoManager.udpPort
-                                validator:          IntValidator {bottom: 1024; top: 65535;}
-                                inputMethodHints:   Qt.ImhDigitsOnly
-                                onEditingFinished: {
-                                    QGroundControl.videoManager.udpPort = parseInt(text)
-                                }
+                                fact:               QGroundControl.settingsManager.videoSettings.udpPort
                             }
                         }
                         Row {
                             spacing:    ScreenTools.defaultFontPixelWidth
-                            visible:    QGroundControl.videoManager.isGStreamer && videoSource.currentIndex === 1
+                            visible:    QGroundControl.settingsManager.videoSettings.rtspUrl.visible && QGroundControl.videoManager.isGStreamer && videoSource.currentIndex === 1
                             QGCLabel {
                                 anchors.baseline:   rtspField.baseline
                                 text:               qsTr("RTSP URL:")
                                 width:              _labelWidth
                             }
-                            QGCTextField {
+                            FactTextField {
                                 id:                 rtspField
                                 width:              _editFieldWidth
-                                text:               QGroundControl.videoManager.rtspURL
-                                onEditingFinished: {
-                                    QGroundControl.videoManager.rtspURL = text
-                                }
+                                fact:               QGroundControl.settingsManager.videoSettings.rtspUrl
                             }
                         }
                         Row {
                             spacing:    ScreenTools.defaultFontPixelWidth
-                            visible:    QGroundControl.videoManager.isGStreamer && QGroundControl.videoManager.recordingEnabled
+                            visible:    QGroundControl.settingsManager.videoSettings.videoSavePath.visible && QGroundControl.videoManager.isGStreamer && QGroundControl.videoManager.recordingEnabled
                             QGCLabel {
                                 anchors.baseline:   pathField.baseline
                                 text:               qsTr("Save Path:")
                                 width:              _labelWidth
                             }
-                            QGCTextField {
+                            FactTextField {
                                 id:                 pathField
                                 width:              _editFieldWidth
-                                readOnly:           true
-                                text:               QGroundControl.videoManager.videoSavePath
+                                fact:               QGroundControl.settingsManager.videoSettings.videoSavePath
                             }
                             QGCButton {
                                 text:       "Browse"
@@ -563,13 +520,12 @@ QGCView {
                                     title:          "Choose a location to save video files."
                                     folder:         shortcuts.home
                                     selectFolder:   true
-                                    onAccepted:     QGroundControl.videoManager.setVideoSavePathByUrl(fileDialog.fileUrl)
+                                    onAccepted:     QGroundControl.settingsManager.videoSettings.videoSavePath.value = QGroundControl.urlToLocalFile(videoLocationFileDialog.fileUrl)
                                 }
-
                             }
                         }
                     }
-                }
+                } // Video Source - Rectangle
 
                 QGCLabel {
                     anchors.horizontalCenter:   parent.horizontalCenter
