@@ -16,6 +16,7 @@ import QGroundControl               1.0
 import QGroundControl.ScreenTools   1.0
 import QGroundControl.Palette       1.0
 import QGroundControl.Controls      1.0
+import QGroundControl.FlightMap     1.0
 
 /// Fixed Wing Landing Pattern map visuals
 Item {
@@ -78,8 +79,8 @@ Item {
 
     function showDragAreas() {
         if (_dragAreas.length === 0) {
-            _dragAreas.push(dragAreaComponent.createObject(map, { "dragLoiter": true }))
-            _dragAreas.push(dragAreaComponent.createObject(map, { "dragLoiter": false }))
+            _dragAreas.push(loiterDragAreaComponent.createObject(map))
+            _dragAreas.push(landDragAreaComponent.createObject(map))
         }
     }
 
@@ -145,55 +146,27 @@ Item {
         }
     }
 
-    // Control which is used to drag items
+    // Control which is used to drag the loiter point
     Component {
-        id: dragAreaComponent
+        id: loiterDragAreaComponent
 
-        Rectangle {
-            id:             itemDragger
-            x:              mapQuickItem ? (mapQuickItem.x + mapQuickItem.anchorPoint.x - (itemDragger.width / 2)) : 100
-            y:              mapQuickItem ? (mapQuickItem.y + mapQuickItem.anchorPoint.y - (itemDragger.height / 2)) : 100
-            width:          ScreenTools.defaultFontPixelHeight * 2
-            height:         ScreenTools.defaultFontPixelHeight * 2
-            color:          "transparent"
-            z:              QGroundControl.zOrderMapItems + 1    // Above item icons
+        MissionItemIndicatorDrag {
+                itemIndicator:  _itemVisuals[_loiterPointIndex]
+                itemCoordinate: _missionItem.loiterCoordinate
 
-            property bool   dragLoiter
-            property var    mapQuickItem:                   dragLoiter ? _itemVisuals[_loiterPointIndex] : _itemVisuals[_landPointIndex]
-            property bool   _preventCoordinateBindingLoop:  false
+                onItemCoordinateChanged: _missionItem.loiterCoordinate = itemCoordinate
+        }
+    }
 
-            onXChanged: liveDrag()
-            onYChanged: liveDrag()
+    // Control which is used to drag the loiter point
+    Component {
+        id: landDragAreaComponent
 
-            function liveDrag() {
-                if (!itemDragger._preventCoordinateBindingLoop && Drag.active) {
-                    var point = Qt.point(itemDragger.x + (itemDragger.width  / 2), itemDragger.y + (itemDragger.height / 2))
-                    var coordinate = map.toCoordinate(point)
-                    itemDragger._preventCoordinateBindingLoop = true
-                    if (dragLoiter) {
-                        coordinate.altitude = _missionItem.loiterCoordinate.altitude
-                        _missionItem.loiterCoordinate = coordinate
-                    } else {
-                        coordinate.altitude = _missionItem.landingCoordinate.altitude
-                        _missionItem.landingCoordinate = coordinate
-                    }
-                    itemDragger._preventCoordinateBindingLoop = false
-                }
-            }
+        MissionItemIndicatorDrag {
+                itemIndicator:  _itemVisuals[_landPointIndex]
+                itemCoordinate: _missionItem.landingCoordinate
 
-            Drag.active:    itemDrag.drag.active
-            Drag.hotSpot.x: width  / 2
-            Drag.hotSpot.y: height / 2
-
-            MouseArea {
-                id:             itemDrag
-                anchors.fill:   parent
-                drag.target:    parent
-                drag.minimumX:  0
-                drag.minimumY:  0
-                drag.maximumX:  itemDragger.parent.width - parent.width
-                drag.maximumY:  itemDragger.parent.height - parent.height
-            }
+                onItemCoordinateChanged: _missionItem.landingCoordinate = itemCoordinate
         }
     }
 
@@ -214,14 +187,17 @@ Item {
         id: loiterPointComponent
 
         MapQuickItem {
-            anchorPoint.x:  sourceItem.width  / 2
-            anchorPoint.y:  sourceItem.height / 2
+            anchorPoint.x:  sourceItem.anchorPointX
+            anchorPoint.y:  sourceItem.anchorPointY
             z:              QGroundControl.zOrderMapItems
             coordinate:     _missionItem.loiterCoordinate
 
             sourceItem:
                 MissionItemIndexLabel {
-                label:      "L"
+                label:      "Loiter"
+                checked:    _missionItem.isCurrentItem
+
+                onClicked: setCurrentItem(_missionItem.sequenceNumber)
             }
         }
     }
@@ -245,15 +221,17 @@ Item {
         id: landPointComponent
 
         MapQuickItem {
-            anchorPoint.x:  sourceItem.width  / 2
-            anchorPoint.y:  sourceItem.height / 2
+            anchorPoint.x:  sourceItem.anchorPointX
+            anchorPoint.y:  sourceItem.anchorPointY
             z:              QGroundControl.zOrderMapItems
             coordinate:     _missionItem.landingCoordinate
 
             sourceItem:
                 MissionItemIndexLabel {
-                label:      "L"
+                label:      "Land"
                 checked:    _missionItem.isCurrentItem
+
+                onClicked: setCurrentItem(_missionItem.sequenceNumber)
             }
         }
     }
