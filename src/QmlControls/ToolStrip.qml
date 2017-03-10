@@ -7,7 +7,7 @@
  *
  ****************************************************************************/
 
-import QtQuick          2.4
+import QtQuick          2.3
 import QtQuick.Controls 1.2
 
 import QGroundControl.ScreenTools   1.0
@@ -16,7 +16,7 @@ import QGroundControl.Palette       1.0
 Rectangle {
     id:         _root
     color:      qgcPal.window
-    width:      ScreenTools.defaultFontPixelWidth * 6
+    width:      ScreenTools.isMobile ? ScreenTools.minTouchPixels : ScreenTools.defaultFontPixelWidth * 6
     height:     buttonStripColumn.height + (buttonStripColumn.anchors.margins * 2)
     radius:     _radius
 
@@ -79,8 +79,8 @@ Rectangle {
         dropButtonsExclusiveGroup.current = null
         // Signal all toggles as off
         for (var i=0; i<model.length; i++) {
-            if (model[i].toggleButton === true) {
-                clicked(index, false)
+            if (model[i].toggle === true) {
+                _root.clicked(i, false)
             }
         }
     }
@@ -172,10 +172,10 @@ Rectangle {
 
                     }
 
-                    MouseArea {
+                    QGCMouseArea {
                         // Size of mouse area is expanded to make touch easier
-                        anchors.leftMargin:     buttonStripColumn.margins
-                        anchors.rightMargin:    buttonStripColumn.margins
+                        anchors.leftMargin:     -buttonStripColumn.anchors.margins
+                        anchors.rightMargin:    -buttonStripColumn.anchors.margins
                         anchors.left:           parent.left
                         anchors.right:          parent.right
                         anchors.top:            parent.top
@@ -198,6 +198,7 @@ Rectangle {
                                     dropPanel.hide()    // hide affects checked, so this needs to be duplicated inside not outside if
                                 } else {
                                     dropPanel.hide()    // hide affects checked, so this needs to be duplicated inside not outside if
+                                    uncheckAll()
                                     checked = true
                                     var panelEdgeTopPoint = mapToItem(_root, width, 0)
                                     dropPanel.show(panelEdgeTopPoint, height, modelData.dropPanelComponent)

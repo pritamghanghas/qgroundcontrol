@@ -7,10 +7,10 @@
  *
  ****************************************************************************/
 
-import QtQuick          2.2
+import QtQuick          2.3
 import QtQuick.Controls 1.2
 import QtLocation       5.3
-import QtPositioning    5.2
+import QtPositioning    5.3
 
 import QGroundControl               1.0
 import QGroundControl.ScreenTools   1.0
@@ -22,32 +22,38 @@ import QGroundControl.FlightMap     1.0
 Item {
     property var map    ///< Map control to place item in
 
-    property var _missionItem:  object
-    property var _itemVisual
-    property var _dragArea
+    property var    _missionItem:       object
+    property var    _itemVisual
+    property var    _dragArea
+    property bool   _itemVisualShowing: false
+    property bool   _dragAreaShowing:   false
 
     function hideItemVisuals() {
-        _itemVisual.destroy()
-        _itemVisual = undefined
+        if (_itemVisualShowing) {
+            _itemVisual.destroy()
+            _itemVisualShowing = false
+        }
     }
 
     function showItemVisuals() {
-        if (!_itemVisual) {
+        if (!_itemVisualShowing) {
             _itemVisual = indicatorComponent.createObject(map)
             map.addMapItem(_itemVisual)
+            _itemVisualShowing = true
         }
     }
 
     function hideDragArea() {
-        if (_dragArea) {
+        if (_dragAreaShowing) {
             _dragArea.destroy()
-            _dragArea = undefined
+            _dragAreaShowing = false
         }
     }
 
     function showDragArea() {
-        if (!_dragArea) {
+        if (!_dragAreaShowing && _missionItem.specifiesCoordinate) {
             _dragArea = dragAreaComponent.createObject(map)
+            _dragAreaShowing = true
         }
     }
 
@@ -81,10 +87,10 @@ Item {
         id: dragAreaComponent
 
         MissionItemIndicatorDrag {
-                itemIndicator:  _itemVisual
-                itemCoordinate: _missionItem.coordinate
+            itemIndicator:  _itemVisual
+            itemCoordinate: _missionItem.coordinate
 
-                onItemCoordinateChanged: _missionItem.coordinate = itemCoordinate
+            onItemCoordinateChanged: _missionItem.coordinate = itemCoordinate
         }
     }
 

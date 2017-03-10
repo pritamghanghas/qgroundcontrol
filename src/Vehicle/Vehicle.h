@@ -307,6 +307,8 @@ public:
     Q_PROPERTY(unsigned int         telemetryTXBuffer       READ telemetryTXBuffer                                      NOTIFY telemetryTXBufferChanged)
     Q_PROPERTY(unsigned int         telemetryLNoise         READ telemetryLNoise                                        NOTIFY telemetryLNoiseChanged)
     Q_PROPERTY(unsigned int         telemetryRNoise         READ telemetryRNoise                                        NOTIFY telemetryRNoiseChanged)
+    Q_PROPERTY(QVariantList         toolBarIndicators       READ toolBarIndicators                                      CONSTANT)
+    Q_PROPERTY(QVariantList         cameraList              READ cameraList                                             CONSTANT)
 
 
     /// true: Vehicle is flying, false: Vehicle is on ground
@@ -658,6 +660,10 @@ public:
     QString vehicleImageOpaque  () const;
     QString vehicleImageOutline () const;
     QString vehicleImageCompass () const;
+
+    const QVariantList& toolBarIndicators   ();
+    const QVariantList& cameraList          (void) const;
+
 
 public slots:
     /// Sets the firmware plugin instance data associated with this Vehicle. This object will be parented to the Vehicle

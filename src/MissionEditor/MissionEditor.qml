@@ -8,8 +8,8 @@
  ****************************************************************************/
 
 
-import QtQuick          2.4
-import QtQuick.Controls 1.3
+import QtQuick          2.3
+import QtQuick.Controls 1.2
 import QtQuick.Dialogs  1.2
 import QtLocation       5.3
 import QtPositioning    5.3
@@ -248,13 +248,8 @@ QGCView {
         id: _mapTypeButtonsExclusiveGroup
     }
 
-    ExclusiveGroup {
-        id: _dropButtonsExclusiveGroup
-    }
-
     function setCurrentItem(sequenceNumber) {
         if (sequenceNumber !== _currentMissionIndex) {
-            //editorMap.polygonDraw.cancelPolygonEdit()
             _currentMissionItem = undefined
             _currentMissionIndex = -1
             for (var i=0; i<_visualItems.count; i++) {
@@ -457,59 +452,6 @@ QGCView {
                     }
                 }
 
-                Component {
-                    id: missionItemComponent
-
-                    MissionItemIndicator {
-                        id:             itemIndicator
-                        coordinate:     object.coordinate
-                        visible:        object.isSimpleItem && object.specifiesCoordinate
-                        z:              QGroundControl.zOrderMapItems
-                        missionItem:    object
-                        sequenceNumber: object.sequenceNumber
-
-                        //-- If you don't want to allow selecting items beneath the
-                        //   toolbar, the code below has to check and see if mouse.y
-                        //   is greater than (map.height - ScreenTools.availableHeight)
-                        onClicked: setCurrentItem(object.sequenceNumber)
-
-                        function updateItemIndicator() {
-                            if (object.isCurrentItem && itemIndicator.visible && object.specifiesCoordinate && object.isSimpleItem) {
-                                // Setup our drag item
-                                itemDragger.visible = true
-                                itemDragger.coordinateItem = Qt.binding(function() { return object })
-                                itemDragger.mapCoordinateIndicator = Qt.binding(function() { return itemIndicator })
-                            }
-                        }
-
-                        Connections {
-                            target: object
-
-                            onIsCurrentItemChanged:         updateItemIndicator()
-                            onSpecifiesCoordinateChanged:   updateItemIndicator()
-                        }
-
-                        // These are the non-coordinate child mission items attached to this item
-                        Row {
-                            anchors.top:    parent.top
-                            anchors.left:   parent.right
-
-                            Repeater {
-                                model: object.isSimpleItem ? object.childItems : 0
-
-                                delegate: MissionItemIndexLabel {
-                                    label:                  object.abbreviation
-                                    checked:                object.isCurrentItem
-                                    z:                      2
-                                    specifiesCoordinate:    false
-
-                                    onClicked: setCurrentItem(object.sequenceNumber)
-                                }
-                            }
-                        }
-                    }
-                }
-
                 // Add lines between waypoints
                 MissionLineView {
                     model:      _editingLayer == _layerMission ? missionController.waypointLines : undefined
@@ -635,9 +577,13 @@ QGCView {
                             onClicked:  setCurrentItem(object.sequenceNumber)
 
                             onRemove: {
+                                var removeIndex = index
                                 itemDragger.clearItem()
-                                missionController.removeMissionItem(index)
-                                editorMap.polygonDraw.cancelPolygonEdit()
+                                missionController.removeMissionItem(removeIndex)
+                                if (removeIndex >= missionController.visualItems.count) {
+                                    removeIndex--
+                                }
+                                setCurrentItem(removeIndex)
                             }
 
                             onInsert: {
@@ -750,17 +696,6 @@ QGCView {
                     }
                 }
 
-                //-- Dismiss Drop Down (if any)
-                MouseArea {
-                    anchors.fill:   parent
-                    enabled:        _dropButtonsExclusiveGroup.current != null
-                    onClicked: {
-                        if(_dropButtonsExclusiveGroup.current)
-                            _dropButtonsExclusiveGroup.current.checked = false
-                        _dropButtonsExclusiveGroup.current = null
-                    }
-                }
-
                 ToolStrip {
                     id:                 toolStrip
                     anchors.leftMargin: ScreenTools.defaultFontPixelWidth
@@ -776,7 +711,7 @@ QGCView {
                     buttonVisible:      [ true, true, true, true, true, _showZoom, _showZoom ]
                     maxHeight:          mapScale.y - toolStrip.y
 
-                    property bool _showZoom: !ScreenTools.isShortScreen
+                    property bool _showZoom: !ScreenTools.isMobile
 
                     model: [
                         {

@@ -1,6 +1,6 @@
-import QtQuick                  2.2
+import QtQuick                  2.3
 import QtQuick.Controls         1.2
-import QtQuick.Controls.Styles  1.2
+import QtQuick.Controls.Styles  1.4
 import QtQuick.Dialogs          1.2
 
 import QGroundControl.ScreenTools   1.0
@@ -68,15 +68,10 @@ Rectangle {
 
     }
 
-    MouseArea {
-        // The MouseArea for the hamburger is larger than the hamburger image itself in order to provide a larger
-        // touch area on mobile
-        anchors.top:        parent.top
-        anchors.bottom:     editorLoader.top
-        anchors.leftMargin: -hamburger.anchors.rightMargin
-        anchors.left:       hamburger.left
-        anchors.right:      parent.right
-        onClicked:          hamburgerMenu.popup()
+    QGCMouseArea {
+        fillItem:   hamburger
+        visible:    hamburger.visible
+        onClicked:  hamburgerMenu.popup()
 
         Menu {
             id: hamburgerMenu

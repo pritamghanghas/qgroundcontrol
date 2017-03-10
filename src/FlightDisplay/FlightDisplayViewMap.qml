@@ -8,10 +8,10 @@
  ****************************************************************************/
 
 
-import QtQuick                      2.4
-import QtQuick.Controls             1.3
+import QtQuick                      2.3
+import QtQuick.Controls             1.2
 import QtLocation                   5.3
-import QtPositioning                5.2
+import QtPositioning                5.3
 
 import QGroundControl               1.0
 import QGroundControl.FlightDisplay 1.0
@@ -87,7 +87,7 @@ FlightMap {
         buttonVisible:      [ true, true, _showZoom, _showZoom ]
         maxHeight:          (_flightVideo.visible ? _flightVideo.y : parent.height) - toolStrip.y   // Massive reach across hack
 
-        property bool _showZoom: !ScreenTools.isShortScreen
+        property bool _showZoom: !ScreenTools.isMobile
 
         model: [
             {

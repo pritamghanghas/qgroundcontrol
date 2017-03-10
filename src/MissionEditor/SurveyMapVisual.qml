@@ -7,10 +7,10 @@
  *
  ****************************************************************************/
 
-import QtQuick          2.2
+import QtQuick          2.3
 import QtQuick.Controls 1.2
 import QtLocation       5.3
-import QtPositioning    5.2
+import QtPositioning    5.3
 
 import QGroundControl               1.0
 import QGroundControl.ScreenTools   1.0
@@ -76,6 +76,7 @@ Item {
             anchorPoint.y:  sourceItem.anchorPointY
             z:              QGroundControl.zOrderMapItems
             coordinate:     _missionItem.coordinate
+            visible:        _missionItem.exitCoordinate.isValid
 
             sourceItem:
                 MissionItemIndexLabel {
@@ -96,6 +97,7 @@ Item {
             anchorPoint.y:  sourceItem.anchorPointY
             z:              QGroundControl.zOrderMapItems
             coordinate:     _missionItem.exitCoordinate
+            visible:        _missionItem.exitCoordinate.isValid
 
             sourceItem:
                 MissionItemIndexLabel {
