@@ -494,7 +494,12 @@ HEADERS += \
     src/comm/UDPLink.h \
     src/uas/UAS.h \
     src/uas/UASInterface.h \
-    src/uas/UASMessageHandler.h
+    src/uas/UASMessageHandler.h \
+
+AndroidBuild {
+HEADERS += \
+	src/Joystick/JoystickAndroid.h \
+}
 
 DebugBuild {
 HEADERS += \
