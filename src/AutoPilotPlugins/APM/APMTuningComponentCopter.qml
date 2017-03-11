@@ -44,13 +44,16 @@ SetupPage {
 
             property Fact _angularRollP: controller.getParameterFact(-1, "ATC_ANG_RLL_P");
             property Fact _angularPitchP: controller.getParameterFact(-1, "ATC_ANG_PIT_P");
+            property Fact _angularYawP: controller.getParameterFact(-1, "ATC_ANG_YAW_P");
             readonly property string _angularPIDesText: qsTr("Maximum angular correction sensitivity, higher for wind jolt resistance");
 
             property Fact _rcFeel:          controller.getParameterFact(-1, "RC_FEEL_RP")
             property Fact _rateRollP:       controller.getParameterFact(-1, "r.ATC_RAT_RLL_P")
             property Fact _rateRollI:       controller.getParameterFact(-1, "r.ATC_RAT_RLL_I")
+            property Fact _rateRollD:       controller.getParameterFact(-1, "r.ATC_RAT_RLL_D")
             property Fact _ratePitchP:      controller.getParameterFact(-1, "r.ATC_RAT_PIT_P")
             property Fact _ratePitchI:      controller.getParameterFact(-1, "r.ATC_RAT_PIT_I")
+            property Fact _ratePitchD:      controller.getParameterFact(-1, "r.ATC_RAT_PIT_D")
             property Fact _rateClimbP:      controller.getParameterFact(-1, "ACCEL_Z_P")
             property Fact _rateClimbI:      controller.getParameterFact(-1, "ACCEL_Z_I")
 
@@ -83,11 +86,22 @@ SetupPage {
                 // your bound values. In order to work around this we don't set the values into the Sliders until
                 // after Qml load is done. We also don't track value changes until Qml load completes.
                 throttleHover.value = _hoverTuneParam.value
-                rollPitch.value = _rateRollP.value
+
+                stabilizeRollAngularP.value  = _angularRollP.value
+                stabilizePitchAngularP.value = _angularPitchP.value
+                stabilizeYawAngularP.value   = _angularYawP.value
+
+                rateRollP.value = _rateRollP.value
+                rateRollI.value = _rateRollI.value
+                rateRollD.value = _rateRollD.value
+
+                ratePitchP.value = _ratePitchP.value
+                ratePitchI.value = _ratePitchI.value
+                ratePitchD.value = _ratePitchD.value
+
                 climb.value = _rateClimbP.value
                 rcFeel.value = _rcFeel.value
                 maxAngle.value = _maxAngleParam.value
-                angularPI.value = _angularRollP.value
                 _loadComplete = true
 
                 calcAutoTuneChannel()
@@ -187,16 +201,106 @@ SetupPage {
                         anchors.right:  parent.right
 
                         QGCLabel {
-                            text:       qsTr("Roll/Pitch Sensitivity")
+                            text:       qsTr("Stabilize Roll Sensitivity P Coefficient")
                             font.family: ScreenTools.demiboldFontFamily
                         }
 
                         QGCLabel {
-                            text: qsTr("Slide to the right if the copter is sluggish or slide to the left if the copter is twitchy") + " : " +  rollPitch.value
+                            text: _angularPIDesText + " : " +  _angularRollP.value
                         }
 
                         Slider {
-                            id:                 rollPitch
+                            id:                 stabilizeRollAngularP
+                            anchors.left:       parent.left
+                            anchors.right:      parent.right
+                            minimumValue:       2
+                            maximumValue:       10
+                            stepSize:           0.25
+                            tickmarksEnabled:   true
+
+                            onValueChanged: {
+                                if (_loadComplete) {
+                                    _angularRollP.value = value
+                                }
+                            }
+                        }
+                    }
+
+                    Column {
+                        anchors.left:   parent.left
+                        anchors.right:  parent.right
+
+                        QGCLabel {
+                            text:       qsTr("Stabilize Pitch Sensitivity P Coefficient")
+                            font.family: ScreenTools.demiboldFontFamily
+                        }
+
+                        QGCLabel {
+                            text: _angularPIDesText + " : " +  _angularPitchP.value
+                        }
+
+                        Slider {
+                            id:                 stabilizePitchAngularP
+                            anchors.left:       parent.left
+                            anchors.right:      parent.right
+                            minimumValue:       2
+                            maximumValue:       10
+                            stepSize:           0.25
+                            tickmarksEnabled:   true
+
+                            onValueChanged: {
+                                if (_loadComplete) {
+                                    _angularPitchP.value = value
+                                }
+                            }
+                        }
+                    }
+
+                    Column {
+                        anchors.left:   parent.left
+                        anchors.right:  parent.right
+
+                        QGCLabel {
+                            text:       qsTr("Stabilize Yaw Sensitivity P Coefficient")
+                            font.family: ScreenTools.demiboldFontFamily
+                        }
+
+                        QGCLabel {
+                            text: _angularPIDesText + " : " +  _angularYawP.value
+                        }
+
+                        Slider {
+                            id:                 stabilizeYawAngularP
+                            anchors.left:       parent.left
+                            anchors.right:      parent.right
+                            minimumValue:       2
+                            maximumValue:       10
+                            stepSize:           0.25
+                            tickmarksEnabled:   true
+
+                            onValueChanged: {
+                                if (_loadComplete) {
+                                    _angularYawP.value = value
+                                }
+                            }
+                        }
+                    }
+
+                    Column {
+                        anchors.left:   parent.left
+                        anchors.right:  parent.right
+
+                        QGCLabel {
+                            text:       qsTr("Rate Roll Sensitivity P")
+                            font.family: ScreenTools.demiboldFontFamily
+                        }
+
+                        QGCLabel {
+                            text: qsTr("Slide to the right if the copter is sluggish or slide to the left if the copter is twitchy") + " : " +  rateRollP.value
+                        }
+
+                        Slider {
+                            id:                 rateRollP
                             anchors.left:       parent.left
                             anchors.right:      parent.right
                             minimumValue:       0.08
@@ -207,9 +311,158 @@ SetupPage {
                             onValueChanged: {
                                 if (_loadComplete) {
                                     _rateRollP.value = value
+                                }
+                            }
+                        }
+                    }
+
+                    Column {
+                        anchors.left:   parent.left
+                        anchors.right:  parent.right
+
+                        QGCLabel {
+                            text:       qsTr("Rate Roll Sensitivity I")
+                            font.family: ScreenTools.demiboldFontFamily
+                        }
+
+                        QGCLabel {
+                            text: qsTr("Slide to the right if the copter is sluggish or slide to the left if the copter is twitchy") + " : " +  rateRollI.value
+                        }
+
+                        Slider {
+                            id:                 rateRollI
+                            anchors.left:       parent.left
+                            anchors.right:      parent.right
+                            minimumValue:       0.08
+                            maximumValue:       0.4
+                            stepSize:           0.01
+                            tickmarksEnabled:   true
+
+                            onValueChanged: {
+                                if (_loadComplete) {
                                     _rateRollI.value = value
+                                }
+                            }
+                        }
+                    }
+
+
+                    Column {
+                        anchors.left:   parent.left
+                        anchors.right:  parent.right
+
+                        QGCLabel {
+                            text:       qsTr("Rate Roll Sensitivity D")
+                            font.family: ScreenTools.demiboldFontFamily
+                        }
+
+                        QGCLabel {
+                            text: qsTr("Slide to the right if the copter is sluggish or slide to the left if the copter is twitchy") + " : " +  rateRollD.value
+                        }
+
+                        Slider {
+                            id:                 rateRollD
+                            anchors.left:       parent.left
+                            anchors.right:      parent.right
+                            minimumValue:       0.08
+                            maximumValue:       0.4
+                            stepSize:           0.01
+                            tickmarksEnabled:   true
+
+                            onValueChanged: {
+                                if (_loadComplete) {
+                                    _rateRollD.value = value
+                                }
+                            }
+                        }
+                    }
+
+                    Column {
+                        anchors.left:   parent.left
+                        anchors.right:  parent.right
+
+                        QGCLabel {
+                            text:       qsTr("Rate Pitch Sensitivity P")
+                            font.family: ScreenTools.demiboldFontFamily
+                        }
+
+                        QGCLabel {
+                            text: qsTr("Slide to the right if the copter is sluggish or slide to the left if the copter is twitchy") + " : " +  ratePitchP.value
+                        }
+
+                        Slider {
+                            id:                 ratePitchP
+                            anchors.left:       parent.left
+                            anchors.right:      parent.right
+                            minimumValue:       0.08
+                            maximumValue:       0.4
+                            stepSize:           0.01
+                            tickmarksEnabled:   true
+
+                            onValueChanged: {
+                                if (_loadComplete) {
                                     _ratePitchP.value = value
+                                }
+                            }
+                        }
+                    }
+
+                    Column {
+                        anchors.left:   parent.left
+                        anchors.right:  parent.right
+
+                        QGCLabel {
+                            text:       qsTr("Rate Pitch Sensitivity I")
+                            font.family: ScreenTools.demiboldFontFamily
+                        }
+
+                        QGCLabel {
+                            text: qsTr("Slide to the right if the copter is sluggish or slide to the left if the copter is twitchy") + " : " +  ratePitchI.value
+                        }
+
+                        Slider {
+                            id:                 ratePitchI
+                            anchors.left:       parent.left
+                            anchors.right:      parent.right
+                            minimumValue:       0.08
+                            maximumValue:       0.4
+                            stepSize:           0.01
+                            tickmarksEnabled:   true
+
+                            onValueChanged: {
+                                if (_loadComplete) {
                                     _ratePitchI.value = value
+                                }
+                            }
+                        }
+                    }
+
+
+                    Column {
+                        anchors.left:   parent.left
+                        anchors.right:  parent.right
+
+                        QGCLabel {
+                            text:       qsTr("Rate Pitch Sensitivity D")
+                            font.family: ScreenTools.demiboldFontFamily
+                        }
+
+                        QGCLabel {
+                            text: qsTr("Slide to the right if the copter is sluggish or slide to the left if the copter is twitchy") + " : " +  ratePitchD.value
+                        }
+
+                        Slider {
+                            id:                 ratePitchD
+                            anchors.left:       parent.left
+                            anchors.right:      parent.right
+                            minimumValue:       0.08
+                            maximumValue:       0.4
+                            stepSize:           0.01
+                            tickmarksEnabled:   true
+
+                            onValueChanged: {
+                                if (_loadComplete) {
+                                    _ratePitchD.value = value
                                 }
                             }
                         }
@@ -316,29 +569,6 @@ SetupPage {
                             text:       qsTr("Stabilize Sensitivity")
                             font.family: ScreenTools.demiboldFontFamily
                         }
-
-                        QGCLabel {
-                            id: angularSlider
-                            text: _angularPIDesText + " : " +  _angularRollP.value
-                        }
-
-                        Slider {
-                            id:                 angularPI
-                            anchors.left:       parent.left
-                            anchors.right:      parent.right
-                            minimumValue:       2
-                            maximumValue:       10
-                            stepSize:           0.5
-                            tickmarksEnabled:   true
-
-                            onValueChanged: {
-                                if (_loadComplete) {
-                                    _angularRollP.value = value
-                                    _angularPitchP.value = value
-                                }
-                            }
-                        }
-                    }
                 }
             } // Rectangle - Basic tuning
 
