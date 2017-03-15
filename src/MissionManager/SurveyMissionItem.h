@@ -45,17 +45,29 @@ public:
     Q_PROPERTY(Fact*                manualGrid                  READ manualGrid                     CONSTANT)
     Q_PROPERTY(Fact*                camera                      READ camera                         CONSTANT)
 
+    Q_PROPERTY(bool                 cameraOrientationFixed      MEMBER _cameraOrientationFixed      NOTIFY cameraOrientationFixedChanged)
+
     Q_PROPERTY(double               timeBetweenShots            READ timeBetweenShots               NOTIFY timeBetweenShotsChanged)
     Q_PROPERTY(QVariantList         polygonPath                 READ polygonPath                    NOTIFY polygonPathChanged)
     Q_PROPERTY(QVariantList         gridPoints                  READ gridPoints                     NOTIFY gridPointsChanged)
     Q_PROPERTY(int                  cameraShots                 READ cameraShots                    NOTIFY cameraShotsChanged)
     Q_PROPERTY(double               coveredArea                 READ coveredArea                    NOTIFY coveredAreaChanged)
 
+    // The polygon vertices are also exposed as a list mode since MapItemView will only work with a QAbstractItemModel as
+    // opposed to polygonPath which is a QVariantList.
+    Q_PROPERTY(QmlObjectListModel*  polygonModel                READ polygonModel                   CONSTANT)
+
     Q_INVOKABLE void clearPolygon(void);
     Q_INVOKABLE void addPolygonCoordinate(const QGeoCoordinate coordinate);
     Q_INVOKABLE void adjustPolygonCoordinate(int vertexIndex, const QGeoCoordinate coordinate);
+    Q_INVOKABLE void removePolygonVertex(int vertexIndex);
 
-    QVariantList polygonPath(void) { return _polygonPath; }
+    // Splits the segment between vertextIndex and the next vertex in half
+    Q_INVOKABLE void splitPolygonSegment(int vertexIndex);
+
+    QVariantList        polygonPath (void) { return _polygonPath; }
+    QmlObjectListModel* polygonModel(void) { return &_polygonModel; }
+
     QVariantList gridPoints (void) { return _gridPoints; }
 
     Fact* manualGrid                (void) { return &_manualGridFact; }
@@ -141,13 +153,14 @@ public:
     static const char* cameraName;
 
 signals:
-    void polygonPathChanged         (void);
-    void gridPointsChanged          (void);
-    void cameraShotsChanged         (int cameraShots);
-    void coveredAreaChanged         (double coveredArea);
-    void cameraValueChanged         (void);
-    void gridTypeChanged            (QString gridType);
-    void timeBetweenShotsChanged    (void);
+    void polygonPathChanged             (void);
+    void gridPointsChanged              (void);
+    void cameraShotsChanged             (int cameraShots);
+    void coveredAreaChanged             (double coveredArea);
+    void cameraValueChanged             (void);
+    void gridTypeChanged                (QString gridType);
+    void timeBetweenShotsChanged        (void);
+    void cameraOrientationFixedChanged  (bool cameraOrientationFixed);
 
 private slots:
     void _cameraTriggerChanged(void);
@@ -168,13 +181,14 @@ private:
     void _setCoveredArea(double coveredArea);
     void _cameraValueChanged(void);
 
-    int             _sequenceNumber;
-    bool            _dirty;
-    QVariantList    _polygonPath;
-    QVariantList    _gridPoints;
-    QGeoCoordinate  _coordinate;
-    QGeoCoordinate  _exitCoordinate;
-    double          _altitude;
+    int                 _sequenceNumber;
+    bool                _dirty;
+    QVariantList        _polygonPath;
+    QmlObjectListModel  _polygonModel;
+    QVariantList        _gridPoints;
+    QGeoCoordinate      _coordinate;
+    QGeoCoordinate      _exitCoordinate;
+    bool                _cameraOrientationFixed;
 
     double          _surveyDistance;
     int             _cameraShots;

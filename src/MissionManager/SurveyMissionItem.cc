@@ -13,6 +13,7 @@
 #include "MissionController.h"
 #include "QGCGeo.h"
 #include "QGroundControlQmlGlobal.h"
+#include "QGCQGeoCoordinate.h"
 
 #include <QPolygonF>
 
@@ -68,6 +69,7 @@ SurveyMissionItem::SurveyMissionItem(Vehicle* vehicle, QObject* parent)
     : ComplexMissionItem(vehicle, parent)
     , _sequenceNumber(0)
     , _dirty(false)
+    , _cameraOrientationFixed(false)
     , _surveyDistance(0.0)
     , _cameraShots(0)
     , _coveredArea(0.0)
@@ -95,7 +97,8 @@ SurveyMissionItem::SurveyMissionItem(Vehicle* vehicle, QObject* parent)
 {
     _editorQml = "qrc:/qml/SurveyItemEditor.qml";
 
-    if (_vehicle->multiRotor()) {
+    // NULL check since object creation during unit testing passes NULL for vehicle
+    if (_vehicle && _vehicle->multiRotor()) {
         _turnaroundDistFact.setRawValue(0);
     }
 
@@ -165,6 +168,8 @@ void SurveyMissionItem::clearPolygon(void)
     // will cause the polygon to go away.
     _polygonPath.clear();
 
+    _polygonModel.clearAndDeleteContents();
+
     _clearGrid();
     setDirty(true);
 
@@ -174,6 +179,8 @@ void SurveyMissionItem::clearPolygon(void)
 
 void SurveyMissionItem::addPolygonCoordinate(const QGeoCoordinate coordinate)
 {
+    _polygonModel.append(new QGCQGeoCoordinate(coordinate, this));
+
     _polygonPath << QVariant::fromValue(coordinate);
     emit polygonPathChanged();
 
@@ -189,8 +196,68 @@ void SurveyMissionItem::addPolygonCoordinate(const QGeoCoordinate coordinate)
 
 void SurveyMissionItem::adjustPolygonCoordinate(int vertexIndex, const QGeoCoordinate coordinate)
 {
+    if (vertexIndex < 0 && vertexIndex > _polygonPath.length() - 1) {
+        qWarning() << "Call to adjustPolygonCoordinate with bad vertexIndex:count" << vertexIndex << _polygonPath.length();
+        return;
+    }
+
+    _polygonModel.value<QGCQGeoCoordinate*>(vertexIndex)->setCoordinate(coordinate);
     _polygonPath[vertexIndex] = QVariant::fromValue(coordinate);
     emit polygonPathChanged();
+    _generateGrid();
+    setDirty(true);
+}
+
+void SurveyMissionItem::splitPolygonSegment(int vertexIndex)
+{
+    int nextIndex = vertexIndex + 1;
+    if (nextIndex > _polygonPath.length() - 1) {
+        nextIndex = 0;
+    }
+
+    QGeoCoordinate firstVertex = _polygonPath[vertexIndex].value<QGeoCoordinate>();
+    QGeoCoordinate nextVertex = _polygonPath[nextIndex].value<QGeoCoordinate>();
+
+    double distance = firstVertex.distanceTo(nextVertex);
+    double azimuth = firstVertex.azimuthTo(nextVertex);
+    QGeoCoordinate newVertex = firstVertex.atDistanceAndAzimuth(distance / 2, azimuth);
+
+    if (nextIndex == 0) {
+        addPolygonCoordinate(newVertex);
+    } else {
+        _polygonModel.insert(nextIndex, new QGCQGeoCoordinate(newVertex, this));
+        _polygonPath.insert(nextIndex, QVariant::fromValue(newVertex));
+        emit polygonPathChanged();
+
+        int pointCount = _polygonPath.count();
+        if (pointCount >= 3) {
+            if (pointCount == 3) {
+                emit specifiesCoordinateChanged();
+            }
+            _generateGrid();
+        }
+        setDirty(true);
+    }
+}
+
+void SurveyMissionItem::removePolygonVertex(int vertexIndex)
+{
+    if (vertexIndex < 0 && vertexIndex > _polygonPath.length() - 1) {
+        qWarning() << "Call to removePolygonCoordinate with bad vertexIndex:count" << vertexIndex << _polygonPath.length();
+        return;
+    }
+
+    if (_polygonPath.length() <= 3) {
+        // Don't allow the user to trash the polygon
+        return;
+    }
+
+    QObject* coordObj = _polygonModel.removeAt(vertexIndex);
+    coordObj->deleteLater();
+
+    _polygonPath.removeAt(vertexIndex);
+    emit polygonPathChanged();
+
     _generateGrid();
     setDirty(true);
 }
@@ -431,6 +498,7 @@ bool SurveyMissionItem::load(const QJsonObject& complexObject, int sequenceNumbe
             return false;
         }
         _polygonPath << QVariant::fromValue(pointCoord);
+        _polygonModel.append(new QGCQGeoCoordinate(pointCoord, this));
     }
 
     _generateGrid();
