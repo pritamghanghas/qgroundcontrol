@@ -39,6 +39,8 @@ QGCView {
     property real _editFieldWidth:              ScreenTools.defaultFontPixelWidth * 30
     property Fact _telemPath:                   QGroundControl.settingsManager.appSettings.telemetrySavePath
     property Fact _videoPath:                   QGroundControl.settingsManager.videoSettings.videoSavePath
+    property Fact _mapProvider:                 QGroundControl.settingsManager.flightMapSettings.mapProvider
+    property Fact _mapType:                     QGroundControl.settingsManager.flightMapSettings.mapType
 
     readonly property string _requiresRestart:  qsTr("(Requires Restart)")
 
@@ -277,7 +279,7 @@ QGCView {
                                 icon:       StandardIcon.Warning
                                 standardButtons: StandardButton.Yes | StandardButton.No
                                 title:      qsTr("Clear Settings")
-                                text:       qsTr("All saved settings will be reset the next time you start QGroundControl. Is this really what you want?")
+                                text:       qsTr("All saved settings will be reset the next time you start %1. Is this really what you want?").arg(QGroundControl.appName)
                                 onYes: {
                                     QGroundControl.deleteAllSettingsNextBoot()
                                     clearDialog.visible = false
@@ -338,7 +340,9 @@ QGCView {
                         //-----------------------------------------------------------------
                         //-- Mission AutoLoad
                         Row {
-                            spacing: ScreenTools.defaultFontPixelWidth
+                            spacing:    ScreenTools.defaultFontPixelWidth
+                            visible:    _autoLoadDir.visible
+
                             QGCCheckBox {
                                 id:                     autoLoadCheckbox
                                 anchors.verticalCenter: parent.verticalCenter
@@ -373,39 +377,49 @@ QGCView {
                                 }
                             }
                         }
+
                         //-----------------------------------------------------------------
-                        //-- Map Providers
+                        //-- Map Provider
                         Row {
-                            /*
-                              TODO: Map settings should come from QGroundControl.mapEngineManager. What is currently in
-                              QGroundControl.flightMapSettings should be moved there so all map related funtions are in
-                              one place.
-                             */
                             spacing:    ScreenTools.defaultFontPixelWidth
-                            visible:    QGroundControl.flightMapSettings.googleMapEnabled
+                            visible:    _mapProvider.visible
+
                             QGCLabel {
-                                id:                 mapProvidersLabel
                                 anchors.baseline:   mapProviders.baseline
                                 text:               qsTr("Map Provider:")
                                 width:              _labelWidth
                             }
-                            QGCComboBox {
-                                id:                 mapProviders
-                                width:              _editFieldWidth
-                                model:              QGroundControl.flightMapSettings.mapProviders
-                                Component.onCompleted: {
-                                    var index = mapProviders.find(QGroundControl.flightMapSettings.mapProvider)
-                                    if (index < 0) {
-                                        console.warn(qsTr("Active map provider not in combobox"), QGroundControl.flightMapSettings.mapProvider)
-                                    } else {
-                                        mapProviders.currentIndex = index
-                                    }
-                                }
-                                onActivated: {
-                                    if (index != -1) {
-                                        currentIndex = index
-                                        console.log(qsTr("New map provider: ") + model[index])
-                                        QGroundControl.flightMapSettings.mapProvider = model[index]
+
+                            FactComboBox {
+                                id:         mapProviders
+                                width:      _editFieldWidth
+                                fact:       _mapProvider
+                                indexModel: false
+                            }
+                        }
+
+                        //-----------------------------------------------------------------
+                        //-- Map Type
+                        Row {
+                            spacing:    ScreenTools.defaultFontPixelWidth
+                            visible:    _mapType.visible
+
+                            QGCLabel {
+                                anchors.baseline:   mapTypes.baseline
+                                text:               qsTr("Map Type:")
+                                width:              _labelWidth
+                            }
+
+                            FactComboBox {
+                                id:         mapTypes
+                                width:      _editFieldWidth
+                                fact:       _mapType
+                                indexModel: false
+
+                                Connections {
+                                    target: QGroundControl.settingsManager.flightMapSettings
+                                    onMapTypeChanged: {
+                                        mapTypes.model = _mapType.enumStrings
                                     }
                                 }
                             }
@@ -596,7 +610,7 @@ QGCView {
 
                 QGCLabel {
                     anchors.horizontalCenter:   parent.horizontalCenter
-                    text:                       qsTr("QGroundControl Version: " + QGroundControl.qgcVersion)
+                    text:                       qsTr("%1 Version: %2").arg(QGroundControl.appName).arg(QGroundControl.qgcVersion)
                 }
             } // settingsColumn
         } // QGCFlickable

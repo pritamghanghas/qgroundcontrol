@@ -20,13 +20,16 @@ import QGroundControl.FlightMap     1.0
 
 /// Fixed Wing Landing Pattern map visuals
 Item {
+    id: _root
+
     property var map    ///< Map control to place item in
+
+    signal clicked(int sequenceNumber)
 
     property var _missionItem:  object
     property var _itemVisuals: [ ]
     property var _mouseArea
     property var _dragAreas: [ ]
-    property var _loiterTangentCoordinate
     property var _flightPath
 
     readonly property int _flightPathIndex:     0
@@ -86,46 +89,8 @@ Item {
         }
     }
 
-    function radiansToDegrees(radians) {
-        return radians * (180.0 / Math.PI)
-    }
-
-    function calcPointTangentToCircleWithCenter() {
-        if (_missionItem.landingCoordSet) {
-            var radius = _missionItem.loiterRadius.value
-            var loiterPointPixels = map.fromCoordinate(_missionItem.loiterCoordinate, false /* clipToViewport */)
-            var landPointPixels = map.fromCoordinate(_missionItem.landingCoordinate, false /* clipToViewport */)
-
-            var dxHypotenuse = loiterPointPixels.x - landPointPixels.x
-            var dyHypotenuse = loiterPointPixels.y - landPointPixels.y
-            var oppositeLength = radius
-            var hypotenuseLength = _missionItem.landingCoordinate.distanceTo(_missionItem.loiterCoordinate)
-            var adjacentLength = Math.sqrt(Math.pow(hypotenuseLength, 2) - Math.pow(oppositeLength, 2))
-            var angleToCenterRadians = -Math.atan2(dyHypotenuse, dxHypotenuse)
-            var angleCenterToTangentRadians = Math.asin(oppositeLength / hypotenuseLength)
-            var angleToTangentRadians
-            if (_missionItem.loiterClockwise) {
-                angleToTangentRadians = angleToCenterRadians - angleCenterToTangentRadians
-            } else {
-                angleToTangentRadians = angleToCenterRadians + angleCenterToTangentRadians
-            }
-            var angleToTangentDegrees = (radiansToDegrees(angleToTangentRadians) - 90) * -1
-            /*
-              Keep in for debugging for now
-            console.log("dxHypotenuse", dxHypotenuse)
-            console.log("dyHypotenuse", dyHypotenuse)
-            console.log("oppositeLength", oppositeLength)
-            console.log("hypotenuseLength", hypotenuseLength)
-            console.log("adjacentLength", adjacentLength)
-            console.log("angleCenterToTangentRadians", angleCenterToTangentRadians, radiansToDegrees(angleCenterToTangentRadians))
-            console.log("angleToCenterRadians", angleToCenterRadians, radiansToDegrees(angleToCenterRadians))
-            console.log("angleToTangentDegrees", angleToTangentDegrees)
-            */
-            _loiterTangentCoordinate = _missionItem.landingCoordinate.atDistanceAndAzimuth(adjacentLength, angleToTangentDegrees)
-            _flightPath = [ _loiterTangentCoordinate, _missionItem.landingCoordinate ]
-        } else {
-            _flightPath = undefined
-        }
+    function _setFlightPath() {
+        _flightPath = [ _missionItem.loiterTangentCoordinate, _missionItem.landingCoordinate ]
     }
 
     Component.onCompleted: {
@@ -134,10 +99,10 @@ Item {
             if (_missionItem.isCurrentItem) {
                 showDragAreas()
             }
+            _setFlightPath()
         } else if (_missionItem.isCurrentItem) {
             showMouseArea()
         }
-        calcPointTangentToCircleWithCenter()
     }
 
     Component.onDestruction: {
@@ -167,16 +132,15 @@ Item {
                 hideMouseArea()
                 showItemVisuals()
                 showDragAreas()
+                _setFlightPath()
             } else if (_missionItem.isCurrentItem) {
                 hideDragAreas()
                 showMouseArea()
             }
-            calcPointTangentToCircleWithCenter()
         }
 
-        onLandingCoordinateChanged: calcPointTangentToCircleWithCenter()
-        onLoiterCoordinateChanged:  calcPointTangentToCircleWithCenter()
-        onLoiterClockwiseChanged:   calcPointTangentToCircleWithCenter()
+        onLandingCoordinateChanged:         _setFlightPath()
+        onLoiterTangentCoordinateChanged:   _setFlightPath()
     }
 
     // Mouse area to capture landing point coordindate
@@ -187,7 +151,7 @@ Item {
             anchors.fill: map
 
             onClicked: {
-                var coordinate = map.toCoordinate(Qt.point(mouse.x, mouse.y))
+                var coordinate = map.toCoordinate(Qt.point(mouse.x, mouse.y), false /* clipToViewPort */)
                 coordinate.latitude = coordinate.latitude.toFixed(_decimalPlaces)
                 coordinate.longitude = coordinate.longitude.toFixed(_decimalPlaces)
                 coordinate.altitude = coordinate.altitude.toFixed(_decimalPlaces)
@@ -244,10 +208,11 @@ Item {
 
             sourceItem:
                 MissionItemIndexLabel {
+                index:      _missionItem.sequenceNumber
                 label:      "Loiter"
                 checked:    _missionItem.isCurrentItem
 
-                onClicked: setCurrentItem(_missionItem.sequenceNumber)
+                onClicked: _root.clicked(_missionItem.sequenceNumber)
             }
         }
     }
@@ -259,7 +224,7 @@ Item {
         MapCircle {
             z:              QGroundControl.zOrderMapItems
             center:         _missionItem.loiterCoordinate
-            radius:         _missionItem.loiterRadius.value
+            radius:         _missionItem.loiterRadius.rawValue
             border.width:   2
             border.color:   "green"
             color:          "transparent"
@@ -278,10 +243,11 @@ Item {
 
             sourceItem:
                 MissionItemIndexLabel {
+                index:      _missionItem.lastSequenceNumber
                 label:      "Land"
                 checked:    _missionItem.isCurrentItem
 
-                onClicked: setCurrentItem(_missionItem.sequenceNumber)
+                onClicked: _root.clicked(_missionItem.sequenceNumber)
             }
         }
     }

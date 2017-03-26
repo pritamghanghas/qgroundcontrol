@@ -20,10 +20,14 @@
 
 static const char* kQmlGlobalKeyName = "QGCQml";
 
+const char* QGroundControlQmlGlobal::_flightMapPositionSettingsGroup =          "FlightMapPosition";
+const char* QGroundControlQmlGlobal::_flightMapPositionLatitudeSettingsKey =    "Latitude";
+const char* QGroundControlQmlGlobal::_flightMapPositionLongitudeSettingsKey =   "Longitude";
+const char* QGroundControlQmlGlobal::_flightMapZoomSettingsKey =                "FlightMapZoom";
+
 QGroundControlQmlGlobal::QGroundControlQmlGlobal(QGCApplication* app)
     : QGCTool(app)
     , _hbSettings(NULL)
-    , _flightMapSettings(NULL)
     , _linkManager(NULL)
     , _multiVehicleManager(NULL)
     , _mapEngineManager(NULL)
@@ -34,6 +38,7 @@ QGroundControlQmlGlobal::QGroundControlQmlGlobal(QGCApplication* app)
     , _corePlugin(NULL)
     , _firmwarePluginManager(NULL)
     , _settingsManager(NULL)
+    , _skipSetupPage(false)
 {
     // We clear the parent on this object since we run into shutdown problems caused by hybrid qml app. Instead we let it leak on shutdown.
     setParent(NULL);
@@ -48,7 +53,6 @@ void QGroundControlQmlGlobal::setToolbox(QGCToolbox* toolbox)
 {
     QGCTool::setToolbox(toolbox);
 
-    _flightMapSettings      = toolbox->flightMapSettings();
     _linkManager            = toolbox->linkManager();
     _multiVehicleManager    = toolbox->multiVehicleManager();
     _mapEngineManager       = toolbox->mapEngineManager();
@@ -175,4 +179,53 @@ bool QGroundControlQmlGlobal::linesIntersect(QPointF line1A, QPointF line1B, QPo
 
     return QLineF(line1A, line1B).intersect(QLineF(line2A, line2B), &intersectPoint) == QLineF::BoundedIntersection &&
             intersectPoint != line1A && intersectPoint != line1B;
+}
+
+void QGroundControlQmlGlobal::setSkipSetupPage(bool skip)
+{
+    if(_skipSetupPage != skip) {
+        _skipSetupPage = skip;
+        emit skipSetupPageChanged();
+    }
+}
+
+QGeoCoordinate QGroundControlQmlGlobal::flightMapPosition(void)
+{
+    QSettings       settings;
+    QGeoCoordinate  coord;
+
+    settings.beginGroup(_flightMapPositionSettingsGroup);
+    coord.setLatitude(settings.value(_flightMapPositionLatitudeSettingsKey, 37.803784).toDouble());
+    coord.setLongitude(settings.value(_flightMapPositionLongitudeSettingsKey, -122.462276).toDouble());
+
+    return coord;
+}
+
+double QGroundControlQmlGlobal::flightMapZoom(void)
+{
+    QSettings settings;
+
+    return settings.value(_flightMapZoomSettingsKey, 18).toDouble();
+}
+
+void QGroundControlQmlGlobal::setFlightMapPosition(QGeoCoordinate& coordinate)
+{
+    if (coordinate != flightMapPosition()) {
+        QSettings settings;
+
+        settings.beginGroup(_flightMapPositionSettingsGroup);
+        settings.setValue(_flightMapPositionLatitudeSettingsKey, coordinate.latitude());
+        settings.setValue(_flightMapPositionLongitudeSettingsKey, coordinate.longitude());
+        emit flightMapPositionChanged(coordinate);
+    }
+}
+
+void QGroundControlQmlGlobal::setFlightMapZoom(double zoom)
+{
+    if (zoom != flightMapZoom()) {
+        QSettings settings;
+
+        settings.setValue(_flightMapZoomSettingsKey, zoom);
+        emit flightMapZoomChanged(zoom);
+    }
 }

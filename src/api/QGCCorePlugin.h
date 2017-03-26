@@ -37,8 +37,12 @@ public:
     Q_PROPERTY(int          defaultSettings     READ defaultSettings    CONSTANT)
     Q_PROPERTY(QGCOptions*  options             READ options            CONSTANT)
 
-    Q_PROPERTY(bool         showTouchAreas      MEMBER _showTouchAreas NOTIFY showTouchAreasChanged)
-    Q_PROPERTY(bool         showAdvancedUI      MEMBER _showAdvancedUI NOTIFY showAdvancedUIChanged)
+    Q_PROPERTY(bool         showTouchAreas      READ showTouchAreas     WRITE setShowTouchAreas    NOTIFY showTouchAreasChanged)
+    Q_PROPERTY(bool         showAdvancedUI      READ showAdvancedUI     WRITE setShowAdvancedUI    NOTIFY showAdvancedUIChanged)
+    Q_PROPERTY(QString                  showAdvancedUIMessage           READ showAdvancedUIMessage          CONSTANT)
+
+    Q_PROPERTY(QString      brandImageIndoor    READ brandImageIndoor   CONSTANT)
+    Q_PROPERTY(QString      brandImageOutdoor   READ brandImageOutdoor  CONSTANT)
 
     /// The list of settings under the Settings Menu
     /// @return A list of QGCSettings
@@ -61,6 +65,21 @@ public:
     ///     @param metaData - MetaData for setting fact
     /// @return true: Setting should be visible in ui, false: Setting should not be shown in ui
     virtual bool adjustSettingMetaData                  (FactMetaData& metaData);
+
+    /// Return the resource file which contains the brand image for for Indoor theme.
+    virtual QString brandImageIndoor(void) const { return QString(); }
+
+    /// Return the resource file which contains the brand image for for Outdoor theme.
+    virtual QString brandImageOutdoor(void) const { return QString(); }
+
+    /// @return The message to show to the user when they a re prompted to confirm turning on advanced ui.
+    virtual QString showAdvancedUIMessage(void) const { return tr("WARNING: You are about to enter Advanced Mode. This may expose features which may cause your vehicle to malfunction. "
+                                                                  "You should do so only if instructed by customer support. Are you sure you want to enable Advanced Mode?"); }
+
+    bool showTouchAreas(void) const { return _showTouchAreas; }
+    bool showAdvancedUI(void) const { return _showAdvancedUI; }
+    void setShowTouchAreas(bool show);
+    void setShowAdvancedUI(bool show);
 
     // Override from QGCTool
     void                            setToolbox          (QGCToolbox *toolbox);

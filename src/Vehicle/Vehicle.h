@@ -290,7 +290,8 @@ public:
     Q_PROPERTY(bool                 coaxialMotors           READ coaxialMotors                                          CONSTANT)
     Q_PROPERTY(bool                 xConfigMotors           READ xConfigMotors                                          CONSTANT)
     Q_PROPERTY(bool                 isOfflineEditingVehicle READ isOfflineEditingVehicle                                CONSTANT)
-    Q_PROPERTY(QString              brandImage              READ brandImage                                             NOTIFY firmwareTypeChanged)
+    Q_PROPERTY(QString              brandImageIndoor        READ brandImageIndoor                                       NOTIFY firmwareTypeChanged)
+    Q_PROPERTY(QString              brandImageOutdoor       READ brandImageOutdoor                                      NOTIFY firmwareTypeChanged)
     Q_PROPERTY(QStringList          unhealthySensors        READ unhealthySensors                                       NOTIFY unhealthySensorsChanged)
     Q_PROPERTY(QString              missionFlightMode       READ missionFlightMode                                      CONSTANT)
     Q_PROPERTY(QString              rtlFlightMode           READ rtlFlightMode                                          CONSTANT)
@@ -338,6 +339,7 @@ public:
     Q_PROPERTY(Fact* climbRate          READ climbRate          CONSTANT)
     Q_PROPERTY(Fact* altitudeRelative   READ altitudeRelative   CONSTANT)
     Q_PROPERTY(Fact* altitudeAMSL       READ altitudeAMSL       CONSTANT)
+    Q_PROPERTY(Fact* flightDistance     READ flightDistance     CONSTANT)
 
     Q_PROPERTY(FactGroup* gps         READ gpsFactGroup         CONSTANT)
     Q_PROPERTY(FactGroup* battery     READ batteryFactGroup     CONSTANT)
@@ -382,7 +384,7 @@ public:
     Q_INVOKABLE void guidedModeLand(void);
 
     /// Command vehicle to takeoff from current location
-    Q_INVOKABLE void guidedModeTakeoff(double altitudeRel);
+    Q_INVOKABLE void guidedModeTakeoff(void);
 
     /// Command vehicle to move to specified location (altitude is included and relative)
     Q_INVOKABLE void guidedModeGotoLocation(const QGeoCoordinate& gotoCoord);
@@ -406,6 +408,8 @@ public:
 
     /// Command vehicle to abort landing
     Q_INVOKABLE void abortLanding(double climbOutAltitude);
+
+    Q_INVOKABLE void startMission(void);
 
     /// Alter the current mission item on the vehicle
     Q_INVOKABLE void setCurrentMissionSequence(int seq);
@@ -575,13 +579,14 @@ public:
     uint8_t         baseMode                () const { return _base_mode; }
     uint32_t        customMode              () const { return _custom_mode; }
     bool            isOfflineEditingVehicle () const { return _offlineEditingVehicle; }
-    QString         brandImage              () const;
+    QString         brandImageIndoor        () const;
+    QString         brandImageOutdoor       () const;
     QStringList     unhealthySensors        () const;
     QString         missionFlightMode       () const;
     QString         rtlFlightMode           () const;
     QString         takeControlFlightMode   () const;
-    double          cruiseSpeed             () const { return _cruiseSpeed; }
-    double          hoverSpeed              () const { return _hoverSpeed; }
+    double          defaultCruiseSpeed      () const { return _defaultCruiseSpeed; }
+    double          defaultHoverSpeed       () const { return _defaultHoverSpeed; }
     QString         firmwareTypeString      () const;
     QString         vehicleTypeString       () const;
     int             telemetryRRSSI          () { return _telemetryRRSSI; }
@@ -600,6 +605,7 @@ public:
     Fact* climbRate         (void) { return &_climbRateFact; }
     Fact* altitudeRelative  (void) { return &_altitudeRelativeFact; }
     Fact* altitudeAMSL      (void) { return &_altitudeAMSLFact; }
+    Fact* flightDistance    (void) { return &_flightDistanceFact; }
 
     FactGroup* gpsFactGroup         (void) { return &_gpsFactGroup; }
     FactGroup* batteryFactGroup     (void) { return &_batteryFactGroup; }
@@ -664,6 +670,10 @@ public:
     const QVariantList& toolBarIndicators   ();
     const QVariantList& cameraList          (void) const;
 
+    bool supportsMissionItemInt(void) const { return _supportsMissionItemInt; }
+
+    /// @true: When flying a mission the vehicle is always facing towards the next waypoint
+    bool vehicleYawsToNextWaypointInMission(void) const;
 
 public slots:
     /// Sets the firmware plugin instance data associated with this Vehicle. This object will be parented to the Vehicle
@@ -695,8 +705,8 @@ signals:
     void prearmErrorChanged(const QString& prearmError);
     void soloFirmwareChanged(bool soloFirmware);
     void unhealthySensorsChanged(void);
-    void cruiseSpeedChanged(double cruiseSpeed);
-    void hoverSpeedChanged(double hoverSpeed);
+    void defaultCruiseSpeedChanged(double cruiseSpeed);
+    void defaultHoverSpeedChanged(double hoverSpeed);
     void firmwareTypeChanged(void);
     void vehicleTypeChanged(void);
 
@@ -836,6 +846,7 @@ private:
     void _checkFlying();
     void _checkDesiredAlitude();
     void _resetBreachflytoLocationOnModeChange();
+    void _startMissionRequest(void);
 
     int     _id;                    ///< Mavlink system id
 
@@ -885,8 +896,8 @@ private:
     uint32_t        _onboardControlSensorsUnhealthy;
     bool            _gpsRawIntMessageAvailable;
     bool            _globalPositionIntMessageAvailable;
-    double          _cruiseSpeed;
-    double          _hoverSpeed;
+    double          _defaultCruiseSpeed;
+    double          _defaultHoverSpeed;
     int             _telemetryRRSSI;
     int             _telemetryLRSSI;
     uint32_t        _telemetryRXErrors;
@@ -894,6 +905,8 @@ private:
     uint32_t        _telemetryTXBuffer;
     uint32_t        _telemetryLNoise;
     uint32_t        _telemetryRNoise;
+    bool            _vehicleCapabilitiesKnown;
+    bool            _supportsMissionItemInt;
 
     typedef struct {
         int     component;
@@ -990,6 +1003,7 @@ private:
     Fact _climbRateFact;
     Fact _altitudeRelativeFact;
     Fact _altitudeAMSLFact;
+    Fact _flightDistanceFact;
 
     VehicleGPSFactGroup         _gpsFactGroup;
     VehicleBatteryFactGroup     _batteryFactGroup;
@@ -1005,6 +1019,7 @@ private:
     static const char* _climbRateFactName;
     static const char* _altitudeRelativeFactName;
     static const char* _altitudeAMSLFactName;
+    static const char* _flightDistanceFactName;
 
     static const char* _gpsFactGroupName;
     static const char* _batteryFactGroupName;

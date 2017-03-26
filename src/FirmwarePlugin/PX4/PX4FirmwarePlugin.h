@@ -40,10 +40,11 @@ public:
     void                pauseVehicle                    (Vehicle* vehicle) override;
     void                guidedModeRTL                   (Vehicle* vehicle) override;
     void                guidedModeLand                  (Vehicle* vehicle) override;
-    void                guidedModeTakeoff               (Vehicle* vehicle, double altitudeRel) override;
+    void                guidedModeTakeoff               (Vehicle* vehicle) override;
     void                guidedModeOrbit                 (Vehicle* vehicle, const QGeoCoordinate& centerCoord = QGeoCoordinate(), double radius = NAN, double velocity = NAN, double altitude = NAN) override;
     void                guidedModeGotoLocation          (Vehicle* vehicle, const QGeoCoordinate& gotoCoord) override;
     void                guidedModeChangeAltitude        (Vehicle* vehicle, double altitudeRel) override;
+    void                startMission                    (Vehicle* vehicle) override;
     bool                isGuidedMode                    (const Vehicle* vehicle) const override;
     int                 manualControlReservedButtonCount(void) override;
     bool                supportsManualControl           (void) override;
@@ -58,10 +59,12 @@ public:
     bool                adjustIncomingMavlinkMessage    (Vehicle* vehicle, mavlink_message_t* message) override;
     GeoFenceManager*    newGeoFenceManager              (Vehicle* vehicle) override { return new PX4GeoFenceManager(vehicle); }
     QString             offlineEditingParamFile(Vehicle* vehicle) override { Q_UNUSED(vehicle); return QStringLiteral(":/FirmwarePlugin/PX4/PX4.OfflineEditing.params"); }
-    QString             brandImage                      (const Vehicle* vehicle) const override { Q_UNUSED(vehicle); return QStringLiteral("/qmlimages/PX4/BrandImage"); }
+    QString             brandImageIndoor                (const Vehicle* vehicle) const override { Q_UNUSED(vehicle); return QStringLiteral("/qmlimages/PX4/BrandImage"); }
+    QString             brandImageOutdoor               (const Vehicle* vehicle) const override { Q_UNUSED(vehicle); return QStringLiteral("/qmlimages/PX4/BrandImage"); }
     QString             missionFlightMode               (void) override;
     QString             rtlFlightMode                   (void) override;
     QString             takeControlFlightMode           (void) override;
+    bool                vehicleYawsToNextWaypointInMission(const Vehicle* vehicle) const override;
 
 protected:
     typedef struct {

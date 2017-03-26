@@ -28,15 +28,23 @@ Item {
     property alias  guidedModeBar:          _guidedModeBar
     property bool   gotoEnabled:            _activeVehicle && _activeVehicle.guidedMode && _activeVehicle.flying
     property var    qgcView
-    property bool   isBackgroundDark
+    property bool   useLightColors
+    property var    missionController
 
     property var    _activeVehicle:         QGroundControl.multiVehicleManager.activeVehicle
     property bool   _isSatellite:           _mainIsMap ? (_flightMap ? _flightMap.isSatelliteMap : true) : true
     property bool   _lightWidgetBorders:    _isSatellite
 
+    // Guided bar properties
+    property bool _missionAvailable:    missionController.containsItems
+    property bool _missionActive:       _activeVehicle ? _activeVehicle.flightMode === _activeVehicle.missionFlightMode : false
+    property bool _missionInProgress:   missionController.missionInProgress
+    property bool _showEmergenyStop:    QGroundControl.corePlugin.options.guidedBarShowEmergencyStop
+    property bool _showOrbit:           QGroundControl.corePlugin.options.guidedBarShowOrbit
+
     readonly property real _margins:        ScreenTools.defaultFontPixelHeight * 0.5
 
-    QGCMapPalette { id: mapPal; lightColors: isBackgroundDark }
+    QGCMapPalette { id: mapPal; lightColors: useLightColors }
     QGCPalette    { id: qgcPal }
 
     function getPreferredInstrumentWidth() {
@@ -223,6 +231,8 @@ Item {
         readonly property int confirmRetask:        9
         readonly property int confirmOrbit:         10
         readonly property int confirmAbort:         11
+        readonly property int confirmStartMission:  12
+        readonly property int confirmResumeMission: 13
 
         property int    confirmActionCode
         property real   _showMargin:    _margins
@@ -238,10 +248,11 @@ Item {
                 _activeVehicle.guidedModeLand()
                 break;
             case confirmTakeoff:
-                var altitude1 = altitudeSlider.getValue()
-                if (!isNaN(altitude1)) {
-                    _activeVehicle.guidedModeTakeoff(altitude1)
-                }
+                _activeVehicle.guidedModeTakeoff()
+                break;
+            case confirmResumeMission:
+            case confirmStartMission:
+                _activeVehicle.startMission()
                 break;
             case confirmArm:
                 _activeVehicle.armed = true
@@ -300,9 +311,13 @@ Item {
                 guidedModeConfirm.confirmText = qsTr("STOP ALL MOTORS!")
                 break;
             case confirmTakeoff:
-                altitudeSlider.visible = true
-                altitudeSlider.setInitialValueMeters(3)
                 guidedModeConfirm.confirmText = qsTr("takeoff")
+                break;
+            case confirmStartMission:
+                guidedModeConfirm.confirmText = qsTr("start mission")
+                break;
+            case confirmResumeMission:
+                guidedModeConfirm.confirmText = qsTr("resume mission")
                 break;
             case confirmLand:
                 guidedModeConfirm.confirmText = qsTr("land")
@@ -319,7 +334,7 @@ Item {
                 guidedModeConfirm.confirmText = qsTr("move vehicle")
                 break;
             case confirmRetask:
-                guidedModeConfirm.confirmText = qsTr("active waypoint change")
+                guidedModeConfirm.confirmText = qsTr("activate waypoint change")
                 break;
             case confirmOrbit:
                 guidedModeConfirm.confirmText = qsTr("enter orbit mode")
@@ -351,33 +366,58 @@ Item {
 
                 QGCButton {
                     pointSize:  _guidedModeBar._fontPointSize
-                    text:       (_activeVehicle && _activeVehicle.armed) ? (_activeVehicle.flying ? qsTr("Emergency Stop") : qsTr("Disarm")) :  qsTr("Arm")
-                    visible:    _activeVehicle
-                    onClicked:  _guidedModeBar.confirmAction(_activeVehicle.armed ? (_activeVehicle.flying ? _guidedModeBar.confirmEmergencyStop : _guidedModeBar.confirmDisarm) : _guidedModeBar.confirmArm)
+                    text:       qsTr("Emergency Stop")
+                    visible:    _showEmergenyStop && _activeVehicle && _activeVehicle.armed && _activeVehicle.flying
+                    onClicked:  _guidedModeBar.confirmAction(_guidedModeBar.confirmEmergencyStop)
+                }
+
+                QGCButton {
+                    pointSize:  _guidedModeBar._fontPointSize
+                    text:       qsTr("Disarm")
+                    visible:    _activeVehicle && _activeVehicle.armed && !_activeVehicle.flying
+                    onClicked:  _guidedModeBar.confirmAction(_guidedModeBar.confirmDisarm)
                 }
 
                 QGCButton {
                     pointSize:  _guidedModeBar._fontPointSize
                     text:       qsTr("RTL")
-                    visible:    (_activeVehicle && _activeVehicle.armed) && _activeVehicle.guidedModeSupported && _activeVehicle.flying
+                    visible:    _activeVehicle && _activeVehicle.armed && _activeVehicle.guidedModeSupported && _activeVehicle.flying
                     onClicked:  _guidedModeBar.confirmAction(_guidedModeBar.confirmHome)
                 }
 
                 QGCButton {
                     pointSize:  _guidedModeBar._fontPointSize
-                    text:       (_activeVehicle && _activeVehicle.flying) ?  qsTr("Land"):  qsTr("Takeoff")
-                    visible:    _activeVehicle && _activeVehicle.guidedModeSupported && _activeVehicle.armed
-                    onClicked:  _guidedModeBar.confirmAction(_activeVehicle.flying ? _guidedModeBar.confirmLand : _guidedModeBar.confirmTakeoff)
+                    text:       qsTr("Takeoff")
+                    visible:    _activeVehicle && _activeVehicle.guidedModeSupported && !_activeVehicle.flying  && !_activeVehicle.fixedWing
+                    onClicked:  _guidedModeBar.confirmAction(_guidedModeBar.confirmTakeoff)
                 }
 
                 QGCButton {
                     pointSize:  _guidedModeBar._fontPointSize
-                    text:       qsTr("Pause")
-                    visible:    (_activeVehicle && _activeVehicle.armed) && _activeVehicle.pauseVehicleSupported && _activeVehicle.flying
-                    onClicked:  {
-                        guidedModeHideTimer.restart()
-                        _activeVehicle.pauseVehicle()
-                    }
+                    text:       qsTr("Land")
+                    visible:    _activeVehicle && _activeVehicle.guidedModeSupported && _activeVehicle.armed && !_activeVehicle.fixedWing
+                    onClicked:  _guidedModeBar.confirmAction(_guidedModeBar.confirmLand)
+                }
+
+                QGCButton {
+                    pointSize:  _guidedModeBar._fontPointSize
+                    text:       qsTr("Start Mission")
+                    visible:    _activeVehicle && !_activeVehicle.flying && _missionAvailable
+                    onClicked:  _guidedModeBar.confirmAction(_guidedModeBar.confirmStartMission)
+                }
+
+                QGCButton {
+                    pointSize:  _guidedModeBar._fontPointSize
+                    text:       qsTr("Resume Mission")
+                    visible:    _activeVehicle && _activeVehicle.guidedModeSupported && !_activeVehicle.flying && _missionAvailable && _missionInProgress
+                    onClicked:  _guidedModeBar.confirmAction(_guidedModeBar.confirmResumeMission)
+                }
+
+                QGCButton {
+                    pointSize:  _guidedModeBar._fontPointSize
+                    text:       _missionActive ? qsTr("Pause Mission") : qsTr("Pause")
+                    visible:    _activeVehicle && _activeVehicle.armed && _activeVehicle.pauseVehicleSupported && _activeVehicle.flying
+                    onClicked:  _activeVehicle.pauseVehicle()
                 }
 
                 QGCButton {
@@ -390,7 +430,7 @@ Item {
                 QGCButton {
                     pointSize:  _guidedModeBar._fontPointSize
                     text:       qsTr("Orbit")
-                    visible:    (_activeVehicle && _activeVehicle.flying) && _activeVehicle.orbitModeSupported && _activeVehicle.armed
+                    visible:    _showOrbit && _activeVehicle && _activeVehicle.flying && _activeVehicle.orbitModeSupported && _activeVehicle.armed
                     onClicked:  _guidedModeBar.confirmAction(_guidedModeBar.confirmOrbit)
                 }
 

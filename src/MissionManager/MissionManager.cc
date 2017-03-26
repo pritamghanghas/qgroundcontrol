@@ -73,7 +73,7 @@ void MissionManager::writeMissionItems(const QList<MissionItem*>& missionItems)
             }
         }
     }
-    emit newMissionItemsAvailable();
+    emit newMissionItemsAvailable(missionItems.count() == 0);
 
     qCDebug(MissionManagerLog) << "writeMissionItems count:" << _missionItems.count();
     
@@ -91,7 +91,7 @@ void MissionManager::writeMissionItems(const QList<MissionItem*>& missionItems)
 /// This begins the write sequence with the vehicle. This may be called during a retry.
 void MissionManager::_writeMissionCount(void)
 {
-    qCDebug(MissionManagerLog) << "_writeMissionCount retry count" << _retryCount;
+    qCDebug(MissionManagerLog) << "_writeMissionCount count:_retryCount" << _missionItems.count() << _retryCount;
 
     mavlink_message_t       message;
     mavlink_mission_count_t missionCount;
@@ -306,7 +306,7 @@ void MissionManager::_readTransactionComplete(void)
     _vehicle->sendMessageOnLink(_dedicatedLink, message);
 
     _finishTransaction(true);
-    emit newMissionItemsAvailable();
+    emit newMissionItemsAvailable(false);
 }
 
 void MissionManager::_handleMissionCount(const mavlink_message_t& message)
@@ -342,50 +342,108 @@ void MissionManager::_requestNextMissionItem(void)
 
     qCDebug(MissionManagerLog) << "_requestNextMissionItem sequenceNumber:retry" << _itemIndicesToRead[0] << _retryCount;
 
-    mavlink_message_t           message;
-    mavlink_mission_request_t   missionRequest;
-    
-    missionRequest.target_system =      _vehicle->id();
-    missionRequest.target_component =   MAV_COMP_ID_MISSIONPLANNER;
-    missionRequest.seq =                _itemIndicesToRead[0];
-    
-    mavlink_msg_mission_request_encode_chan(qgcApp()->toolbox()->mavlinkProtocol()->getSystemId(),
-                                            qgcApp()->toolbox()->mavlinkProtocol()->getComponentId(),
-                                            _dedicatedLink->mavlinkChannel(),
-                                            &message,
-                                            &missionRequest);
+    mavlink_message_t message;
+    if (_vehicle->supportsMissionItemInt()) {
+        mavlink_mission_request_int_t missionRequest;
+
+        missionRequest.target_system =      _vehicle->id();
+        missionRequest.target_component =   MAV_COMP_ID_MISSIONPLANNER;
+        missionRequest.seq =                _itemIndicesToRead[0];
+
+        mavlink_msg_mission_request_int_encode_chan(qgcApp()->toolbox()->mavlinkProtocol()->getSystemId(),
+                                                    qgcApp()->toolbox()->mavlinkProtocol()->getComponentId(),
+                                                    _dedicatedLink->mavlinkChannel(),
+                                                    &message,
+                                                    &missionRequest);
+    } else {
+        mavlink_mission_request_t missionRequest;
+
+        missionRequest.target_system =      _vehicle->id();
+        missionRequest.target_component =   MAV_COMP_ID_MISSIONPLANNER;
+        missionRequest.seq =                _itemIndicesToRead[0];
+
+        mavlink_msg_mission_request_encode_chan(qgcApp()->toolbox()->mavlinkProtocol()->getSystemId(),
+                                                qgcApp()->toolbox()->mavlinkProtocol()->getComponentId(),
+                                                _dedicatedLink->mavlinkChannel(),
+                                                &message,
+                                                &missionRequest);
+    }
     
     _vehicle->sendMessageOnLink(_dedicatedLink, message);
     _startAckTimeout(AckMissionItem);
 }
 
-void MissionManager::_handleMissionItem(const mavlink_message_t& message)
+void MissionManager::_handleMissionItem(const mavlink_message_t& message, bool missionItemInt)
 {
-    mavlink_mission_item_t missionItem;
     
     if (!_checkForExpectedAck(AckMissionItem)) {
         return;
     }
-    
-    mavlink_msg_mission_item_decode(&message, &missionItem);
-    
-    qCDebug(MissionManagerLog) << "_handleMissionItem sequenceNumber:" << missionItem.seq;
-    
-    if (_itemIndicesToRead.contains(missionItem.seq)) {
-        _itemIndicesToRead.removeOne(missionItem.seq);
 
-        MissionItem* item = new MissionItem(missionItem.seq,
-                                            (MAV_CMD)missionItem.command,
-                                            (MAV_FRAME)missionItem.frame,
-                                            missionItem.param1,
-                                            missionItem.param2,
-                                            missionItem.param3,
-                                            missionItem.param4,
-                                            missionItem.x,
-                                            missionItem.y,
-                                            missionItem.z,
-                                            missionItem.autocontinue,
-                                            missionItem.current,
+    MAV_CMD     command;
+    MAV_FRAME   frame;
+    double      param1;
+    double      param2;
+    double      param3;
+    double      param4;
+    double      param5;
+    double      param6;
+    double      param7;
+    bool        autoContinue;
+    bool        isCurrentItem;
+    int         seq;
+
+    if (missionItemInt) {
+        mavlink_mission_item_int_t missionItem;
+        mavlink_msg_mission_item_int_decode(&message, &missionItem);
+
+        command =       (MAV_CMD)missionItem.command,
+        frame =         (MAV_FRAME)missionItem.frame,
+        param1 =        missionItem.param1;
+        param2 =        missionItem.param2;
+        param3 =        missionItem.param3;
+        param4 =        missionItem.param4;
+        param5 =        (double)missionItem.x / qPow(10.0, 7.0);
+        param6 =        (double)missionItem.y / qPow(10.0, 7.0);
+        param7 =        (double)missionItem.z;
+        autoContinue =  missionItem.autocontinue;
+        isCurrentItem = missionItem.current;
+        seq =           missionItem.seq;
+    } else {
+        mavlink_mission_item_t missionItem;
+        mavlink_msg_mission_item_decode(&message, &missionItem);
+
+        command =       (MAV_CMD)missionItem.command,
+        frame =         (MAV_FRAME)missionItem.frame,
+        param1 =        missionItem.param1;
+        param2 =        missionItem.param2;
+        param3 =        missionItem.param3;
+        param4 =        missionItem.param4;
+        param5 =        missionItem.x;
+        param6 =        missionItem.y;
+        param7 =        missionItem.z;
+        autoContinue =  missionItem.autocontinue;
+        isCurrentItem = missionItem.current;
+        seq =           missionItem.seq;
+    }
+    
+    qCDebug(MissionManagerLog) << "_handleMissionItem sequenceNumber:" << seq << command;
+    
+    if (_itemIndicesToRead.contains(seq)) {
+        _itemIndicesToRead.removeOne(seq);
+
+        MissionItem* item = new MissionItem(seq,
+                                            command,
+                                            frame,
+                                            param1,
+                                            param2,
+                                            param3,
+                                            param4,
+                                            param5,
+                                            param6,
+                                            param7,
+                                            autoContinue,
+                                            isCurrentItem,
                                             this);
 
         if (item->command() == MAV_CMD_DO_JUMP && !_vehicle->firmwarePlugin()->sendHomePositionToVehicle()) {
@@ -395,7 +453,7 @@ void MissionManager::_handleMissionItem(const mavlink_message_t& message)
 
         _missionItems.append(item);
     } else {
-        qCDebug(MissionManagerLog) << "_handleMissionItem mission item received item index which was not requested, disregrarding:" << missionItem.seq;
+        qCDebug(MissionManagerLog) << "_handleMissionItem mission item received item index which was not requested, disregrarding:" << seq;
         // We have to put the ack timeout back since it was removed above
         _startAckTimeout(AckMissionItem);
         return;
@@ -415,7 +473,7 @@ void MissionManager::_clearMissionItems(void)
     _missionItems.clear();
 }
 
-void MissionManager::_handleMissionRequest(const mavlink_message_t& message)
+void MissionManager::_handleMissionRequest(const mavlink_message_t& message, bool missionItemInt)
 {
     mavlink_mission_request_t missionRequest;
     
@@ -424,8 +482,6 @@ void MissionManager::_handleMissionRequest(const mavlink_message_t& message)
     }
     
     mavlink_msg_mission_request_decode(&message, &missionRequest);
-    
-    qCDebug(MissionManagerLog) << "_handleMissionRequest sequenceNumber:" << missionRequest.seq;
     
     if (!_itemIndicesToWrite.contains(missionRequest.seq)) {
         if (missionRequest.seq > _missionItems.count()) {
@@ -439,31 +495,58 @@ void MissionManager::_handleMissionRequest(const mavlink_message_t& message)
         _itemIndicesToWrite.removeOne(missionRequest.seq);
     }
     
-    mavlink_message_t       messageOut;
-    mavlink_mission_item_t  missionItem;
-    
     MissionItem* item = _missionItems[missionRequest.seq];
-    
-    missionItem.target_system =     _vehicle->id();
-    missionItem.target_component =  MAV_COMP_ID_MISSIONPLANNER;
-    missionItem.seq =               missionRequest.seq;
-    missionItem.command =           item->command();
-    missionItem.param1 =            item->param1();
-    missionItem.param2 =            item->param2();
-    missionItem.param3 =            item->param3();
-    missionItem.param4 =            item->param4();
-    missionItem.x =                 item->param5();
-    missionItem.y =                 item->param6();
-    missionItem.z =                 item->param7();
-    missionItem.frame =             item->frame();
-    missionItem.current =           missionRequest.seq == 0;
-    missionItem.autocontinue =      item->autoContinue();
-    
-    mavlink_msg_mission_item_encode_chan(qgcApp()->toolbox()->mavlinkProtocol()->getSystemId(),
-                                         qgcApp()->toolbox()->mavlinkProtocol()->getComponentId(),
-                                         _dedicatedLink->mavlinkChannel(),
-                                         &messageOut,
-                                         &missionItem);
+    qCDebug(MissionManagerLog) << "_handleMissionRequest sequenceNumber:command" << missionRequest.seq << item->command();
+
+    mavlink_message_t   messageOut;
+    if (missionItemInt) {
+        mavlink_mission_item_int_t missionItem;
+
+
+        missionItem.target_system =     _vehicle->id();
+        missionItem.target_component =  MAV_COMP_ID_MISSIONPLANNER;
+        missionItem.seq =               missionRequest.seq;
+        missionItem.command =           item->command();
+        missionItem.param1 =            item->param1();
+        missionItem.param2 =            item->param2();
+        missionItem.param3 =            item->param3();
+        missionItem.param4 =            item->param4();
+        missionItem.x =                 item->param5() * qPow(10.0, 7.0);
+        missionItem.y =                 item->param6() * qPow(10.0, 7.0);
+        missionItem.z =                 item->param7();
+        missionItem.frame =             item->frame();
+        missionItem.current =           missionRequest.seq == 0;
+        missionItem.autocontinue =      item->autoContinue();
+
+        mavlink_msg_mission_item_int_encode_chan(qgcApp()->toolbox()->mavlinkProtocol()->getSystemId(),
+                                                 qgcApp()->toolbox()->mavlinkProtocol()->getComponentId(),
+                                                 _dedicatedLink->mavlinkChannel(),
+                                                 &messageOut,
+                                                 &missionItem);
+    } else {
+        mavlink_mission_item_t missionItem;
+
+        missionItem.target_system =     _vehicle->id();
+        missionItem.target_component =  MAV_COMP_ID_MISSIONPLANNER;
+        missionItem.seq =               missionRequest.seq;
+        missionItem.command =           item->command();
+        missionItem.param1 =            item->param1();
+        missionItem.param2 =            item->param2();
+        missionItem.param3 =            item->param3();
+        missionItem.param4 =            item->param4();
+        missionItem.x =                 item->param5();
+        missionItem.y =                 item->param6();
+        missionItem.z =                 item->param7();
+        missionItem.frame =             item->frame();
+        missionItem.current =           missionRequest.seq == 0;
+        missionItem.autocontinue =      item->autoContinue();
+
+        mavlink_msg_mission_item_encode_chan(qgcApp()->toolbox()->mavlinkProtocol()->getSystemId(),
+                                             qgcApp()->toolbox()->mavlinkProtocol()->getComponentId(),
+                                             _dedicatedLink->mavlinkChannel(),
+                                             &messageOut,
+                                             &missionItem);
+    }
     
     _vehicle->sendMessageOnLink(_dedicatedLink, messageOut);
     _startAckTimeout(AckMissionRequest);
@@ -535,29 +618,37 @@ void MissionManager::_handleMissionAck(const mavlink_message_t& message)
 void MissionManager::_mavlinkMessageReceived(const mavlink_message_t& message)
 {
     switch (message.msgid) {
-        case MAVLINK_MSG_ID_MISSION_COUNT:
-            _handleMissionCount(message);
-            break;
+    case MAVLINK_MSG_ID_MISSION_COUNT:
+        _handleMissionCount(message);
+        break;
 
-        case MAVLINK_MSG_ID_MISSION_ITEM:
-            _handleMissionItem(message);
-            break;
-            
-        case MAVLINK_MSG_ID_MISSION_REQUEST:
-            _handleMissionRequest(message);
-            break;
-            
-        case MAVLINK_MSG_ID_MISSION_ACK:
-            _handleMissionAck(message);
-            break;
-            
-        case MAVLINK_MSG_ID_MISSION_ITEM_REACHED:
-            // FIXME: NYI
-            break;
-            
-        case MAVLINK_MSG_ID_MISSION_CURRENT:
-            _handleMissionCurrent(message);
-            break;
+    case MAVLINK_MSG_ID_MISSION_ITEM:
+        _handleMissionItem(message, false /* missionItemInt */);
+        break;
+
+    case MAVLINK_MSG_ID_MISSION_ITEM_INT:
+        _handleMissionItem(message, true /* missionItemInt */);
+        break;
+
+    case MAVLINK_MSG_ID_MISSION_REQUEST:
+        _handleMissionRequest(message, false /* missionItemInt */);
+        break;
+
+    case MAVLINK_MSG_ID_MISSION_REQUEST_INT:
+        _handleMissionRequest(message, true /* missionItemInt */);
+        break;
+
+    case MAVLINK_MSG_ID_MISSION_ACK:
+        _handleMissionAck(message);
+        break;
+
+    case MAVLINK_MSG_ID_MISSION_ITEM_REACHED:
+        // FIXME: NYI
+        break;
+
+    case MAVLINK_MSG_ID_MISSION_CURRENT:
+        _handleMissionCurrent(message);
+        break;
     }
 }
 
@@ -646,7 +737,7 @@ void MissionManager::_finishTransaction(bool success)
     if (!success && _readTransactionInProgress) {
         // Read from vehicle failed, clear partial list
         _missionItems.clear();
-        emit newMissionItemsAvailable();
+        emit newMissionItemsAvailable(false);
     }
 
     _itemIndicesToRead.clear();
@@ -675,4 +766,11 @@ void MissionManager::_handleMissionCurrent(const mavlink_message_t& message)
         _currentMissionItem = missionCurrent.seq;
         emit currentItemChanged(_currentMissionItem);
     }
+}
+
+void MissionManager::removeAll(void)
+{
+    QList<MissionItem*> emptyList;
+
+    writeMissionItems(emptyList);
 }

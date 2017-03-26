@@ -112,9 +112,11 @@ public:
     /// Command vehicle to land at current location
     virtual void guidedModeLand(Vehicle* vehicle);
 
-    /// Command vehicle to takeoff from current location
-    ///     @param altitudeRel Relative altitude to takeoff to
-    virtual void guidedModeTakeoff(Vehicle* vehicle, double altitudeRel);
+    /// Command vehicle to takeoff from current location to a firmware specific height.
+    virtual void guidedModeTakeoff(Vehicle* vehicle);
+
+    /// Command the vehicle to start the mission
+    virtual void startMission(Vehicle* vehicle);
 
     /// Command vehicle to orbit given center point
     ///     @param centerCoord Center Coordinates
@@ -125,6 +127,9 @@ public:
 
     /// Command vehicle to change to the specified relatice altitude
     virtual void guidedModeChangeAltitude(Vehicle* vehicle, double altitudeRel);
+
+
+
 
     /// Returns the flight mode for running missions
     virtual QString missionFlightMode(void);
@@ -249,8 +254,11 @@ public:
     /// Return the resource file which contains the set of params loaded for offline editing.
     virtual QString offlineEditingParamFile(Vehicle* vehicle) { Q_UNUSED(vehicle); return QString(); }
 
-    /// Return the resource file which contains the brand image for the vehicle.
-    virtual QString brandImage(const Vehicle* vehicle) const { Q_UNUSED(vehicle) return QString(); }
+    /// Return the resource file which contains the brand image for the vehicle for Indoor theme.
+    virtual QString brandImageIndoor(const Vehicle* vehicle) const { Q_UNUSED(vehicle) return QString(); }
+
+    /// Return the resource file which contains the brand image for the vehicle for Outdoor theme.
+    virtual QString brandImageOutdoor(const Vehicle* vehicle) const { Q_UNUSED(vehicle) return QString(); }
 
     /// Return the resource file which contains the vehicle icon used in the flight view when the view is dark (Satellite for instance)
     virtual QString vehicleImageOpaque(const Vehicle* vehicle) const;
@@ -268,8 +276,16 @@ public:
     /// Returns a list of CameraMetaData objects for available cameras on the vehicle.
     virtual const QVariantList& cameraList(const Vehicle* vehicle);
 
+    /// @true: When flying a mission the vehicle is always facing towards the next waypoint
+    virtual bool vehicleYawsToNextWaypointInMission(const Vehicle* vehicle) const;
+
     // FIXME: Hack workaround for non pluginize FollowMe support
     static const char* px4FollowMeFlightMode;
+
+protected:
+    // Arms the vehicle, waiting for the arm state to change.
+    // @return: true - vehicle armed, false - vehicle failed to arm
+    bool _armVehicle(Vehicle* vehicle);
 
 private:
     QVariantList _toolBarIndicatorList;

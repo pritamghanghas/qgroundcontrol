@@ -10,7 +10,6 @@
 
 #include "FactSystem.h"
 #include "FirmwarePluginManager.h"
-#include "FlightMapSettings.h"
 #include "GAudioOutput.h"
 #ifndef __mobile__
 #include "GPSManager.h"
@@ -40,7 +39,6 @@ QGCToolbox::QGCToolbox(QGCApplication* app)
     : _audioOutput(NULL)
     , _factSystem(NULL)
     , _firmwarePluginManager(NULL)
-    , _flightMapSettings(NULL)
 #ifndef __mobile__
     , _gpsManager(NULL)
 #endif
@@ -68,7 +66,6 @@ QGCToolbox::QGCToolbox(QGCApplication* app)
     _audioOutput =              new GAudioOutput(app);
     _factSystem =               new FactSystem(app);
     _firmwarePluginManager =    new FirmwarePluginManager(app);
-    _flightMapSettings =        new FlightMapSettings(app);
 #ifndef __mobile__
     _gpsManager =               new GPSManager(app);
 #endif
@@ -96,7 +93,6 @@ void QGCToolbox::setChildToolboxes(void)
     _audioOutput->setToolbox(this);
     _factSystem->setToolbox(this);
     _firmwarePluginManager->setToolbox(this);
-    _flightMapSettings->setToolbox(this);
 #ifndef __mobile__
     _gpsManager->setToolbox(this);
 #endif
@@ -122,7 +118,6 @@ QGCToolbox::~QGCToolbox()
     delete _audioOutput;
     delete _factSystem;
     delete _firmwarePluginManager;
-    delete _flightMapSettings;
     delete _joystickManager;
     delete _linkManager;
     delete _mavlinkProtocol;

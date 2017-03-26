@@ -15,7 +15,6 @@
 
 class FactSystem;
 class FirmwarePluginManager;
-class FlightMapSettings;
 class GAudioOutput;
 class GPSManager;
 class JoystickManager;
@@ -43,7 +42,6 @@ public:
     ~QGCToolbox();
 
     FirmwarePluginManager*      firmwarePluginManager(void)     { return _firmwarePluginManager; }
-    FlightMapSettings*          flightMapSettings(void)         { return _flightMapSettings; }
     GAudioOutput*               audioOutput(void)               { return _audioOutput; }
     JoystickManager*            joystickManager(void)           { return _joystickManager; }
     LinkManager*                linkManager(void)               { return _linkManager; }
@@ -73,7 +71,6 @@ private:
     GAudioOutput*               _audioOutput;
     FactSystem*                 _factSystem;
     FirmwarePluginManager*      _firmwarePluginManager;
-    FlightMapSettings*          _flightMapSettings;
 #ifndef __mobile__
     GPSManager*                 _gpsManager;
 #endif

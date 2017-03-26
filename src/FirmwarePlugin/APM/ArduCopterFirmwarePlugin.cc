@@ -133,14 +133,22 @@ void ArduCopterFirmwarePlugin::guidedModeLand(Vehicle* vehicle)
     vehicle->setFlightMode("Land");
 }
 
-void ArduCopterFirmwarePlugin::guidedModeTakeoff(Vehicle* vehicle, double altitudeRel)
+#if 0
+// WIP
+void ArduCopterFirmwarePlugin::guidedModeTakeoff(Vehicle* vehicle)
 {
+    if (!_armVehicle(vehicle)) {
+        qgcApp()->showMessage(tr("Unable to takeoff: Vehicle failed to arm."));
+        return;
+    }
+
     vehicle->sendMavCommand(vehicle->defaultComponentId(),
                             MAV_CMD_NAV_TAKEOFF,
                             true, // show error
                             0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
-                            altitudeRel);
+                            2.5);
 }
+#endif
 
 void ArduCopterFirmwarePlugin::guidedModeGotoLocation(Vehicle* vehicle, const QGeoCoordinate& gotoCoord)
 {
@@ -223,4 +231,14 @@ QString ArduCopterFirmwarePlugin::geoFenceRadiusParam(Vehicle* vehicle)
 QString ArduCopterFirmwarePlugin::takeControlFlightMode(void)
 {
     return QStringLiteral("Stabilize");
+}
+
+
+bool ArduCopterFirmwarePlugin::vehicleYawsToNextWaypointInMission(const Vehicle* vehicle) const
+{
+    if (vehicle->parameterManager()->parameterExists(FactSystem::defaultComponentId, QStringLiteral("WP_YAW_BEHAVIOR"))) {
+        Fact* yawMode = vehicle->parameterManager()->getParameter(FactSystem::defaultComponentId, QStringLiteral("WP_YAW_BEHAVIOR"));
+        return yawMode && yawMode->rawValue().toInt() != 0;
+    }
+    return false;
 }

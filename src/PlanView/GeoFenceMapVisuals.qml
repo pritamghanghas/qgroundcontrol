@@ -20,32 +20,37 @@ import QGroundControl.FlightMap     1.0
 
 /// Survey Complex Mission Item visuals
 Item {
-    property var map    ///< Map control to place item in
+    z: QGroundControl.zOrderMapItems
 
-    property var _missionItem:      object
-    property var _polygon
-    property var _grid
-    property var _entryCoordinate
-    property var _exitCoordinate
+    property var    map
+    property var    myGeoFenceController
+    property bool   interactive:            false   ///< true: user can interact with items
+    property bool   planView:               false   ///< true: visuals showing in plan view
+    property var    homePosition
+
+    property var _polygonComponent
     property var _dragHandles
     property var _splitHandles
+    property var _breachReturnPointComponent
+    property var _mouseAreaComponent
+    property var _circleComponent
+    property var _mapPolygon:       myGeoFenceController.mapPolygon
 
     function _addVisualElements() {
-        _polygon = polygonComponent.createObject(map)
-        _grid = gridComponent.createObject(map)
-        _entryCoordinate = entryPointComponent.createObject(map)
-        _exitCoordinate = exitPointComponent.createObject(map)
-        map.addMapItem(_polygon)
-        map.addMapItem(_grid)
-        map.addMapItem(_entryCoordinate)
-        map.addMapItem(_exitCoordinate)
+        _polygonComponent = polygonComponent.createObject(map)
+        map.addMapItem(_polygonComponent)
+        _circleComponent = circleComponent.createObject(map)
+        map.addMapItem(_circleComponent)
+        _breachReturnPointComponent = breachReturnPointComponent.createObject(map)
+        map.addMapItem(_breachReturnPointComponent)
+        _mouseAreaComponent = mouseAreaComponent.createObject(map)
     }
 
     function _destroyVisualElements() {
-        _polygon.destroy()
-        _grid.destroy()
-        _entryCoordinate.destroy()
-        _exitCoordinate.destroy()
+        _polygonComponent.destroy()
+        _circleComponent.destroy()
+        _breachReturnPointComponent.destroy()
+        _mouseAreaComponent.destroy()
     }
 
     function _addDragHandles() {
@@ -70,30 +75,26 @@ Item {
 
     /// Add an initial 4 sided polygon if there is none
     function _addInitialPolygon() {
-        if (_missionItem.polygonPath.length < 3) {
-            // Initial polygon is inset to take 2/3rds space
-            var rect = map.centerViewport
-            rect.x += (rect.width * 0.25) / 2
-            rect.y += (rect.height * 0.25) / 2
-            rect.width *= 0.75
-            rect.height *= 0.75
-            var topLeft = Qt.point(rect.x, rect.y)
-            var topRight = Qt.point(rect.x + rect.width, rect.y)
-            var bottomLeft = Qt.point(rect.x, rect.y + rect.height)
-            var bottomRight = Qt.point(rect.x + rect.width, rect.y + rect.height)
-            _missionItem.addPolygonCoordinate(map.toCoordinate(topLeft))
-            _missionItem.addPolygonCoordinate(map.toCoordinate(topRight))
-            _missionItem.addPolygonCoordinate(map.toCoordinate(bottomRight))
-            _missionItem.addPolygonCoordinate(map.toCoordinate(bottomLeft))
-        }
+        // Initial polygon is inset to take 2/3rds space
+        var rect = map.centerViewport
+        rect.x += (rect.width * 0.25) / 2
+        rect.y += (rect.height * 0.25) / 2
+        rect.width *= 0.75
+        rect.height *= 0.75
+        var topLeft = Qt.point(rect.x, rect.y)
+        var topRight = Qt.point(rect.x + rect.width, rect.y)
+        var bottomLeft = Qt.point(rect.x, rect.y + rect.height)
+        var bottomRight = Qt.point(rect.x + rect.width, rect.y + rect.height)
+        _mapPolygon.clear()
+        _mapPolygon.appendVertex(map.toCoordinate(topLeft, false /* clipToViewPort */))
+        _mapPolygon.appendVertex(map.toCoordinate(topRight, false /* clipToViewPort */))
+        _mapPolygon.appendVertex(map.toCoordinate(bottomRight, false /* clipToViewPort */))
+        _mapPolygon.appendVertex(map.toCoordinate(bottomLeft, false /* clipToViewPort */))
     }
 
     Component.onCompleted: {
-        _addInitialPolygon()
         _addVisualElements()
-        if (_missionItem.isCurrentItem) {
-            _addDragHandles()
-        }
+        _addDragHandles()
     }
 
     Component.onDestruction: {
@@ -102,78 +103,52 @@ Item {
     }
 
     Connections {
-        target: _missionItem
+        target: myGeoFenceController
 
-        onIsCurrentItemChanged: {
-            if (_missionItem.isCurrentItem) {
-                _addDragHandles()
-            } else {
-                _destroyDragHandles()
-            }
+        onAddFencePolygon: {
+            _addInitialPolygon()
         }
     }
 
-    // Survey area polygon
+
+    // Mouse area to capture breach return point coordinate
+    Component {
+        id: mouseAreaComponent
+
+        MouseArea {
+            anchors.fill:   map
+            visible:        interactive
+            onClicked:      myGeoFenceController.breachReturnPoint = map.toCoordinate(Qt.point(mouse.x, mouse.y), false /* clipToViewPort */)
+        }
+    }
+
+    // GeoFence polygon
     Component {
         id: polygonComponent
 
         MapPolygon {
-            color: "green"
-            opacity:    0.5
-            path:       _missionItem.polygonPath
-        }
-    }
-
-    // Survey grid lines
-    Component {
-        id: gridComponent
-
-        MapPolyline {
-            line.color: "white"
-            line.width: 2
-            path:       _missionItem.gridPoints
-        }
-    }
-
-    // Entry point
-    Component {
-        id: entryPointComponent
-
-        MapQuickItem {
-            anchorPoint.x:  sourceItem.anchorPointX
-            anchorPoint.y:  sourceItem.anchorPointY
             z:              QGroundControl.zOrderMapItems
-            coordinate:     _missionItem.coordinate
-            visible:        _missionItem.exitCoordinate.isValid
-
-            sourceItem:
-                MissionItemIndexLabel {
-                label:      "Entry"
-                checked:    _missionItem.isCurrentItem
-
-                onClicked: setCurrentItem(_missionItem.sequenceNumber)
-            }
+            border.width:   2
+            border.color:   "orange"
+            color:          "transparent"
+            opacity:        0.5
+            path:           _mapPolygon.path
+            visible:        planView || geoFenceController.polygonEnabled
         }
     }
 
-    // Exit point
+    // GeoFence circle
     Component {
-        id: exitPointComponent
+        id: circleComponent
 
-        MapQuickItem {
-            anchorPoint.x:  sourceItem.anchorPointX
-            anchorPoint.y:  sourceItem.anchorPointY
+        MapCircle {
             z:              QGroundControl.zOrderMapItems
-            coordinate:     _missionItem.exitCoordinate
-            visible:        _missionItem.exitCoordinate.isValid
-
-            sourceItem:
-                MissionItemIndexLabel {
-                label:      "Exit"
-                checked:    _missionItem.isCurrentItem
-
-                onClicked: setCurrentItem(_missionItem.sequenceNumber)
-            }
+            border.width:   2
+            border.color:   "orange"
+            color:          "transparent"
+            center:         homePosition ? homePosition : QtPositioning.coordinate()
+            radius:         myGeoFenceController.circleRadius
+            visible:        planView || geoFenceController.circleEnabled
         }
     }
 
@@ -185,6 +160,7 @@ Item {
             anchorPoint.x:  dragHandle.width / 2
             anchorPoint.y:  dragHandle.height / 2
             z:              QGroundControl.zOrderMapItems + 1
+            visible:        interactive
 
             property int vertexIndex
 
@@ -194,7 +170,7 @@ Item {
                 height:     width
                 radius:     width / 2
                 color:      "white"
-                opacity:    .80
+                opacity:    .50
 
                 QGCLabel {
                     anchors.horizontalCenter:   parent.horizontalCenter
@@ -204,7 +180,7 @@ Item {
 
                 QGCMouseArea {
                     fillItem:   parent
-                    onClicked:  _missionItem.splitPolygonSegment(mapQuickItem.vertexIndex)
+                    onClicked:  _mapPolygon.splitPolygonSegment(mapQuickItem.vertexIndex)
                 }
             }
         }
@@ -214,11 +190,11 @@ Item {
         id: splitHandlesComponent
 
         Repeater {
-            model: _missionItem.polygonPath
+            model: _mapPolygon.path.length > 2 ? _mapPolygon.path : 0
 
             delegate: Item {
                 property var _splitHandle
-                property var _vertices:     _missionItem.polygonPath
+                property var _vertices:     _mapPolygon.path
 
                 function _setHandlePosition() {
                     var nextIndex = index + 1
@@ -238,9 +214,7 @@ Item {
                 }
 
                 Component.onDestruction: {
-                    if (_splitHandle) {
-                        _splitHandle.destroy()
-                    }
+                    _splitHandle.destroy()
                 }
             }
         }
@@ -251,7 +225,8 @@ Item {
         id: dragAreaComponent
 
         MissionItemIndicatorDrag {
-            id: dragArea
+            id:         dragArea
+            visible:    interactive
 
             property int polygonVertex
 
@@ -262,11 +237,11 @@ Item {
             onItemCoordinateChanged: {
                 if (_creationComplete) {
                     // During component creation some bad coordinate values got through which screws up polygon draw
-                    _missionItem.adjustPolygonCoordinate(polygonVertex, itemCoordinate)
+                    _mapPolygon.adjustVertex(polygonVertex, itemCoordinate)
                 }
             }
 
-            onClicked: _missionItem.removePolygonVertex(polygonVertex)
+            onClicked: _mapPolygon.removePolygonVertex(polygonVertex)
         }
     }
 
@@ -278,6 +253,7 @@ Item {
             anchorPoint.x:  dragHandle.width / 2
             anchorPoint.y:  dragHandle.height / 2
             z:              QGroundControl.zOrderMapItems + 2
+            visible:        interactive
 
             sourceItem: Rectangle {
                 id:         dragHandle
@@ -285,7 +261,7 @@ Item {
                 height:     width
                 radius:     width / 2
                 color:      "white"
-                opacity:    .80
+                opacity:    .90
             }
         }
     }
@@ -295,7 +271,7 @@ Item {
         id: dragHandlesComponent
 
         Repeater {
-            model: _missionItem.polygonModel
+            model: _mapPolygon.pathModel
 
             delegate: Item {
                 property var _visuals: [ ]
@@ -319,5 +295,20 @@ Item {
             }
         }
     }
-}
 
+    // Breach return point
+    Component {
+        id: breachReturnPointComponent
+
+        MapQuickItem {
+            anchorPoint.x:  sourceItem.anchorPointX
+            anchorPoint.y:  sourceItem.anchorPointY
+            z:              QGroundControl.zOrderMapItems
+            coordinate:     myGeoFenceController.breachReturnPoint
+
+            sourceItem: MissionItemIndexLabel {
+                label: "B"
+            }
+        }
+    }
+}

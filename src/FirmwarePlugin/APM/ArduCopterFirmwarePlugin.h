@@ -59,7 +59,10 @@ public:
     void pauseVehicle(Vehicle* vehicle) final;
     void guidedModeRTL(Vehicle* vehicle) final;
     void guidedModeLand(Vehicle* vehicle) final;
-    void guidedModeTakeoff(Vehicle* vehicle, double altitudeRel) final;
+#if 0
+    // WIP
+    void guidedModeTakeoff(Vehicle* vehicle) final;
+#endif
     void guidedModeGotoLocation(Vehicle* vehicle, const QGeoCoordinate& gotoCoord) final;
     void guidedModeChangeAltitude(Vehicle* vehicle, double altitudeRel) final;
     const FirmwarePlugin::remapParamNameMajorVersionMap_t& paramNameRemapMajorVersionMap(void) const final { return _remapParamName; }
@@ -69,6 +72,7 @@ public:
     QString geoFenceRadiusParam(Vehicle* vehicle) final;
     QString offlineEditingParamFile(Vehicle* vehicle) final { Q_UNUSED(vehicle); return QStringLiteral(":/FirmwarePlugin/APM/Copter.OfflineEditing.params"); }
     QString takeControlFlightMode(void) final;
+    bool vehicleYawsToNextWaypointInMission(const Vehicle* vehicle) const final;
 
 private:
     static bool _remapParamNameIntialized;

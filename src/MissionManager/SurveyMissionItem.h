@@ -98,10 +98,8 @@ public:
 
     double              complexDistance     (void) const final { return _surveyDistance; }
     int                 lastSequenceNumber  (void) const final;
-    QmlObjectListModel* getMissionItems     (void) const final;
     bool                load                (const QJsonObject& complexObject, int sequenceNumber, QString& errorString) final;
     double              greatestDistanceTo  (const QGeoCoordinate &other) const final;
-    void                setCruiseSpeed      (double cruiseSpeed) final;
     QString             mapVisualQML        (void) const final { return QStringLiteral("SurveyMapVisual.qml"); }
 
 
@@ -111,13 +109,17 @@ public:
     bool            isSimpleItem            (void) const final { return false; }
     bool            isStandaloneCoordinate  (void) const final { return false; }
     bool            specifiesCoordinate     (void) const final;
+    bool            specifiesAltitudeOnly   (void) const final { return false; }
     QString         commandDescription      (void) const final { return "Survey"; }
     QString         commandName             (void) const final { return "Survey"; }
     QString         abbreviation            (void) const final { return "S"; }
     QGeoCoordinate  coordinate              (void) const final { return _coordinate; }
     QGeoCoordinate  exitCoordinate          (void) const final { return _exitCoordinate; }
     int             sequenceNumber          (void) const final { return _sequenceNumber; }
-    double          flightSpeed             (void) final { return std::numeric_limits<double>::quiet_NaN(); }
+    double          specifiedFlightSpeed    (void) final { return std::numeric_limits<double>::quiet_NaN(); }
+    double          specifiedGimbalYaw      (void) final { return std::numeric_limits<double>::quiet_NaN(); }
+    void            appendMissionItems      (QList<MissionItem*>& items, QObject* missionItemParent) final;
+    void            setMissionFlightStatus  (MissionController::MissionFlightStatus_t& missionFlightStatus) final;
 
     bool coordinateHasRelativeAltitude      (void) const final { return _gridAltitudeRelativeFact.rawValue().toBool(); }
     bool exitCoordinateHasRelativeAltitude  (void) const final { return _gridAltitudeRelativeFact.rawValue().toBool(); }
@@ -127,7 +129,7 @@ public:
     void setCoordinate      (const QGeoCoordinate& coordinate) final;
     void setSequenceNumber  (int sequenceNumber) final;
     void setTurnaroundDist  (double dist) { _turnaroundDistFact.setRawValue(dist); }
-    void save               (QJsonObject& saveObject) const final;
+    void save               (QJsonArray&  missionItems) final;
 
     static const char* jsonComplexItemTypeValue;
 

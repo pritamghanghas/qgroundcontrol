@@ -148,6 +148,7 @@ QGCView {
                 anchors.fill:       parent
                 flightWidgets:      flightDisplayViewWidgets
                 rightPanelWidth:    ScreenTools.defaultFontPixelHeight * 9
+                qgcView:            root
             }
         }
 
@@ -245,7 +246,8 @@ QGCView {
             anchors.right:      parent.right
             anchors.bottom:     parent.bottom
             qgcView:            root
-            isBackgroundDark:   root.isBackgroundDark
+            useLightColors:     isBackgroundDark
+            missionController:  _flightMap.missionController
             visible:            singleVehicleView.checked
         }
 
@@ -302,14 +304,14 @@ QGCView {
             z:                          _panel.z + 5
             width:                      parent.width  - (_flightVideoPipControl.width / 2)
             height:                     Math.min(ScreenTools.availableHeight * 0.25, ScreenTools.defaultFontPixelWidth * 16)
-            visible:                    _virtualJoystick.value
+            visible:                    _virtualJoystick ? _virtualJoystick.value : false
             anchors.bottom:             _flightVideoPipControl.top
             anchors.bottomMargin:       ScreenTools.defaultFontPixelHeight * 2
             anchors.horizontalCenter:   flightDisplayViewWidgets.horizontalCenter
             source:                     "qrc:/qml/VirtualJoystick.qml"
-            active:                     _virtualJoystick.value
+            active:                     _virtualJoystick ? _virtualJoystick.value : false
 
-            property bool useLightColors: root.isBackgroundDark
+            property bool useLightColors: isBackgroundDark
 
             property Fact _virtualJoystick: QGroundControl.settingsManager.appSettings.virtualJoystick
         }

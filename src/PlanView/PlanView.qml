@@ -45,10 +45,9 @@ QGCView {
     property var    _visualItems:           missionController.visualItems
     property var    _currentMissionItem
     property int    _currentMissionIndex:   0
-    property bool   _firstVehiclePosition:  true
-    property var    activeVehiclePosition:  _activeVehicle ? _activeVehicle.coordinate : QtPositioning.coordinate()
     property bool   _lightWidgetBorders:    editorMap.isSatelliteMap
     property bool   _addWaypointOnClick:    false
+    property bool   _singleComplexItem:     missionController.complexMissionItemNames.length === 1
 
     /// The controller which should be called for load/save, send to/from vehicle calls
     property var _syncDropDownController: missionController
@@ -58,23 +57,18 @@ QGCView {
     readonly property int _layerRallyPoints:    3
     property int _editingLayer: _layerMission
 
-    onActiveVehiclePositionChanged: updateMapToVehiclePosition()
-
-    Connections {
-        target: QGroundControl.multiVehicleManager
-
-        onActiveVehicleChanged: {
-            // When the active vehicle changes we need to allow the first vehicle position to move the map again
-            _firstVehiclePosition = true
-            updateMapToVehiclePosition()
-        }
+    Component.onCompleted: {
+        toolbar.missionController =     Qt.binding(function () { return missionController })
+        toolbar.currentMissionItem =    Qt.binding(function () { return _currentMissionItem })
     }
 
-    function updateMapToVehiclePosition() {
-        if (_activeVehicle && _activeVehicle.coordinateValid && _activeVehicle.coordinate.isValid && _firstVehiclePosition) {
-            _firstVehiclePosition = false
-            editorMap.center = _activeVehicle.coordinate
-        }
+    function addComplexItem(complexItemName) {
+        var coordinate = editorMap.center
+        coordinate.latitude = coordinate.latitude.toFixed(_decimalPlaces)
+        coordinate.longitude = coordinate.longitude.toFixed(_decimalPlaces)
+        coordinate.altitude = coordinate.altitude.toFixed(_decimalPlaces)
+        var sequenceNumber = missionController.insertComplexMissionItem(complexItemName, coordinate, missionController.visualItems.count)
+        setCurrentItem(sequenceNumber)
     }
 
     property bool _firstMissionLoadComplete:    false
@@ -129,9 +123,7 @@ QGCView {
             mapFitFunctions.fitMapViewportToMissionItems()
         }
 
-        onVisualItemsChanged: {
-            itemDragger.clearItem()
-        }
+        onVisualItemsChanged: itemDragger.clearItem()
 
         onNewItemsFromVehicle: {
             if (_visualItems && _visualItems.count != 1) {
@@ -162,17 +154,6 @@ QGCView {
             } else {
                 geoFenceController.loadFromFilePicker()
                 mapFitFunctions.fitMapViewportToFenceItems()
-            }
-        }
-
-        function validateBreachReturn() {
-            if (geoFenceController.polygon.path.length > 0) {
-                if (!geoFenceController.polygon.containsCoordinate(geoFenceController.breachReturnPoint)) {
-                    geoFenceController.breachReturnPoint = geoFenceController.polygon.center()
-                }
-                if (!geoFenceController.polygon.containsCoordinate(geoFenceController.breachReturnPoint)) {
-                    geoFenceController.breachReturnPoint = geoFenceController.polygon.path[0]
-                }
             }
         }
 
@@ -246,6 +227,8 @@ QGCView {
         id: _mapTypeButtonsExclusiveGroup
     }
 
+    /// Sets a new current mission item
+    ///     @param sequenceNumber - index for new item, -1 to clear current item
     function setCurrentItem(sequenceNumber) {
         if (sequenceNumber !== _currentMissionIndex) {
             _currentMissionItem = undefined
@@ -255,12 +238,21 @@ QGCView {
                 if (visualItem.sequenceNumber == sequenceNumber) {
                     _currentMissionItem = visualItem
                     _currentMissionItem.isCurrentItem = true
-                    _currentMissionIndex = i
+                    _currentMissionIndex = sequenceNumber
                 } else {
                     visualItem.isCurrentItem = false
                 }
             }
         }
+    }
+
+    /// Inserts a new simple mission item
+    ///     @param coordinate Location to insert item
+    ///     @param index Insert item at this index
+    function insertSimpleMissionItem(coordinate, index) {
+        setCurrentItem(-1)
+        var sequenceNumber = missionController.insertSimpleMissionItem(coordinate, index)
+        setCurrentItem(sequenceNumber)
     }
 
     property int _moveDialogMissionItemIndex
@@ -371,7 +363,7 @@ QGCView {
                             return
                         }
 
-                        var coordinate = editorMap.toCoordinate(Qt.point(mouse.x, mouse.y))
+                        var coordinate = editorMap.toCoordinate(Qt.point(mouse.x, mouse.y), false /* clipToViewPort */)
                         coordinate.latitude = coordinate.latitude.toFixed(_decimalPlaces)
                         coordinate.longitude = coordinate.longitude.toFixed(_decimalPlaces)
                         coordinate.altitude = coordinate.altitude.toFixed(_decimalPlaces)
@@ -379,14 +371,7 @@ QGCView {
                         switch (_editingLayer) {
                         case _layerMission:
                             if (_addWaypointOnClick) {
-                                var sequenceNumber = missionController.insertSimpleMissionItem(coordinate, missionController.visualItems.count)
-                                setCurrentItem(sequenceNumber)
-                            }
-                            break
-                        case _layerGeoFence:
-                            if (geoFenceController.breachReturnEnabled) {
-                                geoFenceController.breachReturnPoint = coordinate
-                                geoFenceController.validateBreachReturn()
+                                insertSimpleMissionItem(coordinate, missionController.visualItems.count)
                             }
                             break
                         case _layerRallyPoints:
@@ -419,7 +404,7 @@ QGCView {
                     function liveDrag() {
                         if (!itemDragger.preventCoordinateBindingLoop && Drag.active) {
                             var point = Qt.point(itemDragger.x + (itemDragger.width  / 2), itemDragger.y + (itemDragger.height / 2))
-                            var coordinate = editorMap.toCoordinate(point)
+                            var coordinate = editorMap.toCoordinate(point, false /* clipToViewPort */)
                             coordinate.altitude = itemDragger.coordinateItem.coordinate.altitude
                             itemDragger.preventCoordinateBindingLoop = true
                             itemDragger.coordinateItem.coordinate = coordinate
@@ -453,7 +438,8 @@ QGCView {
                     model: missionController.visualItems
 
                     delegate: MissionItemMapVisual {
-                        map: editorMap
+                        map:        editorMap
+                        onClicked:  setCurrentItem(sequenceNumber)
                     }
                 }
 
@@ -482,6 +468,7 @@ QGCView {
                     anchors.top:        parent.top
                     anchors.leftMargin: parent.width - _rightPanelWidth
                     anchors.left:       parent.left
+                    z:                  QGroundControl.zOrderWidgets
                     spacing:            _horizontalMargin
                     visible:            QGroundControl.corePlugin.options.enablePlanViewSelector
 
@@ -569,12 +556,13 @@ QGCView {
                         spacing:        _margin / 2
                         orientation:    ListView.Vertical
                         model:          missionController.visualItems
-                        cacheBuffer:    height * 2
+                        cacheBuffer:    Math.max(height * 2, 0)
                         clip:           true
                         currentIndex:   _currentMissionIndex
                         highlightMoveDuration: 250
 
                         delegate: MissionItemEditor {
+                            map:            editorMap
                             missionItem:    object
                             width:          parent.width
                             readOnly:       false
@@ -591,12 +579,7 @@ QGCView {
                                 setCurrentItem(removeIndex)
                             }
 
-                            onInsert: {
-                                var sequenceNumber = missionController.insertSimpleMissionItem(editorMap.center, index)
-                                setCurrentItem(sequenceNumber)
-                            }
-
-                            onMoveHomeToMapCenter: _visualItems.get(0).coordinate = editorMap.center
+                            onInsert: insertSimpleMissionItem(editorMap.center, index)
                         }
                     } // QGCListView
                 } // Item - Mission Item editor
@@ -607,40 +590,20 @@ QGCView {
                     anchors.top:        planElementSelectorRow.bottom
                     anchors.right:      parent.right
                     opacity:            _rightPanelOpacity
-                    z:                  QGroundControl.zOrderTopMost
-                    source:             _editingLayer == _layerGeoFence ? "qrc:/qml/GeoFenceEditor.qml" : ""
+                    z:                  QGroundControl.zOrderWidgets
+                    sourceComponent:    _editingLayer == _layerGeoFence ? geoFenceEditorComponent : undefined
 
-                    property real availableWidth:   _rightPanelWidth
-                    property real availableHeight:  ScreenTools.availableHeight
+                    property real   availableWidth:         _rightPanelWidth
+                    property real   availableHeight:        ScreenTools.availableHeight
+                    property var    myGeoFenceController:   geoFenceController
                 }
 
-                // GeoFence polygon
-                MapPolygon {
-                    border.color:   "#80FF0000"
-                    border.width:   3
-                    path:           geoFenceController.polygon.path
-                    z:              QGroundControl.zOrderMapItems
-                    visible:        geoFenceController.polygonEnabled
-                }
-
-                // GeoFence circle
-                MapCircle {
-                    border.color:   "#80FF0000"
-                    border.width:   3
-                    center:         missionController.plannedHomePosition
-                    radius:         geoFenceController.circleRadius
-                    z:              QGroundControl.zOrderMapItems
-                    visible:        geoFenceController.circleEnabled
-                }
-
-                // GeoFence breach return point
-                MapQuickItem {
-                    anchorPoint.x:  sourceItem.anchorPointX
-                    anchorPoint.y:  sourceItem.anchorPointY
-                    coordinate:     geoFenceController.breachReturnPoint
-                    visible:        geoFenceController.breachReturnEnabled
-                    sourceItem:     MissionItemIndexLabel { label: "F" }
-                    z:              QGroundControl.zOrderMapItems
+                GeoFenceMapVisuals {
+                    map:                    editorMap
+                    myGeoFenceController:   geoFenceController
+                    interactive:            _editingLayer == _layerGeoFence
+                    homePosition:           missionController.plannedHomePosition
+                    planView:               true
                 }
 
                 // Rally Point Editor
@@ -710,13 +673,18 @@ QGCView {
                     color:              qgcPal.window
                     title:              qsTr("Plan")
                     z:                  QGroundControl.zOrderWidgets
-                    showAlternateIcon:  [ false, false, _syncDropDownController.dirty, false, false, false, false ]
-                    rotateImage:        [ false, false, _syncDropDownController.syncInProgress, false, false, false, false ]
-                    buttonEnabled:      [ true, true, !_syncDropDownController.syncInProgress, true, true, true, true ]
-                    buttonVisible:      [ true, true, true, true, true, _showZoom, _showZoom ]
+                    showAlternateIcon:  [ false, false, _syncDropDownController.dirty, false, false, false ]
+                    rotateImage:        [ false, false, _syncDropDownController.syncInProgress, false, false, false ]
+                    animateImage:       [ false, false, _syncDropDownController.dirty, false, false, false ]
+                    buttonEnabled:      [ true, true, !_syncDropDownController.syncInProgress, true, true, true ]
+                    buttonVisible:      [ true, true, true, true, _showZoom, _showZoom ]
                     maxHeight:          mapScale.y - toolStrip.y
 
                     property bool _showZoom: !ScreenTools.isMobile
+
+                    property bool mySingleComplexItem: _singleComplexItem
+
+                    onMySingleComplexItemChanged: console.log(model[1].dropPanelComponent)
 
                     model: [
                         {
@@ -727,7 +695,7 @@ QGCView {
                         {
                             name:               "Pattern",
                             iconSource:         "/qmlimages/MapDrawShape.svg",
-                            dropPanelComponent: patternDropPanel
+                            dropPanelComponent: _singleComplexItem ? undefined : patternDropPanel
                         },
                         {
                             name:                   "Sync",
@@ -739,11 +707,6 @@ QGCView {
                             name:               "Center",
                             iconSource:         "/qmlimages/MapCenter.svg",
                             dropPanelComponent: centerMapDropPanel
-                        },
-                        {
-                            name:               "Map",
-                            iconSource:         "/qmlimages/MapType.svg",
-                            dropPanelComponent: mapTypeDropPanel
                         },
                         {
                             name:               "In",
@@ -759,6 +722,11 @@ QGCView {
                         switch (index) {
                         case 0:
                             _addWaypointOnClick = checked
+                            break
+                        case 1:
+                            if (_singleComplexItem) {
+                                addComplexItem(missionController.complexMissionItemNames[0])
+                            }
                             break
                         case 5:
                             editorMap.zoomLevel += 0.5
@@ -935,34 +903,6 @@ QGCView {
     }
 
     Component {
-        id: mapTypeDropPanel
-
-        Column {
-            spacing: _margin
-
-            QGCLabel { text: qsTr("Map type:") }
-            Row {
-                spacing: ScreenTools.defaultFontPixelWidth
-                Repeater {
-                    model: QGroundControl.flightMapSettings.mapTypes
-
-                    QGCButton {
-                        checkable:      true
-                        checked:        QGroundControl.flightMapSettings.mapType === text
-                        text:           modelData
-                        exclusiveGroup: _mapTypeButtonsExclusiveGroup
-
-                        onClicked: {
-                            QGroundControl.flightMapSettings.mapType = text
-                            dropPanel.hide()
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    Component {
         id: patternDropPanel
 
         ColumnLayout {
@@ -978,16 +918,22 @@ QGCView {
                     Layout.fillWidth:   true
 
                     onClicked: {
-                        var coordinate = editorMap.center
-                        coordinate.latitude = coordinate.latitude.toFixed(_decimalPlaces)
-                        coordinate.longitude = coordinate.longitude.toFixed(_decimalPlaces)
-                        coordinate.altitude = coordinate.altitude.toFixed(_decimalPlaces)
-                        var sequenceNumber = missionController.insertComplexMissionItem(modelData, coordinate, missionController.visualItems.count)
-                        setCurrentItem(sequenceNumber)
+                        addComplexItem(modelData)
                         dropPanel.hide()
                     }
                 }
             }
         } // Column
+    }
+
+    Component {
+        id: geoFenceEditorComponent
+
+        GeoFenceEditor {
+            availableWidth:         _rightPanelWidth
+            availableHeight:        ScreenTools.availableHeight
+            myGeoFenceController:   geoFenceController
+            flightMap:              editorMap
+        }
     }
 } // QGCVIew
