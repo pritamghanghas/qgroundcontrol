@@ -1648,7 +1648,8 @@ void Vehicle::_on1STimerTimeout()
 
     if(_1STimerSecsCount == TRIGGER_EXECUTE_DELAY) {
         _say("Takeoff");
-        guidedModeTakeoff(_flyToRelAltitude);
+        guidedModeTakeoff();
+        guidedModeChangeAltitude(_flyToRelAltitude);
     }
 }
 
