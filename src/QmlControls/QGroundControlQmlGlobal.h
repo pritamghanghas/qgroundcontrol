@@ -22,6 +22,7 @@
 #include "FactMetaData.h"
 #include "SimulatedPosition.h"
 #include "QGCLoggingCategory.h"
+#include "AppSettings.h"
 
 #ifdef QT_DEBUG
 #include "MockLink.h"
@@ -123,8 +124,6 @@ public:
 
     Q_INVOKABLE bool linesIntersect(QPointF xLine1, QPointF yLine1, QPointF xLine2, QPointF yLine2);
 
-    Q_INVOKABLE QString urlToLocalFile(QUrl url) { return url.toLocalFile(); }
-
     // Property accesors
     HBSettings*             hbSettings          ()  { return _hbSettings; }
     QString                 appName             ()  { return qgcApp()->applicationName(); }
@@ -158,9 +157,9 @@ public:
     void    setFlightMapPosition        (QGeoCoordinate& coordinate);
     void    setFlightMapZoom            (double zoom);
 
-    QString parameterFileExtension(void) const  { return QGCApplication::parameterFileExtension; }
-    QString missionFileExtension(void) const    { return QGCApplication::missionFileExtension; }
-    QString telemetryFileExtension(void) const  { return QGCApplication::telemetryFileExtension; }
+    QString parameterFileExtension(void) const  { return AppSettings::parameterFileExtension; }
+    QString missionFileExtension(void) const    { return AppSettings::missionFileExtension; }
+    QString telemetryFileExtension(void) const  { return AppSettings::telemetryFileExtension; }
 
     QString qgcVersion(void) const { return qgcApp()->applicationVersion(); }
 

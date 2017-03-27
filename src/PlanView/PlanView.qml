@@ -26,7 +26,7 @@ import QGroundControl.Controllers   1.0
 /// Mission Editor
 
 QGCView {
-    id:         qgcView
+    id:         _qgcView
     viewPanel:  panel
 
     // zOrder comes from the Loader in MainWindow.qml
@@ -96,27 +96,30 @@ QGCView {
     MissionController {
         id: missionController
 
+        property var nameFilters: [ qsTr("Mission Files (*.%1)").arg(missionController.fileExtension) , qsTr("All Files (*.*)") ]
+
         Component.onCompleted: {
             start(true /* editMode */)
             setCurrentItem(0)
         }
 
+        // Users is switching away from Plan View
+        function saveOnSwitch() {
+            save()
+        }
+
         function loadFromSelectedFile() {
-            if (ScreenTools.isMobile) {
-                qgcView.showDialog(mobileFilePicker, qsTr("Select Mission File"), qgcView.showDialogDefaultWidth, StandardButton.Cancel)
-            } else {
-                missionController.loadFromFilePicker()
-                mapFitFunctions.fitMapViewportToMissionItems()
-                _currentMissionItem = _visualItems.get(0)
-            }
+            fileDialog.title =          qsTr("Select Mission File")
+            fileDialog.selectExisting = true
+            fileDialog.nameFilters =    missionController.nameFilters
+            fileDialog.openForLoad()
         }
 
         function saveToSelectedFile() {
-            if (ScreenTools.isMobile) {
-                qgcView.showDialog(mobileFileSaver, qsTr("Save Mission File"), qgcView.showDialogDefaultWidth, StandardButton.Save | StandardButton.Cancel)
-            } else {
-                missionController.saveToFilePicker()
-            }
+            fileDialog.title =          qsTr("Save Mission")
+            fileDialog.selectExisting = false
+            fileDialog.nameFilters =    missionController.nameFilters
+            fileDialog.openForSave()
         }
 
         function fitViewportToItems() {
@@ -138,23 +141,23 @@ QGCView {
     GeoFenceController {
         id: geoFenceController
 
+        property var nameFilters: [ qsTr("GeoFence Files (*.%1)").arg(geoFenceController.fileExtension) , qsTr("All Files (*.*)") ]
+
         Component.onCompleted: start(true /* editMode */)
 
         function saveToSelectedFile() {
-            if (ScreenTools.isMobile) {
-                qgcView.showDialog(mobileFileSaver, qsTr("Save Fence File"), qgcView.showDialogDefaultWidth, StandardButton.Save | StandardButton.Cancel)
-            } else {
-                geoFenceController.saveToFilePicker()
-            }
+            fileDialog.title =          qsTr("Save GeoFence")
+            fileDialog.selectExisting = false
+            fileDialog.nameFilters =    geoFenceController.nameFilters
+            fileDialog.openForSave()
         }
 
         function loadFromSelectedFile() {
-            if (ScreenTools.isMobile) {
-                qgcView.showDialog(mobileFilePicker, qsTr("Select Fence File"), qgcView.showDialogDefaultWidth, StandardButton.Yes | StandardButton.Cancel)
-            } else {
-                geoFenceController.loadFromFilePicker()
-                mapFitFunctions.fitMapViewportToFenceItems()
-            }
+            fileDialog.title =          qsTr("Select GeoFence File")
+            fileDialog.selectExisting = true
+            fileDialog.nameFilters =    geoFenceController.nameFilters
+            fileDialog.openForLoad()
+            ///mapFitFunctions.fitMapViewportToFenceItems()
         }
 
         function fitViewportToItems() {
@@ -177,6 +180,8 @@ QGCView {
     RallyPointController {
         id: rallyPointController
 
+        property var nameFilters: [ qsTr("Rally Point Files (*.%1)").arg(rallyPointController.fileExtension) , qsTr("All Files (*.*)") ]
+
         onCurrentRallyPointChanged: {
             if (_editingLayer == _layerRallyPoints && !currentRallyPoint) {
                 itemDragger.visible = false
@@ -188,20 +193,18 @@ QGCView {
         Component.onCompleted: start(true /* editMode */)
 
         function saveToSelectedFile() {
-            if (ScreenTools.isMobile) {
-                qgcView.showDialog(mobileFileSaver, qsTr("Save Rally Point File"), qgcView.showDialogDefaultWidth, StandardButton.Save | StandardButton.Cancel)
-            } else {
-                rallyPointController.saveToFilePicker()
-            }
+            fileDialog.title =          qsTr("Save Rally Points")
+            fileDialog.selectExisting = false
+            fileDialog.nameFilters =    rallyPointController.nameFilters
+            fileDialog.openForSave()
         }
 
         function loadFromSelectedFile() {
-            if (ScreenTools.isMobile) {
-                qgcView.showDialog(mobileFilePicker, qsTr("Select Rally Point File"), qgcView.showDialogDefaultWidth, StandardButton.Yes | StandardButton.Cancel)
-            } else {
-                rallyPointController.loadFromFilePicker()
-                mapFitFunctions.fitMapViewportToRallyItems()
-            }
+            fileDialog.title =          qsTr("Select Rally Point File")
+            fileDialog.selectExisting = true
+            fileDialog.nameFilters =    rallyPointController.nameFilters
+            fileDialog.openForLoad()
+            //mapFitFunctions.fitMapViewportToRallyItems()
         }
 
         function fitViewportToItems() {
@@ -257,24 +260,22 @@ QGCView {
 
     property int _moveDialogMissionItemIndex
 
-    Component {
-        id: mobileFilePicker
+    QGCFileDialog {
+        id:             fileDialog
+        qgcView:        _qgcView
+        folder:         QGroundControl.settingsManager.appSettings.missionSavePath
+        fileExtension:  _syncDropDownController.fileExtension
 
-        QGCMobileFileOpenDialog {
-            fileExtension: _syncDropDownController.fileExtension
-            onFilenameReturned: {
-                _syncDropDownController.loadFromFile(filename)
-                _syncDropDownController.fitViewportToItems()
-            }
+        onAcceptedForSave: {
+            _syncDropDownController.saveToFile(file)
+            close()
         }
-    }
 
-    Component {
-        id: mobileFileSaver
-
-        QGCMobileFileSaveDialog {
-            fileExtension:      _syncDropDownController.fileExtension
-            onFilenameReturned: _syncDropDownController.saveToFile(filename)
+        onAcceptedForLoad: {
+            _syncDropDownController.loadFromFile(file)
+            _syncDropDownController.fitViewportToItems()
+            _currentMissionItem = _visualItems.get(0)
+            close()
         }
     }
 
@@ -325,7 +326,7 @@ QGCView {
 
             FlightMap {
                 id:             editorMap
-                height:         qgcView.height
+                height:         _qgcView.height
                 anchors.bottom: parent.bottom
                 anchors.left:   parent.left
                 anchors.right:  parent.right
@@ -334,7 +335,7 @@ QGCView {
                 // This is the center rectangle of the map which is not obscured by tools
                 property rect centerViewport: Qt.rect(_leftToolWidth, _toolbarHeight, editorMap.width - _leftToolWidth - _rightPanelWidth, editorMap.height - _statusHeight - _toolbarHeight)
 
-                property real _toolbarHeight:   qgcView.height - ScreenTools.availableHeight
+                property real _toolbarHeight:   _qgcView.height - ScreenTools.availableHeight
                 property real _leftToolWidth:   toolStrip.x + toolStrip.width
                 property real _statusHeight:    waypointValuesDisplay.visible ? editorMap.height - waypointValuesDisplay.y : 0
 
@@ -464,13 +465,12 @@ QGCView {
                 // Plan Element selector (Mission/Fence/Rally)
                 Row {
                     id:                 planElementSelectorRow
-                    anchors.topMargin:  parent.height - ScreenTools.availableHeight + _margin
-                    anchors.top:        parent.top
+                    anchors.top:        toolStrip.top
                     anchors.leftMargin: parent.width - _rightPanelWidth
                     anchors.left:       parent.left
                     z:                  QGroundControl.zOrderWidgets
                     spacing:            _horizontalMargin
-                    visible:            QGroundControl.corePlugin.options.enablePlanViewSelector
+                    visible:            false // WIP: Temporarily remove - QGroundControl.corePlugin.options.enablePlanViewSelector
 
                     readonly property real _buttonRadius: ScreenTools.defaultFontPixelHeight * 0.75
 
@@ -531,7 +531,7 @@ QGCView {
                 // Mission Item Editor
                 Item {
                     id:                 missionItemEditor
-                    anchors.topMargin:  _margin
+                    anchors.topMargin:  planElementSelectorRow.visible ? _margin : 0
                     anchors.top:        planElementSelectorRow.visible ? planElementSelectorRow.bottom : planElementSelectorRow.top
                     anchors.bottom:     parent.bottom
                     anchors.right:      parent.right
@@ -673,18 +673,13 @@ QGCView {
                     color:              qgcPal.window
                     title:              qsTr("Plan")
                     z:                  QGroundControl.zOrderWidgets
-                    showAlternateIcon:  [ false, false, _syncDropDownController.dirty, false, false, false ]
-                    rotateImage:        [ false, false, _syncDropDownController.syncInProgress, false, false, false ]
-                    animateImage:       [ false, false, _syncDropDownController.dirty, false, false, false ]
-                    buttonEnabled:      [ true, true, !_syncDropDownController.syncInProgress, true, true, true ]
-                    buttonVisible:      [ true, true, true, true, _showZoom, _showZoom ]
+                    buttonEnabled:      [ true, true, true, true, true ]
+                    buttonVisible:      [ true, true, true, _showZoom, _showZoom ]
                     maxHeight:          mapScale.y - toolStrip.y
 
                     property bool _showZoom: !ScreenTools.isMobile
 
                     property bool mySingleComplexItem: _singleComplexItem
-
-                    onMySingleComplexItemChanged: console.log(model[1].dropPanelComponent)
 
                     model: [
                         {
@@ -696,12 +691,6 @@ QGCView {
                             name:               "Pattern",
                             iconSource:         "/qmlimages/MapDrawShape.svg",
                             dropPanelComponent: _singleComplexItem ? undefined : patternDropPanel
-                        },
-                        {
-                            name:                   "Sync",
-                            iconSource:             "/qmlimages/MapSync.svg",
-                            alternateIconSource:    "/qmlimages/MapSyncChanged.svg",
-                            dropPanelComponent:     syncDropPanel
                         },
                         {
                             name:               "Center",
@@ -728,16 +717,10 @@ QGCView {
                                 addComplexItem(missionController.complexMissionItemNames[0])
                             }
                             break
-                        case 5:
+                        case 3:
                             editorMap.zoomLevel += 0.5
                             break
-                        case 6:
-                            editorMap.zoomLevel -= 0.5
-                            break
-                        case 5:
-                            editorMap.zoomLevel += 0.5
-                            break
-                        case 6:
+                        case 4:
                             editorMap.zoomLevel -= 0.5
                             break
                         }
@@ -834,12 +817,12 @@ QGCView {
                 columnSpacing:      ScreenTools.defaultFontPixelWidth
 
                 QGCButton {
-                    text:               qsTr("Send To Vehicle")
+                    text:               qsTr("Save")
                     Layout.fillWidth:   true
-                    enabled:            _activeVehicle && !_syncDropDownController.syncInProgress
+                    enabled:            !_syncDropDownController.syncInProgress
                     onClicked: {
                         dropPanel.hide()
-                        _syncDropDownController.sendToVehicle()
+                        _syncDropDownController.save()
                     }
                 }
 
@@ -850,7 +833,7 @@ QGCView {
                     onClicked: {
                         dropPanel.hide()
                         if (_syncDropDownController.dirty) {
-                            qgcView.showDialog(syncLoadFromVehicleOverwrite, columnHolder._overwriteText, qgcView.showDialogDefaultWidth, StandardButton.Yes | StandardButton.Cancel)
+                            _qgcView.showDialog(syncLoadFromVehicleOverwrite, columnHolder._overwriteText, _qgcView.showDialogDefaultWidth, StandardButton.Yes | StandardButton.Cancel)
                         } else {
                             _syncDropDownController.loadFromVehicle()
                         }
@@ -874,7 +857,7 @@ QGCView {
                     onClicked: {
                         dropPanel.hide()
                         if (_syncDropDownController.dirty) {
-                            qgcView.showDialog(syncLoadFromFileOverwrite, columnHolder._overwriteText, qgcView.showDialogDefaultWidth, StandardButton.Yes | StandardButton.Cancel)
+                            _qgcView.showDialog(syncLoadFromFileOverwrite, columnHolder._overwriteText, _qgcView.showDialogDefaultWidth, StandardButton.Yes | StandardButton.Cancel)
                         } else {
                             _syncDropDownController.loadFromSelectedFile()
                         }
@@ -886,7 +869,7 @@ QGCView {
                     Layout.fillWidth:   true
                     onClicked:  {
                         dropPanel.hide()
-                        qgcView.showDialog(removeAllPromptDialog, qsTr("Remove all"), qgcView.showDialogDefaultWidth, StandardButton.Yes | StandardButton.No)
+                        _qgcView.showDialog(removeAllPromptDialog, qsTr("Remove all"), _qgcView.showDialogDefaultWidth, StandardButton.Yes | StandardButton.No)
                     }
                 }
             }

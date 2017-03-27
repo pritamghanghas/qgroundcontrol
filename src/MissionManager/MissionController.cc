@@ -21,11 +21,12 @@
 #include "ParameterManager.h"
 #include "QGroundControlQmlGlobal.h"
 #include "SettingsManager.h"
+#include "AppSettings.h"
 #include "MissionSettingsItem.h"
 
 #ifndef __mobile__
 #include "MainWindow.h"
-#include "QGCFileDialog.h"
+#include "QGCQFileDialog.h"
 #endif
 
 QGC_LOGGING_CATEGORY(MissionControllerLog, "MissionControllerLog")
@@ -645,6 +646,21 @@ void MissionController::loadFromFile(const QString& filename)
     MissionController::_scanForAdditionalSettings(_visualItems, _activeVehicle);
 
     _initAllVisualItems();
+
+    QString filenameOnly = filename;
+    int lastSepIndex = filename.lastIndexOf(QStringLiteral("/"));
+    if (lastSepIndex != -1) {
+        filenameOnly = filename.right(filename.length() - lastSepIndex - 1);
+    }
+    QString extension = AppSettings::missionFileExtension;
+    if (filenameOnly.endsWith("." + extension)) {
+        filenameOnly = filenameOnly.left(filenameOnly.length() - extension.length() - 1);
+    }
+
+    _settingsItem->missionName()->setRawValue(filenameOnly);
+    _settingsItem->setExistingMission(true);
+
+    sendToVehicle();
 }
 
 bool MissionController::loadItemsFromFile(Vehicle* vehicle, const QString& filename, QmlObjectListModel** visualItems)
@@ -686,18 +702,6 @@ bool MissionController::loadItemsFromFile(Vehicle* vehicle, const QString& filen
     return true;
 }
 
-void MissionController::loadFromFilePicker(void)
-{
-#ifndef __mobile__
-    QString filename = QGCFileDialog::getOpenFileName(MainWindow::instance(), "Select Mission File to load", QString(), "Mission file (*.mission);;All Files (*.*)");
-
-    if (filename.isEmpty()) {
-        return;
-    }
-    loadFromFile(filename);
-#endif
-}
-
 void MissionController::saveToFile(const QString& filename)
 {
     qDebug() << filename;
@@ -708,7 +712,7 @@ void MissionController::saveToFile(const QString& filename)
 
     QString missionFilename = filename;
     if (!QFileInfo(filename).fileName().contains(".")) {
-        missionFilename += QString(".%1").arg(QGCApplication::missionFileExtension);
+        missionFilename += QString(".%1").arg(AppSettings::missionFileExtension);
     }
 
     QFile file(missionFilename);
@@ -767,18 +771,6 @@ void MissionController::saveToFile(const QString& filename)
     }
 
     _visualItems->setDirty(false);
-}
-
-void MissionController::saveToFilePicker(void)
-{
-#ifndef __mobile__
-    QString filename = QGCFileDialog::getSaveFileName(MainWindow::instance(), "Select file to save mission to", QString(), "Mission file (*.mission);;All Files (*.*)");
-
-    if (filename.isEmpty()) {
-        return;
-    }
-    saveToFile(filename);
-#endif
 }
 
 void MissionController::_calcPrevWaypointValues(double homeAlt, VisualMissionItem* currentItem, VisualMissionItem* prevItem, double* azimuth, double* distance, double* altDifference)
@@ -1541,7 +1533,7 @@ void MissionController::setDirty(bool dirty)
 
 QString MissionController::fileExtension(void) const
 {
-    return QGCApplication::missionFileExtension;
+    return AppSettings::missionFileExtension;
 }
 
 void MissionController::_scanForAdditionalSettings(QmlObjectListModel* visualItems, Vehicle* vehicle)
@@ -1599,4 +1591,26 @@ QStringList MissionController::complexMissionItemNames(void) const
 bool MissionController::missionInProgress(void) const
 {
     return _visualItems && _visualItems->count() > 1 && (!_visualItems->value<VisualMissionItem*>(0)->isCurrentItem() && !_visualItems->value<VisualMissionItem*>(1)->isCurrentItem());
+}
+
+void MissionController::save(void)
+{
+    // Save to file if the mission is named
+    QString missionFullPath = _settingsItem->missionFullPath()->rawValue().toString();
+    if (!missionFullPath.isEmpty()) {
+        saveToFile(missionFullPath);
+    }
+
+    // Send to vehicle if we are connected
+    if (!_activeVehicle->isOfflineEditingVehicle()) {
+        sendToVehicle();
+    }
+
+    _settingsItem->setExistingMission(_visualItems->count() > 1 && !missionFullPath.isEmpty());
+}
+
+void MissionController::clearMission(void)
+{
+    removeAll();
+    save();
 }
