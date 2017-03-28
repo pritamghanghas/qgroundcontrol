@@ -31,26 +31,13 @@ Rectangle {
     property bool   _mobile:                    ScreenTools.isMobile
     property var    _savePath:                  QGroundControl.settingsManager.appSettings.missionSavePath
     property var    _fileExtension:             QGroundControl.settingsManager.appSettings.missionFileExtension
-    property bool   _newMissionAlreadyExists:   false
-    property bool   _noMissionName:             missionItem.missionName.valueString === ""
-    property bool   _showMissionList:           _noMissionItemsAdded && (_noMissionName || _newMissionAlreadyExists)
-    property bool   _existingMissionLoaded:     missionItem.existingMission
+    property var    _appSettings:               QGroundControl.settingsManager.appSettings
 
     readonly property string _firmwareLabel:    qsTr("Firmware")
     readonly property string _vehicleLabel:     qsTr("Vehicle")
 
     QGCPalette { id: qgcPal }
     QFileDialogController { id: fileController }
-
-    Connections {
-        target:             missionItem.missionName
-
-        onRawValueChanged: {
-            if (!_existingMissionLoaded) {
-                _newMissionAlreadyExists = !_noMissionName && fileController.fileExists(_savePath + "/" + missionItem.missionName.valueString + "." + _fileExtension)
-            }
-        }
-    }
 
     Loader {
         id:              deferedload
@@ -73,98 +60,15 @@ Rectangle {
                     anchors.top:    parent.top
                     spacing:        _margin
 
-                    QGCLabel {
-                        text:           qsTr("Mission name")
-                        font.pointSize: ScreenTools.smallFontPointSize
-                    }
-
-                    FactTextField {
-                        anchors.left:   parent.left
-                        anchors.right:  parent.right
-                        fact:           missionItem.missionName
-                        visible:        !_existingMissionLoaded
-                    }
-
-                    QGCLabel {
-                        text:       missionItem.missionName.valueString
-                        visible:    _existingMissionLoaded
-                    }
-
-                    QGCLabel {
-                        text:           qsTr("Mission already exists")
-                        font.pointSize: ScreenTools.smallFontPointSize
-                        color:          qgcPal.warningText
-                        visible:        !_existingMissionLoaded && _newMissionAlreadyExists
-                    }
-
-                    QGCButton {
-                        text:       qsTr("Clear mission")
-                        visible:    !_noMissionItemsAdded
-                        onClicked:  missionController.clearMission()
-                    }
-
                     Loader {
                         anchors.left:       parent.left
                         anchors.right:      parent.right
-                        sourceComponent:    _showMissionList ? missionList : missionSettings
+                        sourceComponent:    missionSettings
                     }
                 } // Column
             } // Item
         } // Component
     } // Loader
-
-    Component {
-        id: missionList
-
-        QGCFlickable {
-            anchors.left:   parent.left
-            anchors.right:  parent.right
-            height:         missionColumn.height
-
-            Column {
-                id:             missionColumn
-                anchors.left:   parent.left
-                anchors.right:  parent.right
-                spacing:        _margin
-
-                SectionHeader {
-                    text:       qsTr("Load Mission")
-                    showSpacer: false
-                }
-
-                QGCButton {
-                    anchors.left:   parent.left
-                    anchors.right:  parent.right
-                    text:           qsTr("Load from Vehicle")
-                    visible:        !_offlineEditing
-
-                    onClicked: {
-                        missionController.loadFromVehicle()
-                    }
-                }
-
-                QGCLabel {
-                    text:       qsTr("No mission files")
-                    visible:    missionRepeater.model.length === 0
-                }
-
-                Repeater {
-                    id:     missionRepeater
-                    model:  fileController.getFiles(_savePath, _fileExtension);
-
-                    QGCButton {
-                        anchors.left:   parent.left
-                        anchors.right:  parent.right
-                        text:           modelData
-
-                        onClicked: {
-                            missionController.loadFromFile(fileController.fullyQualifiedFilename(_savePath, modelData, _fileExtension))
-                        }
-                    }
-                }
-            }
-        }
-    }
 
     Component {
         id: missionSettings
@@ -337,5 +241,5 @@ Rectangle {
                 }
             }
         } // Column
-    }
+    } // Deferred loader
 } // Rectangle

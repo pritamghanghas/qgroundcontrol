@@ -23,6 +23,7 @@ class CoordinateVector;
 class VisualMissionItem;
 class MissionItem;
 class MissionSettingsItem;
+class AppSettings;
 
 Q_DECLARE_LOGGING_CATEGORY(MissionControllerLog)
 
@@ -88,9 +89,6 @@ public:
     /// Sends the mission items to the specified vehicle
     static void sendItemsToVehicle(Vehicle* vehicle, QmlObjectListModel* visualMissionItems);
 
-    Q_INVOKABLE void save(void);
-    Q_INVOKABLE void clearMission(void);
-
     // Overrides from PlanElementController
     void start                      (bool editMode) final;
     void startStaticActiveVehicle   (Vehicle* vehicle) final;
@@ -145,6 +143,7 @@ private slots:
     void _recalcWaypointLines(void);
     void _recalcMissionFlightStatus(void);
     void _updateContainsItems(void);
+    void _visualItemsDirtyChanged(bool dirty);
 
 private:
     void _init(void);
@@ -193,6 +192,7 @@ private:
     MissionFlightStatus_t   _missionFlightStatus;
     QString                 _surveyMissionItemName;
     QString                 _fwLandingMissionItemName;
+    AppSettings*            _appSettings;
 
     static const char*  _settingsGroup;
 

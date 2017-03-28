@@ -56,6 +56,7 @@ MissionController::MissionController(QObject *parent)
     , _queuedSend(false)
     , _surveyMissionItemName(tr("Survey"))
     , _fwLandingMissionItemName(tr("Fixed Wing Landing"))
+    , _appSettings(qgcApp()->toolbox()->settingsManager()->appSettings())
 {
     _missionFlightStatus.maxTelemetryDistance = 0;
     _missionFlightStatus.totalDistance = 0;
@@ -449,18 +450,18 @@ bool MissionController::_loadJsonMissionFileV2(Vehicle* vehicle, const QJsonObje
 
     // Mission Settings
     QGeoCoordinate homeCoordinate;
-    SettingsManager* settingsManager = qgcApp()->toolbox()->settingsManager();
+    AppSettings* appSettings = qgcApp()->toolbox()->settingsManager()->appSettings();
     if (!JsonHelper::loadGeoCoordinate(json[_jsonPlannedHomePositionKey], true /* altitudeRequired */, homeCoordinate, errorString)) {
         return false;
     }
     if (json.contains(_jsonVehicleTypeKey) && vehicle->isOfflineEditingVehicle()) {
-        settingsManager->appSettings()->offlineEditingVehicleType()->setRawValue(json[_jsonVehicleTypeKey].toDouble());
+        appSettings->offlineEditingVehicleType()->setRawValue(json[_jsonVehicleTypeKey].toDouble());
     }
     if (json.contains(_jsonCruiseSpeedKey)) {
-        settingsManager->appSettings()->offlineEditingCruiseSpeed()->setRawValue(json[_jsonCruiseSpeedKey].toDouble());
+        appSettings->offlineEditingCruiseSpeed()->setRawValue(json[_jsonCruiseSpeedKey].toDouble());
     }
     if (json.contains(_jsonHoverSpeedKey)) {
-        settingsManager->appSettings()->offlineEditingHoverSpeed()->setRawValue(json[_jsonHoverSpeedKey].toDouble());
+        appSettings->offlineEditingHoverSpeed()->setRawValue(json[_jsonHoverSpeedKey].toDouble());
     }
 
     MissionSettingsItem* settingsItem = new MissionSettingsItem(vehicle, visualItems);
@@ -646,20 +647,6 @@ void MissionController::loadFromFile(const QString& filename)
     MissionController::_scanForAdditionalSettings(_visualItems, _activeVehicle);
 
     _initAllVisualItems();
-
-    QString filenameOnly = filename;
-    int lastSepIndex = filename.lastIndexOf(QStringLiteral("/"));
-    if (lastSepIndex != -1) {
-        filenameOnly = filename.right(filename.length() - lastSepIndex - 1);
-    }
-    QString extension = AppSettings::missionFileExtension;
-    if (filenameOnly.endsWith("." + extension)) {
-        filenameOnly = filenameOnly.left(filenameOnly.length() - extension.length() - 1);
-    }
-
-    _settingsItem->missionName()->setRawValue(filenameOnly);
-    _settingsItem->setExistingMission(true);
-
     sendToVehicle();
 }
 
@@ -704,8 +691,6 @@ bool MissionController::loadItemsFromFile(Vehicle* vehicle, const QString& filen
 
 void MissionController::saveToFile(const QString& filename)
 {
-    qDebug() << filename;
-
     if (filename.isEmpty()) {
         return;
     }
@@ -718,7 +703,7 @@ void MissionController::saveToFile(const QString& filename)
     QFile file(missionFilename);
 
     if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
-        qgcApp()->showMessage(file.errorString());
+        qgcApp()->showMessage(tr("Mission save %1 : %2").arg(filename).arg(file.errorString()));
     } else {
         QJsonObject missionFileObject;      // top level json object
 
@@ -1226,7 +1211,7 @@ void MissionController::_initAllVisualItems(void)
 
     _recalcAll();
 
-    connect(_visualItems, &QmlObjectListModel::dirtyChanged, this, &MissionController::dirtyChanged);
+    connect(_visualItems, &QmlObjectListModel::dirtyChanged, this, &MissionController::_visualItemsDirtyChanged);
     connect(_visualItems, &QmlObjectListModel::countChanged, this, &MissionController::_updateContainsItems);
 
     emit visualItemsChanged();
@@ -1241,7 +1226,7 @@ void MissionController::_deinitAllVisualItems(void)
         _deinitVisualItem(qobject_cast<VisualMissionItem*>(_visualItems->get(i)));
     }
 
-    disconnect(_visualItems, &QmlObjectListModel::dirtyChanged, this, &MissionController::dirtyChanged);
+    disconnect(_visualItems, &QmlObjectListModel::dirtyChanged, this, &MissionController::_visualItemsDirtyChanged);
     disconnect(_visualItems, &QmlObjectListModel::countChanged, this, &MissionController::_updateContainsItems);
 }
 
@@ -1538,6 +1523,9 @@ QString MissionController::fileExtension(void) const
 
 void MissionController::_scanForAdditionalSettings(QmlObjectListModel* visualItems, Vehicle* vehicle)
 {
+    // First we look for a Fixed Wing Landing Pattern which is at the end
+    FixedWingLandingComplexItem::scanForItem(visualItems, vehicle);
+
     int scanIndex = 0;
     while (scanIndex < visualItems->count()) {
         VisualMissionItem* visualItem = visualItems->value<VisualMissionItem*>(scanIndex);
@@ -1593,24 +1581,16 @@ bool MissionController::missionInProgress(void) const
     return _visualItems && _visualItems->count() > 1 && (!_visualItems->value<VisualMissionItem*>(0)->isCurrentItem() && !_visualItems->value<VisualMissionItem*>(1)->isCurrentItem());
 }
 
-void MissionController::save(void)
+void MissionController::_visualItemsDirtyChanged(bool dirty)
 {
-    // Save to file if the mission is named
-    QString missionFullPath = _settingsItem->missionFullPath()->rawValue().toString();
-    if (!missionFullPath.isEmpty()) {
-        saveToFile(missionFullPath);
+    if (dirty) {
+        if (_visualItems->count() > 1) {
+            emit dirtyChanged(true);
+        } else {
+            // This was a change to mission settings with no other mission items added
+            _visualItems->setDirty(false);
+        }
+    } else {
+        emit dirtyChanged(false);
     }
-
-    // Send to vehicle if we are connected
-    if (!_activeVehicle->isOfflineEditingVehicle()) {
-        sendToVehicle();
-    }
-
-    _settingsItem->setExistingMission(_visualItems->count() > 1 && !missionFullPath.isEmpty());
-}
-
-void MissionController::clearMission(void)
-{
-    removeAll();
-    save();
 }
