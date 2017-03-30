@@ -28,6 +28,7 @@ const char* QGroundControlQmlGlobal::_flightMapZoomSettingsKey =                
 QGroundControlQmlGlobal::QGroundControlQmlGlobal(QGCApplication* app)
     : QGCTool(app)
     , _hbSettings(NULL)
+    , _flightMapInitialZoom(14.7)   // About 500 meter scale
     , _linkManager(NULL)
     , _multiVehicleManager(NULL)
     , _mapEngineManager(NULL)
@@ -195,8 +196,8 @@ QGeoCoordinate QGroundControlQmlGlobal::flightMapPosition(void)
     QGeoCoordinate  coord;
 
     settings.beginGroup(_flightMapPositionSettingsGroup);
-    coord.setLatitude(settings.value(_flightMapPositionLatitudeSettingsKey, 37.803784).toDouble());
-    coord.setLongitude(settings.value(_flightMapPositionLongitudeSettingsKey, -122.462276).toDouble());
+    coord.setLatitude(settings.value(_flightMapPositionLatitudeSettingsKey, 0).toDouble());
+    coord.setLongitude(settings.value(_flightMapPositionLongitudeSettingsKey, 0).toDouble());
 
     return coord;
 }
@@ -205,7 +206,8 @@ double QGroundControlQmlGlobal::flightMapZoom(void)
 {
     QSettings settings;
 
-    return settings.value(_flightMapZoomSettingsKey, 18).toDouble();
+    settings.beginGroup(_flightMapPositionSettingsGroup);
+    return settings.value(_flightMapZoomSettingsKey, 2).toDouble();
 }
 
 void QGroundControlQmlGlobal::setFlightMapPosition(QGeoCoordinate& coordinate)
@@ -225,6 +227,7 @@ void QGroundControlQmlGlobal::setFlightMapZoom(double zoom)
     if (zoom != flightMapZoom()) {
         QSettings settings;
 
+        settings.beginGroup(_flightMapPositionSettingsGroup);
         settings.setValue(_flightMapZoomSettingsKey, zoom);
         emit flightMapZoomChanged(zoom);
     }
