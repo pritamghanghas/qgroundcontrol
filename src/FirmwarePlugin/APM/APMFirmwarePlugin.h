@@ -83,6 +83,7 @@ public:
     bool                isGuidedMode                    (const Vehicle* vehicle) const final;
     void                pauseVehicle                    (Vehicle* vehicle);
     int                 manualControlReservedButtonCount(void);
+    void                guidedModeTakeoff               (Vehicle* vehicle);
     bool                adjustIncomingMavlinkMessage    (Vehicle* vehicle, mavlink_message_t* message) final;
     void                adjustOutgoingMavlinkMessage    (Vehicle* vehicle, LinkInterface* outgoingLink, mavlink_message_t* message) final;
     void                initializeVehicle               (Vehicle* vehicle) final;
