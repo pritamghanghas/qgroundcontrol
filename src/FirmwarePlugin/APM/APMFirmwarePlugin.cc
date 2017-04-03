@@ -837,13 +837,3 @@ QString APMFirmwarePlugin::internalParameterMetaDataFile(Vehicle* vehicle)
         return QString();
     }
 }
-
-QString APMFirmwarePlugin::missionFlightMode(void)
-{
-    return QStringLiteral("Auto");
-}
-
-QString APMFirmwarePlugin::rtlFlightMode(void)
-{
-    return QStringLiteral("RTL");
-}
