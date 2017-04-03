@@ -248,7 +248,7 @@ void APMFirmwarePlugin::guidedModeTakeoff(Vehicle* vehicle)
                             -1,                             // No pitch requested
                             0, 0,                           // param 2-4 unused
                             NAN, NAN, NAN,                  // No yaw, lat, lon
-                            takeoffAlt->rawValue().toDouble()/100, // ardupilot expects relative alt in meters here
+                            takeoffAlt->rawValue().toDouble()/100 // ardupilot expects relative alt in meters here
                            );
 }
 
