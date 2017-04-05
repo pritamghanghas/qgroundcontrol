@@ -35,11 +35,11 @@ class HBSettings;
 class SettingsManager;
 
 /// This is used to manage all of our top level services/tools
-class QGCToolbox {
+class QGCToolbox : public QObject {
+    Q_OBJECT
 
 public:
     QGCToolbox(QGCApplication* app);
-    ~QGCToolbox();
 
     FirmwarePluginManager*      firmwarePluginManager(void)     { return _firmwarePluginManager; }
     GAudioOutput*               audioOutput(void)               { return _audioOutput; }
@@ -99,11 +99,12 @@ class QGCTool : public QObject {
     Q_OBJECT
 
 public:
-    // All tools are parented to QGCAppliation and go through a two phase creation. First all tools are newed,
-    // and then setToolbox is called on all tools. The prevents creating an circular dependencies at constructor
-    // time.
-    QGCTool(QGCApplication* app);
+    // All tools must be parented to the QGCToolbox and go through a two phase creation. In the constructor the toolbox
+    // should only be passed to QGCTool constructor for correct parenting. It should not be referenced or set in the
+    // protected member. Then in the second phase of setToolbox calls is where you can reference the toolbox.
+    QGCTool(QGCApplication* app, QGCToolbox* toolbox);
 
+    // If you override this method, you must call the base class.
     virtual void setToolbox(QGCToolbox* toolbox);
 
 protected:

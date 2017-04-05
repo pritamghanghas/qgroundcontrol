@@ -2,7 +2,7 @@
 #include <QSettings>
 #include <QtQml>
 
-HBSettings::HBSettings(QGCApplication *app) : QGCTool(app)
+HBSettings::HBSettings(QGCApplication *app, QGCToolbox *toolbox) : QGCTool(app, toolbox)
 {
 
 }

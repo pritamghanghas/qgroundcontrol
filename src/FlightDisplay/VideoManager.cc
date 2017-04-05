@@ -31,8 +31,8 @@
 QGC_LOGGING_CATEGORY(VideoManagerLog, "VideoManagerLog")
 
 //-----------------------------------------------------------------------------
-VideoManager::VideoManager(QGCApplication* app)
-    : QGCTool(app)
+VideoManager::VideoManager(QGCApplication* app, QGCToolbox* toolbox)
+    : QGCTool(app, toolbox)
     , _videoSurface(NULL)
     , _videoReceiver(NULL)
     , _videoRunning(false)

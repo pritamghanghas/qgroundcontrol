@@ -8,7 +8,7 @@ class HBSettings : public QGCTool
 {
     Q_OBJECT
 public:
-    explicit HBSettings(QGCApplication* app);
+    explicit HBSettings(QGCApplication* app, QGCToolbox* toolbox);
 
     // Override from QGCTool
     virtual void setToolbox(QGCToolbox *toolbox);

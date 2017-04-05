@@ -43,7 +43,9 @@ Rectangle {
 
     Component.onCompleted: recalcShowOptionalElements()
 
-    onMaxHeightChanged: recalcShowOptionalElements()
+    onMaxHeightChanged:     recalcShowOptionalElements()
+    onModelChanged:         recalcShowOptionalElements()
+    onButtonVisibleChanged: recalcShowOptionalElements()
 
     Connections {
         target: ScreenTools
@@ -52,6 +54,7 @@ Rectangle {
         onDefaultFontPixelHeightChanged:    recalcShowOptionalElements()
     }
 
+    /*
     onHeightChanged: {
         if (_needRecalc) {
             _needRecalc = false
@@ -60,6 +63,7 @@ Rectangle {
             }
         }
     }
+    */
 
     function recalcShowOptionalElements() {
         if (_showOptionalElements) {
@@ -228,6 +232,12 @@ Rectangle {
                             }
                         }
                     }
+                }
+
+                Item {
+                    width:      1
+                    height:     ScreenTools.defaultFontPixelHeight * 0.25
+                    visible:    _showOptionalElements
                 }
 
                 QGCLabel {
