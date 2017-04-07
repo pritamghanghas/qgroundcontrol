@@ -19,6 +19,7 @@ import QtQuick.Controls 1.2
 import QGroundControl.QgcQtGStreamer 1.0
 import QGroundControl.ScreenTools    1.0
 import QGroundControl.Controls       1.0
+import QGroundControl                1.0
 
 VideoItem {
     id: videoBackground
@@ -301,7 +302,7 @@ VideoItem {
         id:                         toolColumn
         visible:                    !_mainIsMap
         anchors.leftMargin:         _margins
-        anchors.topMargin:          _margins*5
+        anchors.topMargin:          _margins*3.5
         anchors.left:               parent.left
         anchors.top:                parent.top
         spacing:                    ScreenTools.defaultFontPixelHeight
