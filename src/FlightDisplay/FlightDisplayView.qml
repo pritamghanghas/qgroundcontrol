@@ -82,7 +82,8 @@ QGCView {
     }
 
     function px4JoystickCheck() {
-        if ( _activeVehicle && !_activeVehicle.supportsManualControl && (QGroundControl.settingsManager.appSettings.virtualJoystick.value || _activeVehicle.joystickEnabled)) {
+        if ( _activeVehicle && !(_activeVehicle.supportsManualControl || _activeVehicle.supportsRCOverRide)
+                && !_active && (QGroundControl.settingsManager.appSettings.virtualJoystick.value || _activeVehicle.joystickEnabled)) {
             px4JoystickSupport.open()
         }
     }
@@ -94,7 +95,7 @@ QGCView {
 
     MessageDialog {
         id:     px4JoystickSupport
-        text:   qsTr("Joystick support requires MAVLink MANUAL_CONTROL support. ") +
+        text:   qsTr("Joystick support requires MAVLink MANUAL_CONTROL / RC OVERRIDE support. ") +
                 qsTr("The firmware you are running does not normally support this. ") +
                 qsTr("It will only work if you have modified the firmware to add MANUAL_CONTROL support.")
     }

@@ -84,6 +84,7 @@ public:
     void                pauseVehicle                    (Vehicle* vehicle);
     int                 manualControlReservedButtonCount(void);
     void                guidedModeTakeoff               (Vehicle* vehicle);
+    bool                supportsRCOverRide              (void) { return true; }
     bool                adjustIncomingMavlinkMessage    (Vehicle* vehicle, mavlink_message_t* message) final;
     void                adjustOutgoingMavlinkMessage    (Vehicle* vehicle, LinkInterface* outgoingLink, mavlink_message_t* message) final;
     void                initializeVehicle               (Vehicle* vehicle) final;

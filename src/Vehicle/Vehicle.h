@@ -277,6 +277,7 @@ public:
     Q_PROPERTY(bool                 rover                   READ rover                                                  NOTIFY vehicleTypeChanged)
     Q_PROPERTY(bool                 sub                     READ sub                                                    NOTIFY vehicleTypeChanged)
     Q_PROPERTY(bool                 supportsManualControl   READ supportsManualControl                                  CONSTANT)
+    Q_PROPERTY(bool                 supportsRCOverRide      READ supportsRCOverRide                                     CONSTANT)
     Q_PROPERTY(bool        supportsThrottleModeCenterZero   READ supportsThrottleModeCenterZero                         CONSTANT)
     Q_PROPERTY(bool                 supportsJSButton        READ supportsJSButton                                       CONSTANT)
     Q_PROPERTY(bool                 supportsRadio           READ supportsRadio                                          CONSTANT)
