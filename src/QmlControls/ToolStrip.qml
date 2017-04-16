@@ -35,47 +35,7 @@ Rectangle {
     readonly property real  _margin:                ScreenTools.defaultFontPixelWidth / 2
     readonly property real  _buttonSpacing:         ScreenTools.defaultFontPixelWidth
 
-    // All of the following values, connections and function are to support the ability to determine
-    // whether to show or hide the optional elements on the fly.
-
-    property bool _showOptionalElements:    true
-    property bool _needRecalc:              true
-
-    Component.onCompleted: recalcShowOptionalElements()
-
-    onMaxHeightChanged:     recalcShowOptionalElements()
-    onModelChanged:         recalcShowOptionalElements()
-    onButtonVisibleChanged: recalcShowOptionalElements()
-
-    Connections {
-        target: ScreenTools
-
-        onDefaultFontPixelWidthChanged:     recalcShowOptionalElements()
-        onDefaultFontPixelHeightChanged:    recalcShowOptionalElements()
-    }
-
-    /*
-    onHeightChanged: {
-        if (_needRecalc) {
-            _needRecalc = false
-            if (maxHeight && height > maxHeight) {
-                _showOptionalElements = false
-            }
-        }
-    }
-    */
-
-    function recalcShowOptionalElements() {
-        if (_showOptionalElements) {
-            if (maxHeight && height > maxHeight) {
-                _showOptionalElements = false
-            }
-        } else {
-            _needRecalc = true
-            _showOptionalElements = true
-        }
-
-    }
+    property bool _showOptionalElements: !ScreenTools.isTinyScreen
 
     QGCPalette { id: qgcPal }
     ExclusiveGroup { id: dropButtonsExclusiveGroup }

@@ -1755,6 +1755,8 @@ void Vehicle::requestDataStream(MAV_DATA_STREAM stream, uint16_t rate, bool send
     mavlink_message_t               msg;
     mavlink_request_data_stream_t   dataStream;
 
+    memset(&dataStream, 0, sizeof(dataStream));
+
     dataStream.req_stream_id = stream;
     dataStream.req_message_rate = rate;
     dataStream.start_stop = 1;  // start
@@ -1879,10 +1881,8 @@ void Vehicle::_startMissionRequest(void)
 void Vehicle::_parametersReady(bool parametersReady)
 {
     if (parametersReady) {
+        _setupAutoDisarmSignalling();
         _startMissionRequest();
-    }
-
-    if (parametersReady) {
         setJoystickEnabled(_joystickEnabled);
     }
 }
@@ -2334,6 +2334,7 @@ void Vehicle::_sendMavCommandAgain(void)
     mavlink_message_t       msg;
     mavlink_command_long_t  cmd;
 
+    memset(&cmd, 0, sizeof(cmd));
     cmd.command = queuedCommand.command;
     cmd.confirmation = 0;
     cmd.param1 = queuedCommand.rgParam[0];
@@ -2559,6 +2560,7 @@ void Vehicle::_ackMavlinkLogData(uint16_t sequence)
 {
     mavlink_message_t msg;
     mavlink_logging_ack_t ack;
+    memset(&ack, 0, sizeof(ack));
     ack.sequence = sequence;
     ack.target_component = _defaultComponentId;
     ack.target_system = id();
@@ -2664,6 +2666,29 @@ const QVariantList& Vehicle::cameraList(void) const
 bool Vehicle::vehicleYawsToNextWaypointInMission(void) const
 {
     return _firmwarePlugin->vehicleYawsToNextWaypointInMission(this);
+}
+
+void Vehicle::_setupAutoDisarmSignalling(void)
+{
+    QString param = _firmwarePlugin->autoDisarmParameter(this);
+
+    if (!param.isEmpty() && _parameterManager->parameterExists(FactSystem::defaultComponentId, param)) {
+        Fact* fact = _parameterManager->getParameter(FactSystem::defaultComponentId,param);
+        connect(fact, &Fact::rawValueChanged, this, &Vehicle::autoDisarmChanged);
+        emit autoDisarmChanged();
+    }
+}
+
+bool Vehicle::autoDisarm(void)
+{
+    QString param = _firmwarePlugin->autoDisarmParameter(this);
+
+    if (!param.isEmpty() && _parameterManager->parameterExists(FactSystem::defaultComponentId, param)) {
+        Fact* fact = _parameterManager->getParameter(FactSystem::defaultComponentId,param);
+        return fact->rawValue().toDouble() > 0;
+    }
+
+    return false;
 }
 
 //-----------------------------------------------------------------------------

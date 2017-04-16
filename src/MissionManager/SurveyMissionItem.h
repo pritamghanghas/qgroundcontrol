@@ -15,6 +15,7 @@
 #include "MissionItem.h"
 #include "SettingsFact.h"
 #include "QGCLoggingCategory.h"
+#include "QGCMapPolygon.h"
 
 Q_DECLARE_LOGGING_CATEGORY(SurveyMissionItemLog)
 
@@ -30,7 +31,6 @@ public:
     Q_PROPERTY(Fact*                gridAngle                   READ gridAngle                      CONSTANT)
     Q_PROPERTY(Fact*                gridSpacing                 READ gridSpacing                    CONSTANT)
     Q_PROPERTY(Fact*                turnaroundDist              READ turnaroundDist                 CONSTANT)
-    Q_PROPERTY(Fact*                cameraTrigger               READ cameraTrigger                  CONSTANT)
     Q_PROPERTY(Fact*                cameraTriggerDistance       READ cameraTriggerDistance          CONSTANT)
     Q_PROPERTY(Fact*                cameraTriggerInTurnaround   READ cameraTriggerInTurnaround      CONSTANT)
     Q_PROPERTY(Fact*                hoverAndCapture             READ hoverAndCapture                CONSTANT)
@@ -52,25 +52,18 @@ public:
     Q_PROPERTY(bool                 refly90Degrees              READ refly90Degrees WRITE setRefly90Degrees NOTIFY refly90DegreesChanged)
 
     Q_PROPERTY(double               timeBetweenShots            READ timeBetweenShots               NOTIFY timeBetweenShotsChanged)
-    Q_PROPERTY(QVariantList         polygonPath                 READ polygonPath                    NOTIFY polygonPathChanged)
     Q_PROPERTY(QVariantList         gridPoints                  READ gridPoints                     NOTIFY gridPointsChanged)
     Q_PROPERTY(int                  cameraShots                 READ cameraShots                    NOTIFY cameraShotsChanged)
     Q_PROPERTY(double               coveredArea                 READ coveredArea                    NOTIFY coveredAreaChanged)
 
+    Q_PROPERTY(QGCMapPolygon*       mapPolygon                  READ mapPolygon                     CONSTANT)
+
+#if 0
     // The polygon vertices are also exposed as a list mode since MapItemView will only work with a QAbstractItemModel as
     // opposed to polygonPath which is a QVariantList.
     Q_PROPERTY(QmlObjectListModel*  polygonModel                READ polygonModel                   CONSTANT)
-
-    Q_INVOKABLE void clearPolygon(void);
-    Q_INVOKABLE void addPolygonCoordinate(const QGeoCoordinate coordinate);
-    Q_INVOKABLE void adjustPolygonCoordinate(int vertexIndex, const QGeoCoordinate coordinate);
-    Q_INVOKABLE void removePolygonVertex(int vertexIndex);
-
-    // Splits the segment between vertextIndex and the next vertex in half
-    Q_INVOKABLE void splitPolygonSegment(int vertexIndex);
-
-    QVariantList        polygonPath (void) { return _polygonPath; }
-    QmlObjectListModel* polygonModel(void) { return &_polygonModel; }
+    Q_PROPERTY(QVariantList         polygonPath                 READ polygonPath                    NOTIFY polygonPathChanged)
+#endif
 
     QVariantList gridPoints (void) { return _simpleGridPoints; }
 
@@ -80,7 +73,6 @@ public:
     Fact* gridAngle                 (void) { return &_gridAngleFact; }
     Fact* gridSpacing               (void) { return &_gridSpacingFact; }
     Fact* turnaroundDist            (void) { return &_turnaroundDistFact; }
-    Fact* cameraTrigger             (void) { return &_cameraTriggerFact; }
     Fact* cameraTriggerDistance     (void) { return &_cameraTriggerDistanceFact; }
     Fact* cameraTriggerInTurnaround (void) { return &_cameraTriggerInTurnaroundFact; }
     Fact* hoverAndCapture           (void) { return &_hoverAndCaptureFact; }
@@ -96,11 +88,12 @@ public:
     Fact* fixedValueIsAltitude      (void) { return &_fixedValueIsAltitudeFact; }
     Fact* camera                    (void) { return &_cameraFact; }
 
-    int     cameraShots             (void) const;
-    double  coveredArea             (void) const { return _coveredArea; }
-    double  timeBetweenShots        (void) const;
-    bool    hoverAndCaptureAllowed  (void) const;
-    bool    refly90Degrees          (void) const { return _refly90Degrees; }
+    int             cameraShots             (void) const;
+    double          coveredArea             (void) const { return _coveredArea; }
+    double          timeBetweenShots        (void) const;
+    bool            hoverAndCaptureAllowed  (void) const;
+    bool            refly90Degrees          (void) const { return _refly90Degrees; }
+    QGCMapPolygon*  mapPolygon              (void) { return &_mapPolygon; }
 
     void setRefly90Degrees(bool refly90Degrees);
 
@@ -179,6 +172,8 @@ signals:
 
 private slots:
     void _setDirty(void);
+    void _polygonDirtyChanged(bool dirty);
+    void _clearInternal(void);
 
 private:
     enum CameraTriggerCode {
@@ -188,9 +183,7 @@ private:
         CameraTriggerHoverAndCapture
     };
 
-    void _clear(void);
     void _setExitCoordinate(const QGeoCoordinate& coordinate);
-    void _clearGrid(void);
     void _generateGrid(void);
     void _updateCoordinateAltitude(void);
     int _gridGenerator(const QList<QPointF>& polygonPoints, QList<QPointF>& simpleGridPoints, QList<QList<QPointF>>& transectSegments, bool refly);
@@ -216,8 +209,7 @@ private:
 
     int                             _sequenceNumber;
     bool                            _dirty;
-    QVariantList                    _polygonPath;
-    QmlObjectListModel              _polygonModel;
+    QGCMapPolygon                   _mapPolygon;
     QVariantList                    _simpleGridPoints;      ///< Grid points for drawing simple grid visuals
     QList<QList<QGeoCoordinate>>    _transectSegments;      ///< Internal transect segments including grid exit, turnaround and internal camera points
     QList<QList<QGeoCoordinate>>    _reflyTransectSegments; ///< Refly segments
@@ -227,6 +219,7 @@ private:
     int                             _missionCommandCount;
     bool                            _refly90Degrees;
 
+    bool            _ignoreRecalc;
     double          _surveyDistance;
     int             _cameraShots;
     double          _coveredArea;
@@ -241,7 +234,6 @@ private:
     SettingsFact    _gridAngleFact;
     SettingsFact    _gridSpacingFact;
     SettingsFact    _turnaroundDistFact;
-    SettingsFact    _cameraTriggerFact;
     SettingsFact    _cameraTriggerDistanceFact;
     SettingsFact    _cameraTriggerInTurnaroundFact;
     SettingsFact    _hoverAndCaptureFact;
@@ -257,14 +249,12 @@ private:
     SettingsFact    _fixedValueIsAltitudeFact;
     SettingsFact    _cameraFact;
 
-    static const char* _jsonPolygonObjectKey;
     static const char* _jsonGridObjectKey;
     static const char* _jsonGridAltitudeKey;
     static const char* _jsonGridAltitudeRelativeKey;
     static const char* _jsonGridAngleKey;
     static const char* _jsonGridSpacingKey;
     static const char* _jsonTurnaroundDistKey;
-    static const char* _jsonCameraTriggerKey;
     static const char* _jsonCameraTriggerDistanceKey;
     static const char* _jsonCameraTriggerInTurnaroundKey;
     static const char* _jsonHoverAndCaptureKey;

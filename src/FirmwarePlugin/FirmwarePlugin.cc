@@ -11,6 +11,8 @@
 #include "QGCApplication.h"
 #include "Generic/GenericAutoPilotPlugin.h"
 #include "CameraMetaData.h"
+#include "SettingsManager.h"
+#include "AppSettings.h"
 
 #include <QDebug>
 
@@ -341,6 +343,7 @@ const QVariantList &FirmwarePlugin::toolBarIndicators(const Vehicle* vehicle)
         _toolBarIndicatorList.append(QVariant::fromValue(QUrl::fromUserInput("qrc:/toolbar/RCRSSIIndicator.qml")));
         _toolBarIndicatorList.append(QVariant::fromValue(QUrl::fromUserInput("qrc:/toolbar/BatteryIndicator.qml")));
         _toolBarIndicatorList.append(QVariant::fromValue(QUrl::fromUserInput("qrc:/toolbar/ModeIndicator.qml")));
+        _toolBarIndicatorList.append(QVariant::fromValue(QUrl::fromUserInput("qrc:/toolbar/ArmedIndicator.qml")));
     }
     return _toolBarIndicatorList;
 }
@@ -449,4 +452,20 @@ void FirmwarePlugin::batteryConsumptionData(Vehicle* vehicle, int& mAhBattery, d
     mAhBattery = 0;
     hoverAmps = 0;
     cruiseAmps = 0;
+}
+
+QString FirmwarePlugin::autoDisarmParameter(Vehicle* vehicle)
+{
+    Q_UNUSED(vehicle);
+    return QString();
+}
+
+void FirmwarePlugin::missionFlightSpeedInfo(Vehicle* vehicle, double& hoverSpeed, double& cruiseSpeed)
+{
+    Q_UNUSED(vehicle);
+
+    // Best we can do is use settings
+    AppSettings* appSettings = qgcApp()->toolbox()->settingsManager()->appSettings();
+    hoverSpeed = appSettings->offlineEditingHoverSpeed()->rawValue().toDouble();
+    cruiseSpeed = appSettings->offlineEditingCruiseSpeed()->rawValue().toDouble();
 }

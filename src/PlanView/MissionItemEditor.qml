@@ -86,19 +86,15 @@ Rectangle {
         visible:    hamburger.visible
         onClicked: {
             currentItemScope.focus = true
-            if (_waypointsOnlyMode) {
-                waypointsOnlyMenu.popup()
-            } else {
-                normalMenu.popup()
-            }
+            hamburgerMenu.popup()
         }
 
         Menu {
-            id: normalMenu
+            id: hamburgerMenu
 
             MenuItem {
                 text:           qsTr("Insert waypoint")
-                onTriggered:    insert()
+                onTriggered:    insertWaypoint()
             }
 
             MenuItem {
@@ -126,17 +122,18 @@ Rectangle {
             MenuItem {
                 text:           qsTr("Change command...")
                 onTriggered:    commandPicker.clicked()
+                visible:        !_waypointsOnlyMode
             }
 
             MenuSeparator {
-                visible: missionItem.isSimpleItem
+                visible: missionItem.isSimpleItem && !_waypointsOnlyMode
             }
 
             MenuItem {
                 text:       qsTr("Show all values")
                 checkable:  true
                 checked:    missionItem.isSimpleItem ? missionItem.rawEdit : false
-                visible:    missionItem.isSimpleItem
+                visible:    missionItem.isSimpleItem && !_waypointsOnlyMode
 
                 onTriggered:    {
                     if (missionItem.rawEdit) {
@@ -151,38 +148,6 @@ Rectangle {
                     checked = missionItem.rawEdit
                 }
             }
-        }
-
-        Menu {
-            id: waypointsOnlyMenu
-
-            MenuItem {
-                text:           qsTr("Insert waypoint")
-                onTriggered:    insertWaypoint()
-            }
-
-            MenuItem {
-                text:           qsTr("Delete")
-                onTriggered:    remove()
-            }
-
-            Menu {
-                id:     waypointsOnlyPatternMenu
-                title:  qsTr("Insert pattern")
-
-                Instantiator {
-                    model: missionController.complexMissionItemNames
-
-                    onObjectAdded:      waypointsOnlyPatternMenu.insertItem(index, object)
-                    onObjectRemoved:    waypointsOnlyPatternMenu.removeItem(object)
-
-                    MenuItem {
-                        text:           modelData
-                        onTriggered:    insertComplexItem(modelData)
-                    }
-                }
-            }
-
         }
     }
 
