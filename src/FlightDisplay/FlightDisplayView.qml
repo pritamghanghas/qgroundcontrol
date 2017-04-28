@@ -38,14 +38,18 @@ QGCView {
 
     property bool activeVehicleJoystickEnabled: _activeVehicle ? _activeVehicle.joystickEnabled : false
 
-    property var    _activeVehicle:     QGroundControl.multiVehicleManager.activeVehicle
-    property bool   _mainIsMap:         QGroundControl.videoManager.hasVideo ? QGroundControl.loadBoolGlobalSetting(_mainIsMapKey,  true) : true
-    property bool   _isPipVisible:      QGroundControl.videoManager.hasVideo ? QGroundControl.loadBoolGlobalSetting(_PIPVisibleKey, true) : false
-    property real   _savedZoomLevel:    0
-    property real   _margins:           ScreenTools.defaultFontPixelWidth / 2
-    property real   _pipSize:           mainWindow.width * 0.2
-    property alias  _guidedController:  guidedActionsController
-    property alias  _altitudeSlider:    altitudeSlider
+    property var    _planMasterController:  masterController
+    property var    _missionController:     _planMasterController.missionController
+    property var    _geoFenceController:    _planMasterController.geoFenceController
+    property var    _rallyPointController:  _planMasterController.rallyPointController
+    property var    _activeVehicle:         QGroundControl.multiVehicleManager.activeVehicle
+    property bool   _mainIsMap:             QGroundControl.videoManager.hasVideo ? QGroundControl.loadBoolGlobalSetting(_mainIsMapKey,  true) : true
+    property bool   _isPipVisible:          QGroundControl.videoManager.hasVideo ? QGroundControl.loadBoolGlobalSetting(_PIPVisibleKey, true) : false
+    property real   _savedZoomLevel:        0
+    property real   _margins:               ScreenTools.defaultFontPixelWidth / 2
+    property real   _pipSize:               mainWindow.width * 0.2
+    property alias  _guidedController:      guidedActionsController
+    property alias  _altitudeSlider:        altitudeSlider
 
 
     readonly property bool      isBackgroundDark:       _mainIsMap ? (_flightMap ? _flightMap.isSatelliteMap : true) : true
@@ -93,20 +97,14 @@ QGCView {
         }
     }
 
-    MissionController {
-        id:                     flyMissionController
+    PlanElemementMasterController {
+        id:                     masterController
         Component.onCompleted:  start(false /* editMode */)
+    }
+
+    Connections {
+        target:                 _missionController
         onResumeMissionReady:   guidedActionsController.confirmAction(guidedActionsController.actionResumeMissionReady)
-    }
-
-    GeoFenceController {
-        id: flyGeoFenceController
-        Component.onCompleted: start(false /* editMode */)
-    }
-
-    RallyPointController {
-        id: flyRallyPointController
-        Component.onCompleted: start(false /* editMode */)
     }
 
     MessageDialog {
@@ -117,7 +115,7 @@ QGCView {
     }
 
     Connections {
-        target: QGroundControl.multiVehicleManager
+        target:                 QGroundControl.multiVehicleManager
         onActiveVehicleChanged: px4JoystickCheck()
     }
 
@@ -150,7 +148,7 @@ QGCView {
                 vehicleWasArmed = true
             }
         } else {
-            if (promptForMissionRemove && (flyMissionController.containsItems || flyGeoFenceController.containsItems || flyRallyPointController.containsItems)) {
+            if (promptForMissionRemove && (_missionController.containsItems || _geoFenceController.containsItems || _rallyPointController.containsItems)) {
                 root.showDialog(removeMissionDialogComponent, qsTr("Flight complete"), showDialogDefaultWidth, StandardButton.No | StandardButton.Yes)
             }
             promptForMissionRemove = false
@@ -170,9 +168,9 @@ QGCView {
             message: qsTr("Do you want to remove the mission from the vehicle?")
 
             function accept() {
-                flyMissionController.removeAllFromVehicle()
-                flyGeoFenceController.removeAllFromVehicle()
-                flyRallyPointController.removeAllFromVehicle()
+                _missionController.removeAllFromVehicle()
+                _geoFenceController.removeAllFromVehicle()
+                _rallyPointController.removeAllFromVehicle()
                 hideDialog()
 
             }
@@ -215,9 +213,7 @@ QGCView {
             FlightDisplayViewMap {
                 id:                         _flightMap
                 anchors.fill:               parent
-                missionController:          flyMissionController
-                geoFenceController:         flyGeoFenceController
-                rallyPointController:       flyRallyPointController
+                planMasterController:       masterController
                 guidedActionsController:    _guidedController
                 flightWidgets:              flightDisplayViewWidgets
                 rightPanelWidth:            ScreenTools.defaultFontPixelHeight * 9
@@ -321,7 +317,7 @@ QGCView {
             anchors.bottom:     parent.bottom
             qgcView:            root
             useLightColors:     isBackgroundDark
-            missionController:  _flightMap.missionController
+            missionController:  _missionController
             visible:            singleVehicleView.checked
         }
 
@@ -408,7 +404,7 @@ QGCView {
             id:                 toolStrip
             anchors.leftMargin: ScreenTools.defaultFontPixelWidth
             anchors.left:       _panel.left
-            anchors.topMargin:  ScreenTools.toolbarHeight + _margins
+            anchors.topMargin:  ScreenTools.toolbarHeight + (_margins * 2)
             anchors.top:        _panel.top
             z:                  _panel.z + 4
             title:              qsTr("Fly")
@@ -512,7 +508,7 @@ QGCView {
 
         GuidedActionsController {
             id:                 guidedActionsController
-            missionController:  flyMissionController
+            missionController:  _missionController
             confirmDialog:      guidedActionConfirm
             z:                  _flightVideoPipControl.z + 1
 
