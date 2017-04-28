@@ -192,3 +192,9 @@ void QGCCorePlugin::setShowAdvancedUI(bool show)
         emit showAdvancedUIChanged(show);
     }
 }
+
+void QGCCorePlugin::paletteOverride(QString colorName, QGCPalette::PaletteColorInfo_t& colorInfo)
+{
+    Q_UNUSED(colorName);
+    Q_UNUSED(colorInfo);
+}

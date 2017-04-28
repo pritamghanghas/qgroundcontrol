@@ -682,6 +682,8 @@ public:
     /// @return: true: initial request is complete, false: initial request is still in progress;
     bool initialPlanRequestComplete(void) const { return _initialPlanRequestComplete; }
 
+    void _setHomePosition(QGeoCoordinate& homeCoord);
+
 signals:
     void allLinksInactive(Vehicle* vehicle);
     void coordinateChanged(QGeoCoordinate coordinate);
@@ -851,6 +853,7 @@ private:
     void _resetBreachflytoLocationOnModeChange();
     void _startPlanRequest(void);
     void _setupAutoDisarmSignalling(void);
+    void _setCapabilities(uint64_t capabilityBits);
 
     int     _id;                    ///< Mavlink system id
 
