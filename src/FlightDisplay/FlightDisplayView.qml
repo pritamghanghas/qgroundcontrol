@@ -483,11 +483,7 @@ QGCView {
             ]
 
             onClicked: {
-                //-- Dismiss any other dialog
-                rootLoader.sourceComponent  = null
-                guidedActionConfirm.visible = false
-                guidedActionList.visible    = false
-                altitudeSlider.visible      = false
+                guidedActionsController.closeAll()
                 var action = model[index].action
                 if (action === -1) {
                     if (index == 4) {
@@ -525,6 +521,20 @@ QGCView {
                 if (showResumeMission) {
                     confirmAction(actionResumeMission)
                 }
+            }
+
+            onShowLandAbortChanged: {
+                if (showLandAbort) {
+                    confirmAction(actionLandAbort)
+                }
+            }
+
+            /// Close all dialogs
+            function closeAll() {
+                rootLoader.sourceComponent  = null
+                guidedActionConfirm.visible = false
+                guidedActionList.visible    = false
+                altitudeSlider.visible      = false
             }
         }
 
