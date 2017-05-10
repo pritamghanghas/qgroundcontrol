@@ -140,9 +140,15 @@ QString APMCustomMode::modeString() const
     return mode;
 }
 
+APMFirmwarePluginInstanceData::APMFirmwarePluginInstanceData(QObject* parent)
+    : QObject(parent)
+    , textSeverityAdjustmentNeeded(false)
+{
+
+}
+
 APMFirmwarePlugin::APMFirmwarePlugin(void)
     : _coaxialMotors(false)
-    , _textSeverityAdjustmentNeeded(false)
 {
     qmlRegisterType<APMFlightModesComponentController>  ("QGroundControl.Controllers", 1, 0, "APMFlightModesComponentController");
     qmlRegisterType<APMAirframeComponentController>     ("QGroundControl.Controllers", 1, 0, "APMAirframeComponentController");
@@ -352,6 +358,7 @@ void APMFirmwarePlugin::_handleOutgoingParamSet(Vehicle* vehicle, LinkInterface*
 bool APMFirmwarePlugin::_handleIncomingStatusText(Vehicle* vehicle, mavlink_message_t* message)
 {
     QString messageText;
+    APMFirmwarePluginInstanceData* instanceData = qobject_cast<APMFirmwarePluginInstanceData*>(vehicle->firmwarePluginInstanceData());
 
     mavlink_statustext_t statusText;
     mavlink_msg_statustext_decode(message, &statusText);
@@ -365,7 +372,7 @@ bool APMFirmwarePlugin::_handleIncomingStatusText(Vehicle* vehicle, mavlink_mess
             if (messageText.contains(APM_COPTER_REXP) || messageText.contains(APM_PLANE_REXP) || messageText.contains(APM_ROVER_REXP) || messageText.contains(APM_SUB_REXP)) {
                 // found version string
                 APMFirmwareVersion firmwareVersion(messageText);
-                _textSeverityAdjustmentNeeded = _isTextSeverityAdjustmentNeeded(firmwareVersion);
+                instanceData->textSeverityAdjustmentNeeded = _isTextSeverityAdjustmentNeeded(firmwareVersion);
 
                 vehicle->setFirmwareVersion(firmwareVersion.majorNumber(), firmwareVersion.minorNumber(), firmwareVersion.patchNumber());
 
@@ -409,7 +416,7 @@ bool APMFirmwarePlugin::_handleIncomingStatusText(Vehicle* vehicle, mavlink_mess
     }
 
     // adjust mesasge if needed
-    if (_textSeverityAdjustmentNeeded) {
+    if (instanceData->textSeverityAdjustmentNeeded) {
         _adjustSeverity(message);
     }
 
@@ -447,10 +454,10 @@ bool APMFirmwarePlugin::_handleIncomingStatusText(Vehicle* vehicle, mavlink_mess
     if (messageText.startsWith("PreArm")) {
         // ArduPilot PreArm messages can come across very frequently especially on Solo, which seems to send them once a second.
         // Filter them out if they come too quickly.
-        if (_noisyPrearmMap.contains(messageText) && _noisyPrearmMap[messageText].msecsTo(QTime::currentTime()) < (10 * 1000)) {
+        if (instanceData->noisyPrearmMap.contains(messageText) && instanceData->noisyPrearmMap[messageText].msecsTo(QTime::currentTime()) < (10 * 1000)) {
             return false;
         }
-        _noisyPrearmMap[messageText] = QTime::currentTime();
+        instanceData->noisyPrearmMap[messageText] = QTime::currentTime();
 
         vehicle->setPrearmError(messageText);
     }
@@ -609,6 +616,8 @@ void APMFirmwarePlugin::_adjustCalibrationMessageSeverity(mavlink_message_t* mes
 
 void APMFirmwarePlugin::initializeVehicle(Vehicle* vehicle)
 {
+    vehicle->setFirmwarePluginInstanceData(new APMFirmwarePluginInstanceData);
+
     if (vehicle->isOfflineEditingVehicle()) {
         switch (vehicle->vehicleType()) {
         case MAV_TYPE_QUADROTOR:
