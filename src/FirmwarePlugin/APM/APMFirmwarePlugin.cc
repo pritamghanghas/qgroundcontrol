@@ -228,36 +228,6 @@ int APMFirmwarePlugin::manualControlReservedButtonCount(void)
     return 0;
 }
 
-//void APMFirmwarePlugin::guidedModeTakeoff(Vehicle* vehicle)
-//{
-//    QString takeoffAltParam("RTL_ALT");
-
-//    if (qIsNaN(vehicle->altitudeAMSL()->rawValue().toDouble())) {
-//        qgcApp()->showMessage(tr("Unable to takeoff, vehicle position not known."));
-//        return;
-//    }
-
-//    if (!vehicle->parameterManager()->parameterExists(FactSystem::defaultComponentId, takeoffAltParam)) {
-//        qgcApp()->showMessage(tr("Unable to takeoff, RTL_ALT parameter missing."));
-//        return;
-//    }
-//    Fact* takeoffAlt = vehicle->parameterManager()->getParameter(FactSystem::defaultComponentId, takeoffAltParam);
-
-//    if (!_armVehicle(vehicle)) {
-//        qgcApp()->showMessage(tr("Unable to takeoff: Vehicle failed to arm."));
-//        return;
-//    }
-
-//   vehicle->sendMavCommand(vehicle->defaultComponentId(),
-//                            MAV_CMD_NAV_TAKEOFF,
-//                            true,                           // show error is fails
-//                            -1,                             // No pitch requested
-//                            0, 0,                           // param 2-4 unused
-//                            NAN, NAN, NAN,                  // No yaw, lat, lon
-//                            takeoffAlt->rawValue().toDouble()/100 // ardupilot expects relative alt in meters here
-//                           );
-//}
-
 void APMFirmwarePlugin::_handleIncomingParamValue(Vehicle* vehicle, mavlink_message_t* message)
 {
     Q_UNUSED(vehicle);
