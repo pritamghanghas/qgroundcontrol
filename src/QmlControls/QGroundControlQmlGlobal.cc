@@ -140,7 +140,7 @@ void QGroundControlQmlGlobal::startAPMArduSubMockLink(bool sendStatusText)
 #endif
 }
 
-void QGroundControlQmlGlobal::stopAllMockLinks(void)
+void QGroundControlQmlGlobal::stopOneMockLink(void)
 {
 #ifdef QT_DEBUG
     LinkManager* linkManager = qgcApp()->toolbox()->linkManager();
@@ -150,7 +150,8 @@ void QGroundControlQmlGlobal::stopAllMockLinks(void)
         MockLink* mockLink = qobject_cast<MockLink*>(link);
 
         if (mockLink) {
-                    linkManager->disconnectLink(mockLink);
+            linkManager->disconnectLink(mockLink);
+            return;
         }
     }
 #endif
