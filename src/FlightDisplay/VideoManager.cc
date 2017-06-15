@@ -38,6 +38,7 @@ VideoManager::VideoManager(QGCApplication* app, QGCToolbox* toolbox)
     , _videoRunning(false)
     , _init(false)
     , _videoSettings(NULL)
+    , _showFullScreen(false)
 {
 }
 
@@ -111,6 +112,14 @@ void VideoManager::_udpPortChanged(void)
 void VideoManager::_rtspUrlChanged(void)
 {
     _restartVideo();
+}
+
+//-----------------------------------------------------------------------------
+void
+VideoManager::grabImage(QString imageFile)
+{
+    _imageFile = imageFile;
+    emit imageFileChanged();
 }
 
 //-----------------------------------------------------------------------------

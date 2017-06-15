@@ -352,7 +352,7 @@ bool APMFirmwarePlugin::_handleIncomingStatusText(Vehicle* vehicle, mavlink_mess
                 switch (vehicle->vehicleType()) {
                 case MAV_TYPE_FIXED_WING:
                     supportedMajorNumber = 3;
-                    supportedMinorNumber = 2;
+                    supportedMinorNumber = 4;
                     break;
                 case MAV_TYPE_QUADROTOR:
                 case MAV_TYPE_COAXIAL:
@@ -362,7 +362,7 @@ bool APMFirmwarePlugin::_handleIncomingStatusText(Vehicle* vehicle, mavlink_mess
                 case MAV_TYPE_OCTOROTOR:
                 case MAV_TYPE_TRICOPTER:
                     supportedMajorNumber = 3;
-                    supportedMinorNumber = 2;
+                    supportedMinorNumber = 3;
                     break;
                 default:
                     break;
