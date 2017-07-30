@@ -149,7 +149,10 @@ QGCView {
             }
         } else {
             if (promptForMissionRemove && (_missionController.containsItems || _geoFenceController.containsItems || _rallyPointController.containsItems)) {
-                root.showDialog(missionCompleteDialogComponent, qsTr("Flight Plan complete"), showDialogDefaultWidth, StandardButton.Close)
+                // ArduPilot has a strange bug which prevents mission clear from working at certain times, so we can't show this dialog
+                if (!_activeVehicle.apmFirmware) {
+                    root.showDialog(missionCompleteDialogComponent, qsTr("Flight Plan complete"), showDialogDefaultWidth, StandardButton.Close)
+                }
             }
             promptForMissionRemove = false
         }
@@ -169,7 +172,7 @@ QGCView {
                 anchors.fill:   parent
                 contentHeight:  column.height
 
-                Column {
+                ColumnLayout {
                     id:                 column
                     anchors.margins:    _margins
                     anchors.left:       parent.left
@@ -177,18 +180,26 @@ QGCView {
                     spacing:            ScreenTools.defaultFontPixelHeight
 
                     QGCLabel {
-                        text:                       qsTr("%1 Images Taken").arg(_activeVehicle.cameraTriggerPoints.count)
-                        anchors.horizontalCenter:   parent.horizontalCenter
-                        visible:                    _activeVehicle.cameraTriggerPoints.count != 0
+                        Layout.fillWidth:       true
+                        text:                   qsTr("%1 Images Taken").arg(_activeVehicle.cameraTriggerPoints.count)
+                        horizontalAlignment:    Text.AlignHCenter
+                        visible:                _activeVehicle.cameraTriggerPoints.count != 0
                     }
 
                     QGCButton {
-                        text:                       qsTr("Remove plan from vehicle")
-                        anchors.horizontalCenter:   parent.horizontalCenter
+                        Layout.fillWidth:   true
+                        text:               qsTr("Remove plan from vehicle")
                         onClicked: {
                             _planMasterController.removeAllFromVehicle()
                             hideDialog()
                         }
+                    }
+
+                    QGCButton {
+                        Layout.fillWidth:   true
+                        text:               qsTr("Leave plan on vehicle")
+                        anchors.horizontalCenter:   parent.horizontalCenter
+                        onClicked:                  hideDialog()
                     }
                 }
             }
@@ -360,7 +371,7 @@ QGCView {
             anchors.right:      _flightVideo.right
             height:             ScreenTools.defaultFontPixelHeight * 2
             width:              height
-            visible:            QGroundControl.videoManager.videoRunning && QGroundControl.settingsManager.videoSettings.showRecControl.rawValue
+            visible:            QGroundControl.videoManager.videoReceiver.videoRunning && QGroundControl.settingsManager.videoSettings.showRecControl.rawValue
             opacity:            0.75
 
             Rectangle {
@@ -530,6 +541,7 @@ QGCView {
             id:                 guidedActionsController
             missionController:  _missionController
             confirmDialog:      guidedActionConfirm
+            actionList:         guidedActionList
             altitudeSlider:     _altitudeSlider
             z:                  _flightVideoPipControl.z + 1
 

@@ -22,6 +22,8 @@
 #include <QTimer>
 #include <QTcpSocket>
 
+#include "VideoSurface.h"
+
 #if defined(QGC_GST_STREAMING)
 #include <gst/gst.h>
 #include "nodeselector.h"
@@ -34,29 +36,41 @@ class VideoReceiver : public QObject
     Q_OBJECT
 public:
 #if defined(QGC_GST_STREAMING)
-    Q_PROPERTY(bool recording READ recording NOTIFY recordingChanged)
+    Q_PROPERTY(bool             recording           READ    recording           NOTIFY recordingChanged)
 #endif
+    Q_PROPERTY(VideoSurface*    videoSurface        READ    videoSurface        CONSTANT)
+    Q_PROPERTY(bool             videoRunning        READ    videoRunning        NOTIFY videoRunningChanged)
+    Q_PROPERTY(QString          imageFile           READ    imageFile           NOTIFY imageFileChanged)
+    Q_PROPERTY(bool             showFullScreen      READ    showFullScreen      WRITE setShowFullScreen     NOTIFY showFullScreenChanged)
 
     explicit VideoReceiver(NodeSelector* piNodeSelector, QObject* parent = 0);
     ~VideoReceiver();
 
 #if defined(QGC_GST_STREAMING)
-    void setVideoSink(GstElement* sink);
-
-    bool running()   { return _running;   }
-    bool recording() { return _recording; }
-    bool streaming() { return _streaming; }
-    bool starting()  { return _starting;  }
-    bool stopping()  { return _stopping;  }
+    bool            running         () { return _running;   }
+    bool            recording       () { return _recording; }
+    bool            streaming       () { return _streaming; }
+    bool            starting        () { return _starting;  }
+    bool            stopping        () { return _stopping;  }
 #endif
 
+    VideoSurface*   videoSurface    () { return _videoSurface; }
+    bool            videoRunning    () { return _videoRunning; }
+    QString         imageFile       () { return _imageFile; }
+    bool            showFullScreen  () { return _showFullScreen; }
+    void            grabImage       (QString imageFile);
+
+    void        setShowFullScreen   (bool show) { _showFullScreen = show; emit showFullScreenChanged(); }
 
 signals:
+    void videoRunningChanged        ();
+    void imageFileChanged           ();
+    void showFullScreenChanged      ();
 #if defined(QGC_GST_STREAMING)
-    void recordingChanged();
-    void msgErrorReceived();
-    void msgEOSReceived();
-    void msgStateChangedReceived();
+    void recordingChanged           ();
+    void msgErrorReceived           ();
+    void msgEOSReceived             ();
+    void msgStateChangedReceived    ();
 #endif
 
 public slots:
@@ -69,17 +83,19 @@ public slots:
     void startRecording     ();
 
 private slots:
+    void _updateTimer               ();
 #if defined(QGC_GST_STREAMING)
-    void _timeout       ();
-    void _connected     ();
-    void _socketError   (QAbstractSocket::SocketError socketError);
-    void _handleError();
-    void _handleEOS();
-    void _handleStateChanged();
+    void _timeout                   ();
+    void _connected                 ();
+    void _socketError               (QAbstractSocket::SocketError socketError);
+    void _handleError               ();
+    void _handleEOS                 ();
+    void _handleStateChanged        ();
 #endif
 
 private:
 #if defined(QGC_GST_STREAMING)
+
     typedef struct
     {
         GstPad*         teepad;
@@ -98,31 +114,33 @@ private:
     Sink*               _sink;
     GstElement*         _tee;
 
-    static gboolean             _onBusMessage(GstBus* bus, GstMessage* message, gpointer user_data);
-    static GstPadProbeReturn    _unlinkCallBack(GstPad* pad, GstPadProbeInfo* info, gpointer user_data);
-    void                        _detachRecordingBranch(GstPadProbeInfo* info);
+    static gboolean             _onBusMessage           (GstBus* bus, GstMessage* message, gpointer user_data);
+    static GstPadProbeReturn    _unlinkCallBack         (GstPad* pad, GstPadProbeInfo* info, gpointer user_data);
+    void                        _detachRecordingBranch  (GstPadProbeInfo* info);
     void                        _shutdownRecordingBranch();
-    void                        _shutdownPipeline();
-    void                        _cleanupOldVideos();
+    void                        _shutdownPipeline       ();
+    void                        _cleanupOldVideos       ();
+    void                        _setVideoSink           (GstElement* sink);
 
-#endif
+    GstElement*     _pipeline;
+    GstElement*     _pipelineStopRec;
+    GstElement*     _videoSink;
 
-    QString     _uri;
+    //-- Wait for Video Server to show up before starting
+    QTimer          _frameTimer;
+    QTimer          _timer;
+    QTcpSocket*     _socket;
+    bool            _serverPresent;
 
-#if defined(QGC_GST_STREAMING)
-    GstElement*         _pipeline;
-    GstElement*         _pipelineStopRec;
-    GstElement*         _videoSink;
 #endif
 
     NodeSelector* _nodeSelector;
+    QString         _uri;
+    QString         _imageFile;
+    VideoSurface*   _videoSurface;
+    bool            _videoRunning;
+    bool            _showFullScreen;
 
-    //-- Wait for Video Server to show up before starting
-#if defined(QGC_GST_STREAMING)
-    QTimer      _timer;
-    QTcpSocket* _socket;
-    bool        _serverPresent;
-#endif
 };
 
 #endif // VIDEORECEIVER_H

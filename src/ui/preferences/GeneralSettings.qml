@@ -37,7 +37,6 @@ QGCView {
     property Fact _appFontPointSize:            QGroundControl.settingsManager.appSettings.appFontPointSize
     property real _labelWidth:                  ScreenTools.defaultFontPixelWidth * 15
     property real _editFieldWidth:              ScreenTools.defaultFontPixelWidth * 30
-    property Fact _videoPath:                   QGroundControl.settingsManager.videoSettings.videoSavePath
     property Fact _mapProvider:                 QGroundControl.settingsManager.flightMapSettings.mapProvider
     property Fact _mapType:                     QGroundControl.settingsManager.flightMapSettings.mapType
 
@@ -254,7 +253,7 @@ QGCView {
                             id:         promptSaveLog
                             text:       qsTr("Save telemetry log after each flight")
                             fact:       _telemetrySave
-                            visible:    !ScreenTools.isMobile && _telemetrySave.visible
+                            visible:    _telemetrySave.visible
                             property Fact _telemetrySave: QGroundControl.settingsManager.appSettings.telemetrySave
                         }
                         //-----------------------------------------------------------------
@@ -262,7 +261,7 @@ QGCView {
                         FactCheckBox {
                             text:       qsTr("Save telemetry log even if vehicle was not armed")
                             fact:       _telemetrySaveNotArmed
-                            visible:    !ScreenTools.isMobile && _telemetrySaveNotArmed.visible
+                            visible:    _telemetrySaveNotArmed.visible
                             enabled:    promptSaveLog.checked
                             property Fact _telemetrySaveNotArmed: QGroundControl.settingsManager.appSettings.telemetrySaveNotArmed
                         }
@@ -530,7 +529,7 @@ QGCView {
                         }
                         Row {
                             spacing:    ScreenTools.defaultFontPixelWidth
-                            visible:    QGroundControl.settingsManager.videoSettings.udpPort.visible && QGroundControl.videoManager.isGStreamer && videoSource.currentIndex === 0
+                            visible:    QGroundControl.settingsManager.videoSettings.udpPort.visible && QGroundControl.videoManager.isGStreamer && videoSource.currentIndex === 1
                             QGCLabel {
                                 text:               qsTr("UDP Port:")
                                 width:              _labelWidth
@@ -544,7 +543,7 @@ QGCView {
                         }
                         Row {
                             spacing:    ScreenTools.defaultFontPixelWidth
-                            visible:    QGroundControl.settingsManager.videoSettings.rtspUrl.visible && QGroundControl.videoManager.isGStreamer && videoSource.currentIndex === 1
+                            visible:    QGroundControl.settingsManager.videoSettings.rtspUrl.visible && QGroundControl.videoManager.isGStreamer && videoSource.currentIndex === 2
                             QGCLabel {
                                 anchors.verticalCenter: parent.verticalCenter
                                 text:               qsTr("RTSP URL:")
@@ -558,7 +557,7 @@ QGCView {
                         }
                         Row {
                             spacing:    ScreenTools.defaultFontPixelWidth
-                            visible:    QGroundControl.videoManager.isGStreamer && videoSource.currentIndex < 2 && QGroundControl.settingsManager.videoSettings.aspectRatio.visible
+                            visible:    QGroundControl.videoManager.isGStreamer && videoSource.currentIndex && videoSource.currentIndex < 3 && QGroundControl.settingsManager.videoSettings.aspectRatio.visible
                             QGCLabel {
                                 text:               qsTr("Aspect Ratio:")
                                 width:              _labelWidth
@@ -572,7 +571,7 @@ QGCView {
                         }
                         Row {
                             spacing:    ScreenTools.defaultFontPixelWidth
-                            visible:    QGroundControl.videoManager.isGStreamer && videoSource.currentIndex < 2 && QGroundControl.settingsManager.videoSettings.gridLines.visible
+                            visible:    QGroundControl.videoManager.isGStreamer && videoSource.currentIndex && videoSource.currentIndex < 3 && QGroundControl.settingsManager.videoSettings.gridLines.visible
                             QGCLabel {
                                 text:               qsTr("Grid Lines:")
                                 width:              _labelWidth
@@ -614,7 +613,7 @@ QGCView {
                         anchors.centerIn: parent
                         Row {
                             spacing:    ScreenTools.defaultFontPixelWidth
-                            visible:    QGroundControl.videoManager.isGStreamer && videoSource.currentIndex < 2 && QGroundControl.settingsManager.videoSettings.maxVideoSize.visible
+                            visible:    QGroundControl.videoManager.isGStreamer && videoSource.currentIndex && videoSource.currentIndex < 3 && QGroundControl.settingsManager.videoSettings.maxVideoSize.visible
                             QGCLabel {
                                 text:               qsTr("Max Storage Usage:")
                                 width:              _labelWidth
@@ -628,7 +627,7 @@ QGCView {
                         }
                         Row {
                             spacing:    ScreenTools.defaultFontPixelWidth
-                            visible:    QGroundControl.videoManager.isGStreamer && videoSource.currentIndex < 2 && QGroundControl.settingsManager.videoSettings.recordingFormat.visible
+                            visible:    QGroundControl.videoManager.isGStreamer && videoSource.currentIndex && videoSource.currentIndex < 3 && QGroundControl.settingsManager.videoSettings.recordingFormat.visible
                             QGCLabel {
                                 text:               qsTr("Video File Format:")
                                 width:              _labelWidth
@@ -638,36 +637,6 @@ QGCView {
                                 width:              _editFieldWidth
                                 fact:               QGroundControl.settingsManager.videoSettings.recordingFormat
                                 anchors.verticalCenter: parent.verticalCenter
-                            }
-                        }
-                        Row {
-                            spacing:    ScreenTools.defaultFontPixelWidth
-                            visible:    QGroundControl.settingsManager.videoSettings.videoSavePath.visible && QGroundControl.videoManager.isGStreamer
-
-                            QGCLabel {
-                                anchors.baseline:   videoBrowse.baseline
-                                text:               qsTr("Save Path:")
-                                enabled:            promptSaveLog.checked
-                            }
-                            QGCLabel {
-                                anchors.baseline:   videoBrowse.baseline
-                                text:               _videoPath.value === "" ? qsTr("<not set>") : _videoPath.value
-                            }
-                            QGCButton {
-                                id:         videoBrowse
-                                text:       "Browse"
-                                onClicked:  videoDialog.openForLoad()
-
-                                QGCFileDialog {
-                                    id:             videoDialog
-                                    title:          "Choose a location to save video files."
-                                    folder:         "file://" + _videoPath.value
-                                    selectFolder:   true
-
-                                    onAcceptedForLoad: {
-                                        _videoPath.value = file
-                                    }
-                                }
                             }
                         }
                     }

@@ -30,6 +30,7 @@
 #include "QGroundControlQmlGlobal.h"
 #include "SettingsManager.h"
 #include "QGCQGeoCoordinate.h"
+#include "QGCCorePlugin.h"
 
 #include "sensornotification.h"
 
@@ -84,7 +85,8 @@ Vehicle::Vehicle(LinkInterface*             link,
     , _autopilotPlugin(NULL)
     , _mavlink(NULL)
     , _soloFirmware(false)
-    , _settingsManager(qgcApp()->toolbox()->settingsManager())
+    , _toolbox(qgcApp()->toolbox())
+    , _settingsManager(_toolbox->settingsManager())
     , _joystickMode(JoystickModeRC)
     , _joystickEnabled(false)
     , _uas(NULL)
@@ -178,7 +180,7 @@ Vehicle::Vehicle(LinkInterface*             link,
 
     connect(_joystickManager, &JoystickManager::activeJoystickChanged, this, &Vehicle::_activeJoystickChanged);
 
-    _mavlink = qgcApp()->toolbox()->mavlinkProtocol();
+    _mavlink = _toolbox->mavlinkProtocol();
 
     connect(_mavlink, &MAVLinkProtocol::messageReceived,     this, &Vehicle::_mavlinkMessageReceived);
 
@@ -195,7 +197,7 @@ Vehicle::Vehicle(LinkInterface*             link,
     _autopilotPlugin = _firmwarePlugin->autopilotPlugin(this);
 
     // connect this vehicle to the follow me handle manager
-    connect(this, &Vehicle::flightModeChanged,qgcApp()->toolbox()->followMe(), &FollowMe::followMeHandleManager);
+    connect(this, &Vehicle::flightModeChanged,_toolbox->followMe(), &FollowMe::followMeHandleManager);
 
     // PreArm Error self-destruct timer
     connect(&_prearmErrorTimer, &QTimer::timeout, this, &Vehicle::_prearmErrorTimeout);
@@ -216,8 +218,8 @@ Vehicle::Vehicle(LinkInterface*             link,
     _mav = uas();
 
     // Listen for system messages
-    connect(qgcApp()->toolbox()->uasMessageHandler(), &UASMessageHandler::textMessageCountChanged,  this, &Vehicle::_handleTextMessage);
-    connect(qgcApp()->toolbox()->uasMessageHandler(), &UASMessageHandler::textMessageReceived,      this, &Vehicle::_handletextMessageReceived);
+    connect(_toolbox->uasMessageHandler(), &UASMessageHandler::textMessageCountChanged,  this, &Vehicle::_handleTextMessage);
+    connect(_toolbox->uasMessageHandler(), &UASMessageHandler::textMessageReceived,      this, &Vehicle::_handletextMessageReceived);
     // Now connect the new UAS
     connect(_mav, SIGNAL(attitudeChanged                    (UASInterface*,double,double,double,quint64)),              this, SLOT(_updateAttitude(UASInterface*, double, double, double, quint64)));
     connect(_mav, SIGNAL(attitudeChanged                    (UASInterface*,int,double,double,double,quint64)),          this, SLOT(_updateAttitude(UASInterface*,int,double, double, double, quint64)));
@@ -266,7 +268,8 @@ Vehicle::Vehicle(MAV_AUTOPILOT              firmwareType,
     , _autopilotPlugin(NULL)
     , _mavlink(NULL)
     , _soloFirmware(false)
-    , _settingsManager(qgcApp()->toolbox()->settingsManager())
+    , _toolbox(qgcApp()->toolbox())
+    , _settingsManager(_toolbox->settingsManager())
     , _joystickMode(JoystickModeRC)
     , _joystickEnabled(false)
     , _uas(NULL)
@@ -394,6 +397,16 @@ void Vehicle::_commonInit(void)
     _addFactGroup(&_vibrationFactGroup, _vibrationFactGroupName);
     _addFactGroup(&_temperatureFactGroup, _temperatureFactGroupName);
 
+    // Add firmware-specific fact groups, if provided
+    QMap<QString, FactGroup*>* fwFactGroups = _firmwarePlugin->factGroups();
+    if (fwFactGroups) {
+        QMapIterator<QString, FactGroup*> i(*fwFactGroups);
+        while(i.hasNext()) {
+            i.next();
+            _addFactGroup(i.value(), i.key());
+        }
+    }
+
     _flightDistanceFact.setRawValue(0);
     _flightTimeFact.setRawValue(0);
 }
@@ -476,9 +489,11 @@ void Vehicle::resetCounters()
 
 void Vehicle::_mavlinkMessageReceived(LinkInterface* link, mavlink_message_t message)
 {
-
     if (message.sysid != _id && message.sysid != 0) {
-        return;
+        // We allow RADIO_STATUS messages which come from a link the vehicle is using to pass through and be handled
+        if (!(message.msgid == MAVLINK_MSG_ID_RADIO_STATUS && _containsLink(link))) {
+            return;
+        }
     }
 
     if (!_containsLink(link)) {
@@ -517,6 +532,11 @@ void Vehicle::_mavlinkMessageReceived(LinkInterface* link, mavlink_message_t mes
 
     // Give the plugin a change to adjust the message contents
     if (!_firmwarePlugin->adjustIncomingMavlinkMessage(this, &message)) {
+        return;
+    }
+
+    // Give the Core Plugin access to all mavlink traffic
+    if (!_toolbox->corePlugin()->mavlinkMessage(this, link, message)) {
         return;
     }
 
@@ -691,6 +711,11 @@ void Vehicle::_handleGlobalPositionInt(mavlink_message_t& message)
     mavlink_global_position_int_t globalPositionInt;
     mavlink_msg_global_position_int_decode(&message, &globalPositionInt);
 
+    // ArduPilot sends bogus GLOBAL_POSITION_INT messages with lat/lat 0/0 even when it has not gps signal
+    if (globalPositionInt.lat == 0 && globalPositionInt.lon == 0) {
+        return;
+    }
+
     _globalPositionIntMessageAvailable = true;
     //-- Set these here and emit a single signal instead of 3 for the same variable (_coordinate)
     _coordinate.setLatitude(globalPositionInt.lat  / (double)1E7);
@@ -721,6 +746,7 @@ void Vehicle::_setCapabilities(uint64_t capabilityBits)
         _supportsMissionItemInt = true;
     }
     _vehicleCapabilitiesKnown = true;
+    emit capabilitiesKnownChanged(true);
 
     qCDebug(VehicleLog) << QString("Vehicle %1 MISSION_ITEM_INT").arg(_supportsMissionItemInt ? QStringLiteral("supports") : QStringLiteral("does not support"));
 }
@@ -793,7 +819,7 @@ void Vehicle::_handleHilActuatorControls(mavlink_message_t &message)
 
 void Vehicle::_handleCommandAck(mavlink_message_t& message)
 {
-    bool showError = true;
+    bool showError = false;
 
     mavlink_command_ack_t ack;
     mavlink_msg_command_ack_decode(&message, &ack);
@@ -814,7 +840,7 @@ void Vehicle::_handleCommandAck(mavlink_message_t& message)
     emit mavCommandResult(_id, message.compid, ack.command, ack.result, false /* noResponsefromVehicle */);
 
     if (showError) {
-        QString commandName = qgcApp()->toolbox()->missionCommandTree()->friendlyName((MAV_CMD)ack.command);
+        QString commandName = _toolbox->missionCommandTree()->friendlyName((MAV_CMD)ack.command);
 
         switch (ack.result) {
         case MAV_RESULT_TEMPORARILY_REJECTED:
@@ -1197,8 +1223,8 @@ void Vehicle::_addLink(LinkInterface* link)
         qCDebug(VehicleLog) << "_addLink:" << QString("%1").arg((ulong)link, 0, 16);
         _links += link;
         _updatePriorityLink();
-        connect(qgcApp()->toolbox()->linkManager(), &LinkManager::linkInactive, this, &Vehicle::_linkInactiveOrDeleted);
-        connect(qgcApp()->toolbox()->linkManager(), &LinkManager::linkDeleted, this, &Vehicle::_linkInactiveOrDeleted);
+        connect(_toolbox->linkManager(), &LinkManager::linkInactive, this, &Vehicle::_linkInactiveOrDeleted);
+        connect(_toolbox->linkManager(), &LinkManager::linkDeleted, this, &Vehicle::_linkInactiveOrDeleted);
     }
 }
 
@@ -1287,7 +1313,7 @@ void Vehicle::_updatePriorityLink(void)
     }
 
     if (newPriorityLink) {
-        _priorityLink = qgcApp()->toolbox()->linkManager()->sharedLinkInterfacePointerForLink(newPriorityLink);
+        _priorityLink = _toolbox->linkManager()->sharedLinkInterfacePointerForLink(newPriorityLink);
     }
 }
 
@@ -1364,7 +1390,7 @@ QString Vehicle::getMavIconColor()
 QString Vehicle::formatedMessages()
 {
     QString messages;
-    foreach(UASMessage* message, qgcApp()->toolbox()->uasMessageHandler()->messages()) {
+    foreach(UASMessage* message, _toolbox->uasMessageHandler()->messages()) {
         messages += message->getFormatedText();
     }
     return messages;
@@ -1372,7 +1398,7 @@ QString Vehicle::formatedMessages()
 
 void Vehicle::clearMessages()
 {
-    qgcApp()->toolbox()->uasMessageHandler()->clearMessages();
+    _toolbox->uasMessageHandler()->clearMessages();
 }
 
 void Vehicle::_handletextMessageReceived(UASMessage* message)
@@ -1400,7 +1426,7 @@ void Vehicle::_handleTextMessage(int newCount)
         return;
     }
 
-    UASMessageHandler* pMh = qgcApp()->toolbox()->uasMessageHandler();
+    UASMessageHandler* pMh = _toolbox->uasMessageHandler();
     MessageType_t type = newCount ? _currentMessageType : MessageNone;
     int errorCount     = _currentErrorCount;
     int warnCount      = _currentWarningCount;
@@ -1489,7 +1515,7 @@ void Vehicle::_loadSettings(void)
     }
 
     // Joystick enabled is a global setting so first make sure there are any joysticks connected
-    if (qgcApp()->toolbox()->joystickManager()->joysticks().count()) {
+    if (_toolbox->joystickManager()->joysticks().count()) {
         setJoystickEnabled(settings.value(_joystickEnabledSettingsKey, false).toBool());
     }
 }
@@ -1504,7 +1530,7 @@ void Vehicle::_saveSettings(void)
 
     // The joystick enabled setting should only be changed if a joystick is present
     // since the checkbox can only be clicked if one is present
-    if (qgcApp()->toolbox()->joystickManager()->joysticks().count()) {
+    if (_toolbox->joystickManager()->joysticks().count()) {
         settings.setValue(_joystickEnabledSettingsKey, _joystickEnabled);
     }
 }
@@ -2019,6 +2045,7 @@ void Vehicle::_missionLoadComplete(void)
     // After the initial mission request completes we ask for the geofence
     if (!_geoFenceManagerInitialRequestSent) {
         _geoFenceManagerInitialRequestSent = true;
+        qCDebug(VehicleLog) << "_missionLoadComplete requesting geoFence";
         _geoFenceManager->loadFromVehicle();
     }
 }
@@ -2028,13 +2055,14 @@ void Vehicle::_geoFenceLoadComplete(void)
     // After geofence request completes we ask for the rally points
     if (!_rallyPointManagerInitialRequestSent) {
         _rallyPointManagerInitialRequestSent = true;
+        qCDebug(VehicleLog) << "_missionLoadComplete requesting rally points";
         _rallyPointManager->loadFromVehicle();
     }
 }
 
-
 void Vehicle::_rallyPointLoadComplete(void)
 {
+    qCDebug(VehicleLog) << "_missionLoadComplete _initialPlanRequestComplete = true";
     _initialPlanRequestComplete = true;
 }
 
@@ -2052,11 +2080,11 @@ void Vehicle::disconnectInactiveVehicle(void)
     // Vehicle is no longer communicating with us, disconnect all links
 
 
-    LinkManager* linkMgr = qgcApp()->toolbox()->linkManager();
+    LinkManager* linkMgr = _toolbox->linkManager();
     for (int i=0; i<_links.count(); i++) {
         // FIXME: This linkInUse check is a hack fix for multiple vehicles on the same link.
         // The real fix requires significant restructuring which will come later.
-        if (!qgcApp()->toolbox()->multiVehicleManager()->linkInUse(_links[i], this)) {
+        if (!_toolbox->multiVehicleManager()->linkInUse(_links[i], this)) {
             linkMgr->disconnectLink(_links[i]);
         }
     }
@@ -2067,7 +2095,7 @@ void Vehicle::_imageReady(UASInterface*)
     if(_uas)
     {
         QImage img = _uas->getImage();
-        qgcApp()->toolbox()->imageProvider()->setImage(&img, _id);
+        _toolbox->imageProvider()->setImage(&img, _id);
         _flowImageIndex++;
         emit flowImageIndexChanged();
     }
@@ -2132,7 +2160,7 @@ void Vehicle::_connectionActive(void)
 
 void Vehicle::_say(const QString& text)
 {
-    qgcApp()->toolbox()->audioOutput()->say(text.toLower());
+    _toolbox->audioOutput()->say(text.toLower());
 }
 
 bool Vehicle::fixedWing(void) const
@@ -2196,11 +2224,6 @@ bool Vehicle::supportsJSButton(void) const
     return _firmwarePlugin->supportsJSButton();
 }
 
-bool Vehicle::supportsCalibratePressure(void) const
-{
-    return _firmwarePlugin->supportsCalibratePressure();
-}
-
 bool Vehicle::supportsMotorInterference(void) const
 {
     return _firmwarePlugin->supportsMotorInterference();
@@ -2243,7 +2266,7 @@ QString Vehicle::vehicleTypeName() const {
 /// Returns the string to speak to identify the vehicle
 QString Vehicle::_vehicleIdSpeech(void)
 {
-    if (qgcApp()->toolbox()->multiVehicleManager()->vehicles()->count() > 1) {
+    if (_toolbox->multiVehicleManager()->vehicles()->count() > 1) {
         return QString("vehicle %1").arg(id());
     } else {
         return QString();
@@ -2470,7 +2493,7 @@ void Vehicle::_sendMavCommandAgain(void)
 
         emit mavCommandResult(_id, queuedCommand.component, queuedCommand.command, MAV_RESULT_FAILED, true /* noResponsefromVehicle */);
         if (queuedCommand.showError) {
-            qgcApp()->showMessage(tr("Vehicle did not respond to command: %1").arg(qgcApp()->toolbox()->missionCommandTree()->friendlyName(queuedCommand.command)));
+            qgcApp()->showMessage(tr("Vehicle did not respond to command: %1").arg(_toolbox->missionCommandTree()->friendlyName(queuedCommand.command)));
         }
         _mavCommandQueue.removeFirst();
         _sendNextQueuedMavCommand();
