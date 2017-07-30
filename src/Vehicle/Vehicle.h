@@ -38,6 +38,7 @@ class ParameterManager;
 class JoystickManager;
 class UASMessage;
 class SettingsManager;
+class ADSBVehicle;
 
 Q_DECLARE_LOGGING_CATEGORY(VehicleLog)
 
@@ -112,18 +113,24 @@ class VehicleGPSFactGroup : public FactGroup
 public:
     VehicleGPSFactGroup(QObject* parent = NULL);
 
+    Q_PROPERTY(Fact* lat                READ lat                CONSTANT)
+    Q_PROPERTY(Fact* lon                READ lon                CONSTANT)
     Q_PROPERTY(Fact* hdop               READ hdop               CONSTANT)
     Q_PROPERTY(Fact* vdop               READ vdop               CONSTANT)
     Q_PROPERTY(Fact* courseOverGround   READ courseOverGround   CONSTANT)
     Q_PROPERTY(Fact* count              READ count              CONSTANT)
     Q_PROPERTY(Fact* lock               READ lock               CONSTANT)
 
+    Fact* lat               (void) { return &_latFact; }
+    Fact* lon               (void) { return &_lonFact; }
     Fact* hdop              (void) { return &_hdopFact; }
     Fact* vdop              (void) { return &_vdopFact; }
     Fact* courseOverGround  (void) { return &_courseOverGroundFact; }
     Fact* count             (void) { return &_countFact; }
     Fact* lock              (void) { return &_lockFact; }
 
+    static const char* _latFactName;
+    static const char* _lonFactName;
     static const char* _hdopFactName;
     static const char* _vdopFactName;
     static const char* _courseOverGroundFactName;
@@ -131,6 +138,8 @@ public:
     static const char* _lockFactName;
 
 private:
+    Fact        _latFact;
+    Fact        _lonFact;
     Fact        _hdopFact;
     Fact        _vdopFact;
     Fact        _courseOverGroundFact;
@@ -312,6 +321,7 @@ public:
     Q_PROPERTY(int                  telemetryRNoise         READ telemetryRNoise                                        NOTIFY telemetryRNoiseChanged)
     Q_PROPERTY(QVariantList         toolBarIndicators       READ toolBarIndicators                                      CONSTANT)
     Q_PROPERTY(QVariantList         cameraList              READ cameraList                                             CONSTANT)
+    Q_PROPERTY(QmlObjectListModel*  adsbVehicles            READ adsbVehicles                                           CONSTANT)
 
 
     /// true: Vehicle is flying, false: Vehicle is on ground
@@ -536,6 +546,7 @@ public:
 
     QmlObjectListModel* trajectoryPoints(void) { return &_mapTrajectoryList; }
     QmlObjectListModel* cameraTriggerPoints(void) { return &_cameraTriggerPoints; }
+    QmlObjectListModel* adsbVehicles(void) { return &_adsbVehicles; }
 
     int  flowImageIndex() { return _flowImageIndex; }
 
@@ -851,6 +862,7 @@ private:
     void _handleScaledPressure3(mavlink_message_t& message);
     void _handleCameraFeedback(const mavlink_message_t& message);
     void _handleCameraImageCaptured(const mavlink_message_t& message);
+    void _handleADSBVehicle(const mavlink_message_t& message);
     void _missionManagerError(int errorCode, const QString& errorMsg);
     void _geoFenceManagerError(int errorCode, const QString& errorMsg);
     void _rallyPointManagerError(int errorCode, const QString& errorMsg);
@@ -993,6 +1005,9 @@ private:
     static const int    _mapTrajectoryMsecsBetweenPoints = 1000;
 
     QmlObjectListModel  _cameraTriggerPoints;
+
+    QmlObjectListModel              _adsbVehicles;
+    QMap<uint32_t, ADSBVehicle*>    _adsbICAOMap;
 
     // Toolbox references
     FirmwarePluginManager*      _firmwarePluginManager;

@@ -31,6 +31,7 @@
 #include "SettingsManager.h"
 #include "QGCQGeoCoordinate.h"
 #include "QGCCorePlugin.h"
+#include "ADSBVehicle.h"
 
 #include "sensornotification.h"
 
@@ -622,9 +623,11 @@ void Vehicle::_mavlinkMessageReceived(LinkInterface* link, mavlink_message_t mes
     case MAVLINK_MSG_ID_CAMERA_FEEDBACK:
         _handleCameraFeedback(message);
         break;
-
     case MAVLINK_MSG_ID_CAMERA_IMAGE_CAPTURED:
         _handleCameraImageCaptured(message);
+        break;
+    case MAVLINK_MSG_ID_ADSB_VEHICLE:
+        _handleADSBVehicle(message);
         break;
 
     case MAVLINK_MSG_ID_SERIAL_CONTROL:
@@ -699,6 +702,8 @@ void Vehicle::_handleGpsRawInt(mavlink_message_t& message)
         }
     }
 
+    _gpsFactGroup.lat()->setRawValue(gpsRawInt.lat * 1e-7);
+    _gpsFactGroup.lon()->setRawValue(gpsRawInt.lon * 1e-7);
     _gpsFactGroup.count()->setRawValue(gpsRawInt.satellites_visible == 255 ? 0 : gpsRawInt.satellites_visible);
     _gpsFactGroup.hdop()->setRawValue(gpsRawInt.eph == UINT16_MAX ? std::numeric_limits<double>::quiet_NaN() : gpsRawInt.eph / 100.0);
     _gpsFactGroup.vdop()->setRawValue(gpsRawInt.epv == UINT16_MAX ? std::numeric_limits<double>::quiet_NaN() : gpsRawInt.epv / 100.0);
@@ -1601,7 +1606,10 @@ bool Vehicle::active(void)
 
 void Vehicle::setActive(bool active)
 {
-    _active = active;
+    if (_active != active) {
+        _active = active;
+        emit activeChanged(_active);
+    }
 
     _startJoystick(_active);
 }
@@ -2705,6 +2713,8 @@ void Vehicle::triggerCamera(void)
                    1.0);                            // test shot flag
 }
 
+const char* VehicleGPSFactGroup::_latFactName =                 "lat";
+const char* VehicleGPSFactGroup::_lonFactName =                 "lon";
 const char* VehicleGPSFactGroup::_hdopFactName =                "hdop";
 const char* VehicleGPSFactGroup::_vdopFactName =                "vdop";
 const char* VehicleGPSFactGroup::_courseOverGroundFactName =    "courseOverGround";
@@ -2713,18 +2723,24 @@ const char* VehicleGPSFactGroup::_lockFactName =                "lock";
 
 VehicleGPSFactGroup::VehicleGPSFactGroup(QObject* parent)
     : FactGroup(1000, ":/json/Vehicle/GPSFact.json", parent)
+    , _latFact              (0, _latFactName,               FactMetaData::valueTypeDouble)
+    , _lonFact              (0, _lonFactName,               FactMetaData::valueTypeDouble)
     , _hdopFact             (0, _hdopFactName,              FactMetaData::valueTypeDouble)
     , _vdopFact             (0, _vdopFactName,              FactMetaData::valueTypeDouble)
     , _courseOverGroundFact (0, _courseOverGroundFactName,  FactMetaData::valueTypeDouble)
     , _countFact            (0, _countFactName,             FactMetaData::valueTypeInt32)
     , _lockFact             (0, _lockFactName,              FactMetaData::valueTypeInt32)
 {
+    _addFact(&_latFact,                 _latFactName);
+    _addFact(&_lonFact,                 _lonFactName);
     _addFact(&_hdopFact,                _hdopFactName);
     _addFact(&_vdopFact,                _vdopFactName);
     _addFact(&_courseOverGroundFact,    _courseOverGroundFactName);
     _addFact(&_lockFact,                _lockFactName);
     _addFact(&_countFact,               _countFactName);
 
+    _latFact.setRawValue(std::numeric_limits<float>::quiet_NaN());
+    _lonFact.setRawValue(std::numeric_limits<float>::quiet_NaN());
     _hdopFact.setRawValue(std::numeric_limits<float>::quiet_NaN());
     _vdopFact.setRawValue(std::numeric_limits<float>::quiet_NaN());
     _courseOverGroundFact.setRawValue(std::numeric_limits<float>::quiet_NaN());
@@ -2873,6 +2889,30 @@ bool Vehicle::autoDisarm(void)
     }
 
     return false;
+}
+
+void Vehicle::_handleADSBVehicle(const mavlink_message_t& message)
+{
+    mavlink_adsb_vehicle_t adsbVehicle;
+    static const int maxTimeSinceLastSeen = 15;
+
+    mavlink_msg_adsb_vehicle_decode(&message, &adsbVehicle);
+    if (adsbVehicle.flags | ADSB_FLAGS_VALID_COORDS) {
+        if (_adsbICAOMap.contains(adsbVehicle.ICAO_address)) {
+            if (adsbVehicle.tslc > maxTimeSinceLastSeen) {
+                ADSBVehicle* vehicle = _adsbICAOMap[adsbVehicle.ICAO_address];
+                _adsbVehicles.removeOne(vehicle);
+                _adsbICAOMap.remove(adsbVehicle.ICAO_address);
+                vehicle->deleteLater();
+            } else {
+                _adsbICAOMap[adsbVehicle.ICAO_address]->update(adsbVehicle);
+            }
+        } else if (adsbVehicle.tslc <= maxTimeSinceLastSeen) {
+            ADSBVehicle* vehicle = new ADSBVehicle(adsbVehicle, this);
+            _adsbICAOMap[adsbVehicle.ICAO_address] = vehicle;
+            _adsbVehicles.append(vehicle);
+        }
+    }
 }
 
 //-----------------------------------------------------------------------------
