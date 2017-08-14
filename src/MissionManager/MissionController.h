@@ -110,6 +110,7 @@ public:
     bool loadTextFile(QFile& file, QString& errorString);
 
     // Overrides from PlanElementController
+    bool supported                  (void) const final { return true; };
     void start                      (bool editMode) final;
     void save                       (QJsonObject& json) final;
     bool load                       (const QJsonObject& json, QString& errorString) final;
@@ -160,6 +161,7 @@ signals:
     void complexMissionItemNamesChanged(void);
     void resumeMissionIndexChanged(void);
     void resumeMissionReady(void);
+    void resumeMissionUploadFail(void);
     void batteryChangePointChanged(int batteryChangePoint);
     void batteriesRequiredChanged(int batteriesRequired);
     void plannedHomePositionChanged(QGeoCoordinate plannedHomePosition);

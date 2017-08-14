@@ -144,7 +144,7 @@ QGCView {
         }
     }
 
-    PlanElemementMasterController {
+    PlanMasterController {
         id: masterController
 
         Component.onCompleted: {
@@ -335,7 +335,7 @@ QGCView {
                         }
                         break
                     case _layerRallyPoints:
-                        if (_rallyPointController.rallyPointsSupported) {
+                        if (_rallyPointController.supported) {
                             _rallyPointController.addPoint(coordinate)
                         }
                         break

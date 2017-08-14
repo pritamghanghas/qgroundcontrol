@@ -39,6 +39,7 @@ FlightMap {
     property var    flightWidgets
     property var    rightPanelWidth
     property var    qgcView                             ///< QGCView control which contains this map
+    property var    multiVehicleView                    ///< true: multi-vehicle view, false: single vehicle view
 
     property rect   centerViewport:             Qt.rect(0, 0, width, height)
 
@@ -206,19 +207,23 @@ FlightMap {
         }
     }
 
-    // Add the mission item visuals to the map
+    // Add the items associated with each vehicles flight plan to the map
     Repeater {
-        model: _mainIsMap ? _missionController.visualItems : 0
+        model: QGroundControl.multiVehicleManager.vehicles
 
-        delegate: MissionItemMapVisual {
-            map:        flightMap
-            onClicked:  guidedActionsController.confirmAction(guidedActionsController.actionSetWaypoint, Math.max(object.sequenceNumber, 1))
+        PlanMapItems {
+            map:                flightMap
+            largeMapView:       _mainIsMap
+            masterController:   masterController
+            isActiveVehicle:    _vehicle.active
+
+            property var _vehicle: object
+
+            PlanMasterController {
+                id: masterController
+                Component.onCompleted: startStaticActiveVehicle(object)
+            }
         }
-    }
-
-    // Add lines between waypoints
-    MissionLineView {
-        model:  _mainIsMap ? _missionController.waypointLines : 0
     }
 
     GeoFenceMapVisuals {
