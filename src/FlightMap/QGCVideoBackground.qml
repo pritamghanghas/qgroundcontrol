@@ -43,16 +43,28 @@ VideoItem {
 
     surface: display
 
+    // rule of thumb for bitrate is
+    // 1 is low motion, 4 is lot of motion like uav
+    // frame w * frame h * fps * motion factor (1,2,4) * 0.07 //bps
+
     ListModel {
         id: bitrateList
 
         ListElement {
-            text: "4mbps"
-            bitrate: 4000000
+            text: "15mbps"
+            bitrate: 15000000
+        }
+        ListElement {
+            text: "10mbps"
+            bitrate: 10000000
+        }
+        ListElement {
+            text: "5mbps"
+            bitrate: 5000000
         }
         ListElement {
             text: "2mbps"
-            bitrate: 2000000
+            bitrate: 200000
         }
         ListElement {
             text: "1mbps"
@@ -89,6 +101,8 @@ VideoItem {
             width:          1920;
             height:         1080;
             fps:            30;
+            bitrateIndex:   0;
+            // desired birate of 17mps
         }
 
         ListElement {
@@ -96,30 +110,40 @@ VideoItem {
             width:          1296;
             height:          730;
             fps:             49;
+            bitrateIndex:    1;
+            // desired birtae 12mpbs
         }
         ListElement {
             text:           "720p30f";
             width:          1296;
             height:          730;
             fps:             30;
+            bitrateIndex:    2;
+            // desired bitrate of 7mbps
         }
         ListElement {
             text:           "640p60f";
             width:          640;
             height:         480;
             fps:            60;
+            bitrateIndex:    2;
+            // desired birtae of 5mbps
         }
         ListElement {
             text:           "640p30f";
             width:          640;
             height:         480;
             fps:            30;
+            bitrateIndex:    3;
+            // desired birate of 2.5mps
         }
         ListElement {
             text:           "640p15f";
             width:          640;
             height:         480;
             fps:            15;
+            bitrateIndex:    4;
+            // desired bitrate of 1.3mps
         }
 //        ListElement {
 //            text: "photo";
@@ -544,6 +568,7 @@ VideoItem {
                 model:      resolutionList
 
                 onCurrentIndexChanged: {
+//                    onResolutionChange();
                     onModeChange();
                 }
             }
