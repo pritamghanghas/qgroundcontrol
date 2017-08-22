@@ -264,6 +264,7 @@ void VideoReceiver::start(const QString &optionsString, bool recording)
     GstElement*     queue       = NULL;
     GstElement*     decoder     = NULL;
     GstElement*     queue1      = NULL;
+    GstElement*     udpjitter   = NULL;
 
     do {
         if ((_pipeline = gst_pipeline_new("receiver")) == NULL) {
@@ -304,6 +305,10 @@ void VideoReceiver::start(const QString &optionsString, bool recording)
                 break;
             }
         } else {
+            if ((udpjitter = gst_element_factory_make("rtpjitterbuffer", "rpp-jitter-buffer")) == NULL) {
+                qCritical() << "VideoReceiver::start() failed. Error with gst_element_factory_make('rtpjitterbuffer')";
+                break;
+            }
             if ((demux = gst_element_factory_make("rtph264depay", "rtp-h264-depacketizer")) == NULL) {
                 qCritical() << "VideoReceiver::start() failed. Error with gst_element_factory_make('rtph264depay')";
                 break;
@@ -337,12 +342,12 @@ void VideoReceiver::start(const QString &optionsString, bool recording)
             break;
         }
 
-        gst_bin_add_many(GST_BIN(_pipeline), dataSource, demux, parser, _tee, queue, decoder, queue1, _videoSink, NULL);
+        gst_bin_add_many(GST_BIN(_pipeline), dataSource, udpjitter, demux, parser, _tee, queue, decoder, queue1, _videoSink, NULL);
         pipelineUp = true;
 
         if(isUdp) {
             // Link the pipeline in front of the tee
-            if(!gst_element_link_many(dataSource, demux, parser, _tee, queue, decoder, queue1, _videoSink, NULL)) {
+            if(!gst_element_link_many(dataSource, udpjitter, demux, parser, _tee, queue, decoder, queue1, _videoSink, NULL)) {
                 qCritical() << "Unable to link UDP elements.";
                 break;
             }
