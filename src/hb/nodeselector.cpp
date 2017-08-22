@@ -222,6 +222,10 @@ int NodeSelector::startStreaming(int nodeIndex, const QString &optionsString)
 
 int NodeSelector::startStreaming(const PiNode &node, const QString &optionsString, bool recording)
 {
+    if (optionsString.isEmpty()) {
+        return -1;
+    }
+
     // store for cold start when node appears
     m_picamOptString = optionsString;
     m_recordingStatus = recording;
