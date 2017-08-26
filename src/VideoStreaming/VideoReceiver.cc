@@ -78,6 +78,7 @@ VideoReceiver::VideoReceiver(NodeSelector *piNodeSelector, QObject* parent)
     connect(this, &VideoReceiver::msgEOSReceived, this, &VideoReceiver::_handleEOS);
     connect(this, &VideoReceiver::msgStateChangedReceived, this, &VideoReceiver::_handleStateChanged);
     connect(&_frameTimer, &QTimer::timeout, this, &VideoReceiver::_updateTimer);
+    connect(&_statsTimer, &QTimer::timeout, this, &VideoReceiver::_onStatsTimer);
     _frameTimer.start(1000);
 #endif
 }
@@ -309,6 +310,8 @@ void VideoReceiver::start(const QString &optionsString, bool recording)
                 qCritical() << "VideoReceiver::start() failed. Error with gst_element_factory_make('rtpjitterbuffer')";
                 break;
             }
+            _jitterBuffer = udpjitter;
+            _statsTimer.start(1000);
             if ((demux = gst_element_factory_make("rtph264depay", "rtp-h264-depacketizer")) == NULL) {
                 qCritical() << "VideoReceiver::start() failed. Error with gst_element_factory_make('rtph264depay')";
                 break;
@@ -498,6 +501,10 @@ VideoReceiver::_shutdownPipeline() {
     _recording = false;
     _stopping = false;
     _running = false;
+
+    _statsTimer.stop();
+    _jitterBuffer = NULL;
+
     emit recordingChanged();
 }
 #endif
@@ -569,6 +576,66 @@ VideoReceiver::_onBusMessage(GstBus* bus, GstMessage* msg, gpointer data)
     }
 
     return TRUE;
+}
+#endif
+
+#if defined(QGC_GST_STREAMING)
+void VideoReceiver::_onStatsTimer()
+{
+    // figure out if we need to switch streaming rates or latency.
+    if (!_pipeline || !_jitterBuffer) {
+        return;
+    }
+
+    GstStructure *stats;
+
+    g_object_get(_jitterBuffer, "stats", &stats, NULL);
+
+    guint64 num_pushed = 0;
+    guint64 num_lost = 0;
+    guint64 num_late = 0;
+    guint64 num_duplicates = 0;
+    guint64 rtx_count = 0;
+    guint64 rtx_success_count = 0;
+    gdouble rtx_per_packet = 0;
+    guint64 rtx_rtt = 0;
+
+    gst_structure_get(stats, "num-pushed",
+                      gst_structure_get_field_type(stats,"num-pushed"),
+                      &num_pushed, NULL);
+    gst_structure_get(stats, "num-lost",
+                      gst_structure_get_field_type(stats,"num-lost"),
+                      &num_lost, NULL);
+    gst_structure_get(stats, "num-late",
+                      gst_structure_get_field_type(stats,"num-late"),
+                      &num_late, NULL);
+    gst_structure_get(stats, "num-duplicates",
+                      gst_structure_get_field_type(stats,"num-duplicates"),
+                      &num_duplicates, NULL);
+    gst_structure_get(stats, "rtx-count",
+                      gst_structure_get_field_type(stats,"rtx-count"),
+                      &rtx_count, NULL);
+    gst_structure_get(stats, "rtx-success-count",
+                      gst_structure_get_field_type(stats,"rtx-success-count"),
+                      &rtx_success_count, NULL);
+    gst_structure_get(stats, "rtx-per-packet",
+                      gst_structure_get_field_type(stats,"rtx-per-packet"),
+                      &rtx_per_packet, NULL);
+    gst_structure_get(stats, "rtx-rtt",
+                      gst_structure_get_field_type(stats,"rtx-rtt"),
+                      &rtx_rtt, NULL);
+
+    qDebug() << "Stats structure: " << gst_structure_get_name(stats);
+    qDebug() << "Stats structure num-pushed: " << num_pushed;
+    qDebug() << "Stats structure num-lost: " << num_lost;
+    qDebug() << "Stats structure num-late: " << num_late;
+    qDebug() << "Stats structure num-duplicates: " << num_duplicates;
+    qDebug() << "Stats structure rtx-count: " << rtx_count;
+    qDebug() << "Stats structure rtx-success-count: " << rtx_success_count;
+    qDebug() << "Stats structure rtx-per-packet: " << rtx_per_packet;
+    qDebug() << "Stats structure rtx-rtt: " << rtx_rtt;
+
+    gst_structure_free (stats);
 }
 #endif
 

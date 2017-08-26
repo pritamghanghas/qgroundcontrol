@@ -26,6 +26,7 @@
 
 #if defined(QGC_GST_STREAMING)
 #include <gst/gst.h>
+#include <QTimer>
 #include "nodeselector.h"
 #endif
 
@@ -91,6 +92,7 @@ private slots:
     void _handleError               ();
     void _handleEOS                 ();
     void _handleStateChanged        ();
+    void _onStatsTimer              ();
 #endif
 
 private:
@@ -125,6 +127,8 @@ private:
     GstElement*     _pipeline;
     GstElement*     _pipelineStopRec;
     GstElement*     _videoSink;
+    GstElement*     _jitterBuffer;
+    QTimer          _statsTimer;
 
     //-- Wait for Video Server to show up before starting
     QTimer          _frameTimer;
@@ -134,12 +138,13 @@ private:
 
 #endif
 
-    NodeSelector* _nodeSelector;
+    NodeSelector*   _nodeSelector;
     QString         _uri;
     QString         _imageFile;
     VideoSurface*   _videoSurface;
     bool            _videoRunning;
     bool            _showFullScreen;
+
 
 };
 
