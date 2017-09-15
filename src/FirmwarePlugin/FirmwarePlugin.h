@@ -45,6 +45,7 @@ public:
         PauseVehicleCapability =            1 << 2, ///< Vehicle supports pausing at current location
         GuidedModeCapability =              1 << 3, ///< Vehicle supports guided mode commands
         OrbitModeCapability =               1 << 4, ///< Vehicle supports orbit mode
+        TakeoffVehicleCapability =          1 << 5, ///< Vehicle supports guided takeoff
     } FirmwareCapabilities;
 
     /// Maps from on parameter name to another
@@ -157,6 +158,10 @@ public:
     /// is zero when centered. Typically not supported on vehicles that have bidirectional
     /// throttle.
     virtual bool supportsThrottleModeCenterZero(void);
+
+    /// Returns true if the vehicle and firmware supports the use of negative thrust
+    /// Typically supported rover.
+    virtual bool supportsNegativeThrust(void);
 
     /// Returns true if the firmware supports the use of the MAVlink "MANUAL_CONTROL" message.
     /// By default, this returns false unless overridden in the firmware plugin.
@@ -285,6 +290,9 @@ public:
     ///     @param[out] yawSupported Gimbal supports yaw
     /// @return true: vehicle has gimbal, false: gimbal support unknown
     virtual bool hasGimbal(Vehicle* vehicle, bool& rollSupported, bool& pitchSupported, bool& yawSupported);
+
+    /// Returns true if the vehicle is a VTOL
+    virtual bool isVtol(const Vehicle* vehicle) const;
 
     // FIXME: Hack workaround for non pluginize FollowMe support
     static const char* px4FollowMeFlightMode;

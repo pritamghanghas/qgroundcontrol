@@ -2191,7 +2191,7 @@ void Vehicle::_rallyPointLoadComplete(void)
     qCDebug(VehicleLog) << "_missionLoadComplete _initialPlanRequestComplete = true";
     if (!_initialPlanRequestComplete) {
         _initialPlanRequestComplete = true;
-        emit initialPlanRequestCompleted();
+        emit initialPlanRequestCompleteChanged(true);
     }
 }
 
@@ -2326,18 +2326,7 @@ bool Vehicle::multiRotor(void) const
 
 bool Vehicle::vtol(void) const
 {
-    switch (vehicleType()) {
-    case MAV_TYPE_VTOL_DUOROTOR:
-    case MAV_TYPE_VTOL_QUADROTOR:
-    case MAV_TYPE_VTOL_TILTROTOR:
-    case MAV_TYPE_VTOL_RESERVED2:
-    case MAV_TYPE_VTOL_RESERVED3:
-    case MAV_TYPE_VTOL_RESERVED4:
-    case MAV_TYPE_VTOL_RESERVED5:
-        return true;
-    default:
-        return false;
-    }
+    return _firmwarePlugin->isVtol(this);
 }
 
 bool Vehicle::supportsManualControl(void) const
@@ -2353,6 +2342,11 @@ bool Vehicle::supportsRCOverRide(void) const
 bool Vehicle::supportsThrottleModeCenterZero(void) const
 {
     return _firmwarePlugin->supportsThrottleModeCenterZero();
+}
+
+bool Vehicle::supportsNegativeThrust(void) const
+{
+    return _firmwarePlugin->supportsNegativeThrust();
 }
 
 bool Vehicle::supportsRadio(void) const
@@ -2470,6 +2464,11 @@ bool Vehicle::pauseVehicleSupported(void) const
 bool Vehicle::orbitModeSupported() const
 {
     return _firmwarePlugin->isCapable(this, FirmwarePlugin::OrbitModeCapability);
+}
+
+bool Vehicle::takeoffVehicleSupported() const
+{
+    return _firmwarePlugin->isCapable(this, FirmwarePlugin::TakeoffVehicleCapability);
 }
 
 void Vehicle::guidedModeRTL(void)
@@ -3064,6 +3063,18 @@ void Vehicle::_updateDistanceToHome(void)
         _distanceToHomeFact.setRawValue(qQNaN());
     }
 }
+
+void Vehicle::forceInitialPlanRequestComplete(void)
+{
+    _initialPlanRequestComplete = true;
+    emit initialPlanRequestCompleteChanged(true);
+}
+
+void Vehicle::sendPlan(QString planFile)
+{
+    PlanMasterController::sendPlanToVehicle(this, planFile);
+}
+
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------

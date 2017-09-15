@@ -285,6 +285,7 @@ public:
     Q_PROPERTY(bool                 supportsManualControl   READ supportsManualControl                                  CONSTANT)
     Q_PROPERTY(bool                 supportsRCOverRide      READ supportsRCOverRide                                     CONSTANT)
     Q_PROPERTY(bool        supportsThrottleModeCenterZero   READ supportsThrottleModeCenterZero                         CONSTANT)
+    Q_PROPERTY(bool                supportsNegativeThrust   READ supportsNegativeThrust                                 CONSTANT)
     Q_PROPERTY(bool                 supportsJSButton        READ supportsJSButton                                       CONSTANT)
     Q_PROPERTY(bool                 supportsRadio           READ supportsRadio                                          CONSTANT)
     Q_PROPERTY(bool               supportsMotorInterference READ supportsMotorInterference                              CONSTANT)
@@ -317,25 +318,16 @@ public:
     Q_PROPERTY(QVariantList         toolBarIndicators       READ toolBarIndicators                                      CONSTANT)
     Q_PROPERTY(QVariantList         cameraList              READ cameraList                                             CONSTANT)
     Q_PROPERTY(QmlObjectListModel*  adsbVehicles            READ adsbVehicles                                           CONSTANT)
+    Q_PROPERTY(bool              initialPlanRequestComplete READ initialPlanRequestComplete                             NOTIFY initialPlanRequestCompleteChanged)
 
-
-    /// true: Vehicle is flying, false: Vehicle is on ground
-    Q_PROPERTY(bool flying READ flying NOTIFY flyingChanged)
-
-    /// true: Vehicle is flying, false: Vehicle is on ground
-    Q_PROPERTY(bool landing READ landing NOTIFY landingChanged)
-
-    /// true: Vehicle is in Guided mode and can respond to guided commands, false: vehicle cannot respond to direct control commands
-    Q_PROPERTY(bool guidedMode READ guidedMode WRITE setGuidedMode NOTIFY guidedModeChanged)
-
-    /// true: Guided mode commands are supported by this vehicle
-    Q_PROPERTY(bool guidedModeSupported READ guidedModeSupported CONSTANT)
-
-    /// true: pauseVehicle command is supported
-    Q_PROPERTY(bool pauseVehicleSupported READ pauseVehicleSupported CONSTANT)
-
-    /// true: Orbit mode is supported by this vehicle
-    Q_PROPERTY(bool orbitModeSupported READ orbitModeSupported CONSTANT)
+    // Vehicle state used for guided control
+    Q_PROPERTY(bool flying                  READ flying NOTIFY flyingChanged)                               ///< Vehicle is flying
+    Q_PROPERTY(bool landing                 READ landing NOTIFY landingChanged)                             ///< Vehicle is in landing pattern (DO_LAND_START)
+    Q_PROPERTY(bool guidedMode              READ guidedMode WRITE setGuidedMode NOTIFY guidedModeChanged)   ///< Vehicle is in Guided mode and can respond to guided commands
+    Q_PROPERTY(bool guidedModeSupported     READ guidedModeSupported CONSTANT)                              ///< Guided mode commands are supported by this vehicle
+    Q_PROPERTY(bool pauseVehicleSupported   READ pauseVehicleSupported CONSTANT)                            ///< Pause vehicle command is supported
+    Q_PROPERTY(bool orbitModeSupported      READ orbitModeSupported CONSTANT)                               ///< Orbit mode is supported by this vehicle
+    Q_PROPERTY(bool takeoffVehicleSupported READ takeoffVehicleSupported CONSTANT)                          ///< Guided takeoff supported
 
     Q_PROPERTY(ParameterManager* parameterManager READ parameterManager CONSTANT)
 
@@ -434,6 +426,7 @@ public:
     Q_INVOKABLE void clearMessages();
 
     Q_INVOKABLE void triggerCamera(void);
+    Q_INVOKABLE void sendPlan(QString planFile);
 
 #if 0
     // Temporarily removed, waiting for new command implementation
@@ -444,9 +437,10 @@ public:
     Q_INVOKABLE void motorTest(int motor, int percent, int timeoutSecs);
 #endif
 
-    bool guidedModeSupported(void) const;
-    bool pauseVehicleSupported(void) const;
-    bool orbitModeSupported(void) const;
+    bool guidedModeSupported    (void) const;
+    bool pauseVehicleSupported  (void) const;
+    bool orbitModeSupported     (void) const;
+    bool takeoffVehicleSupported(void) const;
 
     // Property accessors
 
@@ -531,6 +525,7 @@ public:
     bool supportsManualControl(void) const;
     bool supportsRCOverRide(void) const;
     bool supportsThrottleModeCenterZero(void) const;
+    bool supportsNegativeThrust(void) const;
     bool supportsRadio(void) const;
     bool supportsJSButton(void) const;
     bool supportsMotorInterference(void) const;
@@ -707,7 +702,7 @@ public:
     /// @return: true: initial request is complete, false: initial request is still in progress;
     bool initialPlanRequestComplete(void) const { return _initialPlanRequestComplete; }
 
-    void forceInitialPlanRequestComplete(void) { _initialPlanRequestComplete = true; }
+    void forceInitialPlanRequestComplete(void);
 
     void _setFlying(bool flying);
     void _setLanding(bool landing);
@@ -741,7 +736,7 @@ signals:
     void firmwareTypeChanged(void);
     void vehicleTypeChanged(void);
     void capabilitiesKnownChanged(bool capabilitiesKnown);
-    void initialPlanRequestCompleted(void);
+    void initialPlanRequestCompleteChanged(bool initialPlanRequestComplete);
     void capabilityBitsChanged(uint64_t capabilityBits);
 
     void messagesReceivedChanged    ();
