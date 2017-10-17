@@ -135,11 +135,6 @@ bool FirmwarePlugin::supportsNegativeThrust(void)
     return false;
 }
 
-bool FirmwarePlugin::supportsManualControl(void)
-{
-    return false;
-}
-
 bool FirmwarePlugin::supportsRCOverRide(void)
 {
     return false;
@@ -403,6 +398,7 @@ const QVariantList& FirmwarePlugin::cameraList(const Vehicle* vehicle)
                                       false,
                                       0,
                                       this);
+        _cameraList.append(QVariant::fromValue(metaData));
 
         metaData = new CameraMetaData(tr("Canon EOS-M 22mm"),
                                       22.3,
@@ -551,3 +547,20 @@ bool FirmwarePlugin::isVtol(const Vehicle* vehicle) const
         return false;
     }
 }
+
+QGCCameraManager* FirmwarePlugin::createCameraManager(Vehicle* vehicle)
+{
+    Q_UNUSED(vehicle);
+    return NULL;
+}
+
+QGCCameraControl* FirmwarePlugin::createCameraControl(const mavlink_camera_information_t *info, Vehicle *vehicle, int compID, QObject* parent)
+{
+    Q_UNUSED(info);
+    Q_UNUSED(vehicle);
+    Q_UNUSED(compID);
+    Q_UNUSED(parent);
+    return NULL;
+}
+
+

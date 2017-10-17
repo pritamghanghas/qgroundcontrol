@@ -35,6 +35,7 @@ VideoManager::VideoManager(QGCApplication* app, QGCToolbox* toolbox)
     : QGCTool(app, toolbox)
     , _videoReceiver(NULL)
     , _videoSettings(NULL)
+    , _fullScreen(false)
 {
 }
 

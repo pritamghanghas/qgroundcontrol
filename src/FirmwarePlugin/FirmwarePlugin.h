@@ -25,6 +25,8 @@
 #include <QVariantList>
 
 class Vehicle;
+class QGCCameraControl;
+class QGCCameraManager;
 
 /// This is the base class for Firmware specific plugins
 ///
@@ -165,10 +167,6 @@ public:
 
     /// Returns true if the firmware supports the use of the MAVlink "MANUAL_CONTROL" message.
     /// By default, this returns false unless overridden in the firmware plugin.
-    virtual bool supportsManualControl(void);
-
-    /// Returns true if the firmware supports the use of the MAVlink "MANUAL_CONTROL" message.
-    /// By default, this returns false unless overridden in the firmware plugin.
     virtual bool supportsRCOverRide(void);
 
     /// Returns true if the firmware supports the use of the RC radio and requires the RC radio
@@ -267,7 +265,14 @@ public:
     virtual const QVariantList& toolBarIndicators(const Vehicle* vehicle);
 
     /// Returns a list of CameraMetaData objects for available cameras on the vehicle.
+    /// TODO: This should go into QGCCameraManager
     virtual const QVariantList& cameraList(const Vehicle* vehicle);
+
+    /// Creates vehicle camera manager. Returns NULL if not supported.
+    virtual QGCCameraManager* createCameraManager(Vehicle *vehicle);
+
+    /// Camera control. Returns NULL if not supported.
+    virtual QGCCameraControl* createCameraControl(const mavlink_camera_information_t* info, Vehicle* vehicle, int compID, QObject* parent = NULL);
 
     /// Returns a pointer to a dictionary of firmware-specific FactGroups
     virtual QMap<QString, FactGroup*>* factGroups(void);
