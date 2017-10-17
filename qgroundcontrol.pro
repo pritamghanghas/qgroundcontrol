@@ -529,6 +529,7 @@ HEADERS += \
     src/MissionManager/SimpleMissionItem.h \
     src/MissionManager/Section.h \
     src/MissionManager/SpeedSection.h \
+    src/MissionManager/StructureScanComplexItem.h \
     src/MissionManager/SurveyMissionItem.h \
     src/MissionManager/VisualMissionItem.h \
     src/PositionManager/PositionManager.h \
@@ -561,6 +562,7 @@ HEADERS += \
     src/QtLocationPlugin/QMLControl/QGCMapEngineManager.h \
     src/Settings/AppSettings.h \
     src/Settings/AutoConnectSettings.h \
+    src/Settings/BrandImageSettings.h \
     src/Settings/FlightMapSettings.h \
     src/Settings/GuidedSettings.h \
     src/Settings/RTKSettings.h \
@@ -714,6 +716,7 @@ SOURCES += \
     src/MissionManager/RallyPointManager.cc \
     src/MissionManager/SimpleMissionItem.cc \
     src/MissionManager/SpeedSection.cc \
+    src/MissionManager/StructureScanComplexItem.cc \
     src/MissionManager/SurveyMissionItem.cc \
     src/MissionManager/VisualMissionItem.cc \
     src/PositionManager/PositionManager.cpp \
@@ -744,6 +747,7 @@ SOURCES += \
     src/QtLocationPlugin/QMLControl/QGCMapEngineManager.cc \
     src/Settings/AppSettings.cc \
     src/Settings/AutoConnectSettings.cc \
+    src/Settings/BrandImageSettings.cc \
     src/Settings/FlightMapSettings.cc \
     src/Settings/GuidedSettings.cc \
     src/Settings/RTKSettings.cc \
