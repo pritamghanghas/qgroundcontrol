@@ -78,7 +78,7 @@ VideoReceiver::VideoReceiver(NodeSelector *piNodeSelector, QObject* parent)
     connect(this, &VideoReceiver::msgEOSReceived, this, &VideoReceiver::_handleEOS);
     connect(this, &VideoReceiver::msgStateChangedReceived, this, &VideoReceiver::_handleStateChanged);
     connect(&_frameTimer, &QTimer::timeout, this, &VideoReceiver::_updateTimer);
-    connect(&_statsTimer, &QTimer::timeout, this, &VideoReceiver::_onStatsTimer);
+//    connect(&_statsTimer, &QTimer::timeout, this, &VideoReceiver::_onStatsTimer);
     _frameTimer.start(1000);
 #endif
 }
