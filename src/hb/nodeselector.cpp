@@ -20,7 +20,8 @@ NodeSelector* NodeSelector::instance(QNetworkAccessManager *nam)
 
 NodeSelector::NodeSelector(QNetworkAccessManager *nam, QObject *parent) :
     QObject(parent),
-    m_currentIndex(0)
+    m_currentIndex(0),
+    m_hasVideo(false)
 {
     // use supplied QNAM, otherwise create your own
     if (nam) {
@@ -49,13 +50,13 @@ NodeSelector::~NodeSelector()
     Q_FOREACH(const PiNode &node, nodes) {
             terminatePicam(node);
             terminateThermal(node);
-//            terminateMavProxy(node); // don't terminate, don't want it falling down if gc is closed
+            terminateMavProxy(node);
         }
 }
 
 void NodeSelector::terminatePicam(const PiNode &node)
 {
-    if (node.caps & PiNode::PiCam) {
+    if (node.caps & PiNode::PICAM) {
         qDebug() << "termiante picam at node" << node.addressString;
         QUrl terminateUrl("http://" + node.addressString + ":8080/picam/?command=terminate");
         sendRequest(terminateUrl);
@@ -84,7 +85,7 @@ void NodeSelector::hostapdget()
 
 void NodeSelector::terminateThermal(const PiNode &node)
 {
-    if (node.caps & PiNode::Thermal) {
+    if (node.caps & PiNode::LEPTON) {
         qDebug() << "termiante thermal at node" << node.addressString;
         QUrl terminateUrl = QUrl("http://" + node.addressString + ":8080/thermalcam/?command=terminate");
         sendRequest(terminateUrl);
@@ -113,7 +114,7 @@ void NodeSelector::restartAll()
 
 void NodeSelector::terminateMavProxy(const PiNode &node)
 {
-    if (node.caps & PiNode::MAVProxy) {
+    if (node.caps & PiNode::MAVUDP) {
         qDebug() << "terminate mavproxy at node" << node.addressString;
         QUrl terminateUrl = QUrl("http://" + node.addressString + ":8080/mavproxy/?command=screen -X -S MAVPROXY quit");
         sendRequest(terminateUrl);
@@ -185,13 +186,13 @@ void NodeSelector::setCurrentHostAPDConf(const QVariantMap &config)
 
 void NodeSelector::onNewNodeDiscovered(const PiNode &node)
 {
-        if (node.caps & PiNode::MAVProxy) { // has mav capability
-            if (!(node.capsRunning & PiNode::MAVProxy)) { // mav proxy is not running
+        if (node.caps & PiNode::MAVUDP) { // has mav capability
+            if (!(node.capsRunning & PiNode::MAVUDP)) { // mav proxy is not running
                 QString mavcmd = "http://" + node.addressString + ":8080/mavproxy/?command=" + MAVPROXY_REMOTE_CMD;
                 mavcmd.replace("$CLIENT_IP", deviceAddress(node));
                 qDebug() << "mav command " << mavcmd;
                 QVariantMap map;
-                map.insert("requestFor", PiNode::MAVProxy);
+                map.insert("requestFor", PiNode::MAVUDP);
                 map.insert("nodeIndex", m_currentIndex);
                 sendRequest(mavcmd, map);
             }
@@ -201,12 +202,16 @@ void NodeSelector::onNewNodeDiscovered(const PiNode &node)
             hostapdget();
         }
 
-        if (node.caps & PiNode::PiCam) {
+        if (node.caps & PiNode::PICAM) {
             startStreaming(node, m_picamOptString, m_recordingStatus);
         }
 
         // check if its thermal module, if so start thermal
         startThermal(node);
+
+        if(node.caps & (PiNode::PICAM || PiNode::UVC)) {
+            m_hasVideo = true;
+        }
 }
 
 int NodeSelector::startStreaming(int nodeIndex, const QString &optionsString)
@@ -238,7 +243,7 @@ int NodeSelector::startStreaming(const PiNode &node, const QString &optionsStrin
     }
 
     QString servercmd;
-    if (node.caps & PiNode::PiCam) { // has picam capability
+    if (node.caps & PiNode::PICAM) { // has picam capability
         if (optionsString.contains("nostream")) { // check if this goes well with wiered
             servercmd = "http://$SERVER_IP:8080/picam/?command=terminate";
         } else {
@@ -249,7 +254,7 @@ int NodeSelector::startStreaming(const PiNode &node, const QString &optionsStrin
             servercmd = servercmd.replace("$OPT_STRING", optionsString);
         }
         QVariantMap map;
-        map.insert("requestFor", PiNode::PiCam);
+        map.insert("requestFor", PiNode::PICAM);
         map.insert("nodeIndex", m_currentIndex);
         qDebug() << "sending out new streaming command " << servercmd;
         sendRequest(servercmd, map);
@@ -283,12 +288,12 @@ bool NodeSelector::startThermal(int nodeIndex)
 
 bool NodeSelector::startThermal(const PiNode &node)
 {
-    if (node.caps & PiNode::Thermal) {
-        if (!(node.capsRunning & PiNode::Thermal)) {
+    if (node.caps & PiNode::LEPTON) {
+        if (!(node.capsRunning & PiNode::LEPTON)) {
             QUrl startUrl("http://" + node.addressString + ":8080/thermalcam/?command=start");
             qDebug() << "thermal server start url " << startUrl;
             QVariantMap map;
-            map.insert("requestFor", PiNode::Thermal);
+            map.insert("requestFor", PiNode::LEPTON);
             map.insert("nodeIndex", m_currentIndex);
 //                map.insert("camUrl", mjpegUrl);
             sendRequest(startUrl, map);
@@ -353,21 +358,21 @@ void NodeSelector::replyFinished()
         int index;
         QUrl url;
         switch (capibility) {
-        case PiNode::PiCam:
+        case PiNode::PICAM:
             index = reply->property("nodeIndex").toInt();
-            nodes[index].capsRunning |= PiNode::PiCam;
+            nodes[index].capsRunning |= PiNode::PICAM;
             qDebug() << "picam started without any error";
             break;
-        case PiNode::Thermal:
+        case PiNode::LEPTON:
             index = reply->property("nodeIndex").toInt();
-            nodes[index].capsRunning |= PiNode::Thermal;
+            nodes[index].capsRunning |= PiNode::LEPTON;
 //            url = reply->property("camUrl").toUrl();
 //            Q_EMIT thermalUrl(url);
             qDebug() << "thermal camera started without any error";
             break;
-        case PiNode::MAVProxy:
+        case PiNode::MAVUDP:
             index = reply->property("nodeIndex").toInt();
-            nodes[index].capsRunning |= PiNode::MAVProxy;
+            nodes[index].capsRunning |= PiNode::MAVUDP;
             qDebug() << "mavproxy started without any error";
             break;
         case PiNode::AP:

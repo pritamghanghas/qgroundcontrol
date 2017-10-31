@@ -34,6 +34,7 @@ public Q_SLOTS:
     void stopStreaming(int nodeIndex);
     bool startThermal(int nodeIndex);
     bool startThermal(const PiNode& node);
+    bool hasVideoNode() { return m_hasVideo; }
     void terminatePicam(const PiNode& node);
     void terminateThermal(int index);
     void terminateThermal(const PiNode& node);
@@ -55,7 +56,8 @@ private:
     QNetworkAccessManager   *m_nam;
     int                      m_currentIndex;
     QString                  m_picamOptString;
-    bool                     m_recordingStatus;
+    bool                     m_recordingStatus,
+                             m_hasVideo;
 };
 
 #endif // NODESELECTOR_H

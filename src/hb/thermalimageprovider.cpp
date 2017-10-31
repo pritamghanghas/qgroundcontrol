@@ -1,20 +1,20 @@
 #include "thermalimageprovider.h"
 
-ThermalImageProvider::ThermalImageProvider(QNetworkAccessManager *nam, QObject *parent) :
+LEPTONImageProvider::LEPTONImageProvider(QNetworkAccessManager *nam, QObject *parent) :
     QObject(parent), QQuickImageProvider(QQuickImageProvider::Pixmap)
 {
     m_mjpegGrabber = 0;
     m_nam = nam;
 }
 
-void ThermalImageProvider::onNewPixmap(const QPixmap &pixmap)
+void LEPTONImageProvider::onNewPixmap(const QPixmap &pixmap)
 {
     m_currentPixmap = pixmap;
 //    qDebug() << "new thermal image";
     Q_EMIT refresh();
 }
 
-void ThermalImageProvider::onNewThermalUrl(const QUrl &url)
+void LEPTONImageProvider::onNewThermalUrl(const QUrl &url)
 {
     if (m_mjpegGrabber) {
         m_mjpegGrabber->deleteLater();
@@ -30,12 +30,12 @@ void ThermalImageProvider::onNewThermalUrl(const QUrl &url)
     QTimer::singleShot(2000, this, SLOT(startImageGrabber()));
 }
 
-bool ThermalImageProvider::hasThermalData()
+bool LEPTONImageProvider::hasThermalData()
 {
     return !m_camUrl.isEmpty();
 }
 
-QPixmap	ThermalImageProvider::requestPixmap(const QString & id, QSize * size, const QSize & requestedSize)
+QPixmap	LEPTONImageProvider::requestPixmap(const QString & id, QSize * size, const QSize & requestedSize)
 {
     Q_UNUSED(id)
     Q_UNUSED(requestedSize)
@@ -45,7 +45,7 @@ QPixmap	ThermalImageProvider::requestPixmap(const QString & id, QSize * size, co
 }
 
 
-void ThermalImageProvider::startImageGrabber()
+void LEPTONImageProvider::startImageGrabber()
 {
     qDebug() << "starting thermal image grabber";
     m_mjpegGrabber = new MJPEGImageGrabber(m_nam, m_camUrl, this);

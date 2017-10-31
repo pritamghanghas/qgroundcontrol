@@ -5,11 +5,11 @@
 #include <QUrl>
 #include "mjpegimagegrabber.h"
 
-class ThermalImageProvider : public QObject, public QQuickImageProvider
+class LEPTONImageProvider : public QObject, public QQuickImageProvider
 {
     Q_OBJECT
 public:
-    ThermalImageProvider(QNetworkAccessManager *nam, QObject *parent = 0);
+    LEPTONImageProvider(QNetworkAccessManager *nam, QObject *parent = 0);
     virtual QPixmap	requestPixmap(const QString & id, QSize * size,
                                   const QSize & requestedSize);
     bool hasThermalData();

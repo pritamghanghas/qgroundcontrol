@@ -250,11 +250,23 @@ QGCView {
                             columns: 2
 
                             QGCLabel {
+                                text: "Enable Wire"
+                            }
+
+                            QGCCheckBox {
+                                id:                 wired
+                                text:               " "
+                                checked:    QGroundControl.hbSettings.value("enableWire", false)
+                                onClicked:  QGroundControl.hbSettings.setValue("enableWire", checked ? true : false)
+                            }
+
+                            QGCLabel {
                                 text: "Sweep Angle (degrees)"
                             }
                             QGCTextField {
                                 text: QGroundControl.hbSettings.value("panSweepAngle", 20)
                                 maximumLength:  3
+                                enabled: wired.checked
                                 validator: IntValidator { bottom: 5; top: 160 }
                                 onEditingFinished: {
                                     QGroundControl.hbSettings.setValue("panSweepAngle", text);
@@ -267,6 +279,7 @@ QGCView {
                             QGCTextField {
                                 validator: IntValidator { bottom: 1; top: 20 }
                                 maximumLength: 2
+                                enabled: wired.checked
                                 text: QGroundControl.hbSettings.value("panSweepSpeed", 5)
                                 onEditingFinished: {
                                     QGroundControl.hbSettings.setValue("panSweepSpeed", text);
@@ -278,6 +291,7 @@ QGCView {
                             QGCTextField {
                                 text: QGroundControl.hbSettings.value("wiredMinAltitude", 5)
                                 maximumLength:  4
+                                enabled: wired.checked
                                 validator: IntValidator { bottom: 5; top: 2000 }
                                 onEditingFinished: {
                                     QGroundControl.hbSettings.setValue("wiredMinAltitude", text);
@@ -290,6 +304,7 @@ QGCView {
                             QGCTextField {
                                 text: QGroundControl.hbSettings.value("wiredMaxAltitude", 60)
                                 maximumLength: 4
+                                enabled: wired.checked
                                 validator: IntValidator { bottom: 5; top: 2000 }
                                 onEditingFinished: {
                                     QGroundControl.hbSettings.setValue("wiredMaxAltitude", text);

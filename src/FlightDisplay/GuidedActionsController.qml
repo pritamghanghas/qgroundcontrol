@@ -89,19 +89,19 @@ Item {
     readonly property int actionMVStartMission:             19
 
     property bool showEmergenyStop:     !_hideEmergenyStop && _activeVehicle && _vehicleArmed && _vehicleFlying
-    property bool showArm:              _activeVehicle && !_vehicleArmed
-    property bool showDisarm:           _activeVehicle && _vehicleArmed && !_vehicleFlying
-    property bool showRTL:              _activeVehicle && _vehicleArmed && _activeVehicle.guidedModeSupported && _vehicleFlying && !_vehicleInRTLMode
-    property bool showTakeoff:          _activeVehicle && _activeVehicle.takeoffVehicleSupported && !_vehicleFlying
-    property bool showLand:             _activeVehicle && _activeVehicle.guidedModeSupported && _vehicleArmed && !_activeVehicle.fixedWing && !_vehicleInLandMode
-    property bool showStartMission:     _activeVehicle && _missionAvailable && !_missionActive && !_vehicleFlying
-    property bool showContinueMission:  _activeVehicle && _missionAvailable && !_missionActive && _vehicleFlying && (_currentMissionIndex < missionController.visualItems.count - 1)
-    property bool showResumeMission:    _activeVehicle && !_vehicleArmed && _vehicleWasFlying && _missionAvailable && _resumeMissionIndex > 0 && (_resumeMissionIndex < missionController.visualItems.count - 2)
-    property bool showPause:            _activeVehicle && _vehicleArmed && _activeVehicle.pauseVehicleSupported && _vehicleFlying && !_vehiclePaused
-    property bool showChangeAlt:        (_activeVehicle && _vehicleFlying) && _activeVehicle.guidedModeSupported && _vehicleArmed && !_missionActive
-    property bool showOrbit:            !_hideOrbit && _activeVehicle && _vehicleFlying && _activeVehicle.orbitModeSupported && _vehicleArmed && !_missionActive
-    property bool showLandAbort:        _activeVehicle && _vehicleFlying && _activeVehicle.fixedWing && _vehicleLanding
-    property bool showGotoLocation:     _activeVehicle && _vehicleFlying
+    property bool showArm:              true
+    property bool showDisarm:           true
+    property bool showRTL:              true
+    property bool showTakeoff:          true
+    property bool showLand:             true
+    property bool showStartMission:     true
+    property bool showContinueMission:  true
+    property bool showResumeMission:    true
+    property bool showPause:            true
+    property bool showChangeAlt:        true
+    property bool showOrbit:            true
+    property bool showLandAbort:        true
+    property bool showGotoLocation:     true
 
     property bool guidedUIVisible:      guidedActionConfirm.visible || guidedActionList.visible
 
@@ -118,8 +118,8 @@ Item {
     property bool   _vehicleInLandMode:     false
     property int    _currentMissionIndex:   missionController.currentMissionIndex
     property int    _resumeMissionIndex:    missionController.resumeMissionIndex
-    property bool   _hideEmergenyStop:      !QGroundControl.corePlugin.options.guidedBarShowEmergencyStop
-    property bool   _hideOrbit:             !QGroundControl.corePlugin.options.guidedBarShowOrbit
+    property bool   _hideEmergenyStop:      false
+    property bool   _hideOrbit:             false
     property bool   _vehicleWasFlying:      false
 
     /*

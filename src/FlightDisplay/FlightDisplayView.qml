@@ -332,16 +332,30 @@ QGCView {
             visible:            singleVehicleView.checked && !QGroundControl.videoManager.fullScreen
         }
 
+//        Loader {
+//            id:                 hbOverlay
+//            z:                  flightDisplayViewWidgets.z + 1
+//            visible:            !QGroundControl.videoManager.fullScreen
+//            height:             ScreenTools.availableHeight
+//            anchors.left:       parent.left
+//            anchors.right:      altitudeSlider.visible ? altitudeSlider.left : parent.right
+//            anchors.bottom:     parent.bottom
+
+//            property var qgcView: root
+//        }
+
         //-------------------------------------------------------------------------
         //-- Loader helper for plugins to overlay elements over the fly view
         Loader {
             id:                 flyViewOverlay
             z:                  flightDisplayViewWidgets.z + 1
-            visible:            !QGroundControl.videoManager.fullScreen
+            visible:            _activeVehicle && !QGroundControl.videoManager.fullScreen
             height:             ScreenTools.availableHeight
-            anchors.left:       parent.left
+            anchors.left:       toolStrip.right;
             anchors.right:      altitudeSlider.visible ? altitudeSlider.left : parent.right
             anchors.bottom:     parent.bottom
+            anchors.margins:    _margins
+            source:             "qrc:/qml/hbdisplay.qml"
 
             property var qgcView: root
         }
