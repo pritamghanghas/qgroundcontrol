@@ -75,7 +75,8 @@ signals:
 #endif
 
 public slots:
-    void start              (const QString& optionsString = QString(), bool recording = false);
+    void delayedStart       (const QString& optionsString = QString(), bool recording = false);
+    void start              ();
     void stop               ();
     void setUri             (const QString& uri);
     void next               ();

@@ -397,9 +397,9 @@ void NodeSelector::replyFinished()
         }
     }
     m_discoverer->setDiscoveredNodes(nodes);
-    Q_FOREACH(const PiNode& node, nodes) {
-        qDebug() << node.hostAPDConf;
-    }
+//    Q_FOREACH(const PiNode& node, nodes) {
+//        qDebug() << node.hostAPDConf;
+//    }
 }
 
 void NodeSelector::sendRequest(const QUrl &url, const QVariantMap &properties)

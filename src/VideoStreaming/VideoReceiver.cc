@@ -24,6 +24,7 @@
 #include <QDir>
 #include <QDateTime>
 #include <QSysInfo>
+#include <QThread>
 
 QGC_LOGGING_CATEGORY(VideoReceiverLog, "VideoReceiverLog")
 
@@ -204,6 +205,25 @@ VideoReceiver::_timeout()
 }
 #endif
 
+
+void VideoReceiver::delayedStart(const QString &optionsString, bool recording)
+{
+#if defined(QGC_GST_STREAMING)
+    if (!optionsString.isEmpty()) {
+        // start new stream
+        _nodeSelector->startStreaming(_nodeSelector->currentNode(), optionsString, recording);
+
+        QString newUri = QString("udp://0.0.0.0:") + QString::number(_nodeSelector->currentNode().targetStreamingPort);
+        qDebug() << newUri;
+        setUri(newUri);
+    }
+
+
+    stop();
+    QTimer::singleShot(1000, this, &VideoReceiver::start);
+#endif
+}
+
 //-----------------------------------------------------------------------------
 // When we finish our pipeline will look like this:
 //
@@ -214,16 +234,10 @@ VideoReceiver::_timeout()
 //                                   ^
 //                                   |
 //                                   +-Here we will later link elements for recording
-void VideoReceiver::start(const QString &optionsString, bool recording)
+void VideoReceiver::start()
 {
 #if defined(QGC_GST_STREAMING)
     qCDebug(VideoReceiverLog) << "start()";
-
-    if (!optionsString.isEmpty()) {
-        QString newUri = QString("udp://0.0.0.0:") + QString::number(_nodeSelector->currentNode().targetStreamingPort);
-        qDebug() << newUri;
-        setUri(newUri);
-    }
 
     if (_uri.isEmpty()) {
         qCritical() << "VideoReceiver::start() failed because URI is not specified";
@@ -249,11 +263,6 @@ void VideoReceiver::start(const QString &optionsString, bool recording)
         _timer.start(100);
         qDebug() << "rtsp server not preset, not procceding";
         return;
-    }
-
-    if (!optionsString.isEmpty()) {
-        // start new stream
-        _nodeSelector->startStreaming(_nodeSelector->currentNode(), optionsString, recording);
     }
 
     bool running = false;
@@ -317,6 +326,9 @@ void VideoReceiver::start(const QString &optionsString, bool recording)
                 qCritical() << "VideoReceiver::start() failed. Error with gst_element_factory_make('rtph264depay')";
                 break;
             }
+
+            g_object_set(G_OBJECT(udpjitter), "latency", 40, NULL);
+            g_object_set(G_OBJECT(udpjitter), "latency", 40, NULL);
         }
 
         if ((parser = gst_element_factory_make("h264parse", "h264-parser")) == NULL) {
@@ -442,6 +454,8 @@ void VideoReceiver::start(const QString &optionsString, bool recording)
     }
     _starting = false;
 #endif
+
+    qDebug("done with actual start");
 }
 
 //-----------------------------------------------------------------------------
@@ -589,8 +603,10 @@ void VideoReceiver::_onStatsTimer()
     }
 
     GstStructure *stats;
+    gint fill_percent = 0;
 
     g_object_get(_jitterBuffer, "stats", &stats, NULL);
+    g_object_get(_jitterBuffer, "percent", &fill_percent, NULL);
 
     guint64 num_pushed = 0;
     guint64 num_lost = 0;
@@ -635,6 +651,7 @@ void VideoReceiver::_onStatsTimer()
     qDebug() << "Stats structure rtx-success-count: " << rtx_success_count;
     qDebug() << "Stats structure rtx-per-packet: " << rtx_per_packet;
     qDebug() << "Stats structure rtx-rtt: " << rtx_rtt;
+    qDebug() << "buffer filled percentage" << fill_percent;
 
     gst_structure_free (stats);
 }
