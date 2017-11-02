@@ -256,8 +256,8 @@ QGCView {
                             QGCCheckBox {
                                 id:                 wired
                                 text:               " "
-                                checked:    QGroundControl.hbSettings.value("enableWire", false)
-                                onClicked:  QGroundControl.hbSettings.setValue("enableWire", checked ? true : false)
+                                checked:   QGroundControl.hbSettings.value("enableWire", false) == "true"
+                                onClicked: QGroundControl.hbSettings.setValue("enableWire", checked)
                             }
 
                             QGCLabel {
@@ -277,7 +277,7 @@ QGCView {
                                 text : "sweep speed (degree/s)"
                             }
                             QGCTextField {
-                                validator: IntValidator { bottom: 1; top: 20 }
+                                validator: IntValidator { bottom: 1; top: 10 }
                                 maximumLength: 2
                                 enabled: wired.checked
                                 text: QGroundControl.hbSettings.value("panSweepSpeed", 5)
@@ -285,6 +285,8 @@ QGCView {
                                     QGroundControl.hbSettings.setValue("panSweepSpeed", text);
                                 }
                             }
+
+
                             QGCLabel {
                                 text : "Min Alt"
                             }

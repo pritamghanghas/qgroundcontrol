@@ -41,7 +41,7 @@ QGC_LOGGING_CATEGORY(VehicleLog, "VehicleLog")
 #define UPDATE_TIMER 50
 #define DEFAULT_LAT  38.965767f
 #define DEFAULT_LON -120.083923f
-#define HEADING_MARGIN 5.0f
+#define HEADING_MARGIN 1.0f
 
 #define TRIGGER_EXECUTE_DELAY 5
 
@@ -1757,7 +1757,10 @@ void Vehicle::doChangeAltitude(int height)
 void Vehicle::doChangeYaw(float angle, float speed, bool relative, int direction)
 {
 //    qDebug("moving yaw by angle %f and its %s", angle, relative ? "relative" : "absolute");
-    _currentDirection = direction;
+
+    // this method is never used for sweep and should mean that we are done with sweep
+//    doSweepYaw(0, 0);
+
 
     mavlink_message_t msg;
     mavlink_command_long_t cmd;
@@ -1780,12 +1783,29 @@ void Vehicle::doChangeYaw(float angle, float speed, bool relative, int direction
 
 }
 
+void Vehicle::doChangeYawStick(float angle, float speed, bool relative, int direction)
+{
+    _currentDirection = direction;
+
+    qDebug() << "desired speed is " << speed;
+
+    // don't go beyond 50% deflection on either side considering maximum stopped value is 20
+    float yaw = speed/20;
+    if (direction < 0) {
+        yaw = -yaw;
+    }
+    qDebug() << "sending yaw input" << yaw;
+    _uas->setExternalControlSetpoint(0, 0, yaw, 0, 0, _joystickMode);
+}
+
 void Vehicle::doSweepYaw(float sweepAngle, float sweepSpeed)
 {
     if (!sweepAngle) {
         _headingLeft = 0.0f;
         _headingRight = 0.0f;
         _sweepSpeed = 0.0f;
+        // stop existing input
+        _uas->setExternalControlSetpoint(0, 0, 0, 0, 0, _joystickMode);
         return;
     }
 
@@ -1804,11 +1824,10 @@ void Vehicle::doSweepYaw(float sweepAngle, float sweepSpeed)
     }
 
 
-
     qDebug(" we will sweep from angle %f to %f", _headingLeft, _headingRight);
 
-    // start by sweeping right
-    doChangeYaw(_headingLeft, _sweepSpeed, true, 1);
+    // start by sweeping left
+    doChangeYawStick(_headingLeft, _sweepSpeed, true, 1);
 }
 
 void Vehicle::flyToLocation(const QGeoCoordinate &coord, double altitudeRel)
@@ -1870,14 +1889,14 @@ void Vehicle::_onHeadingChanged()
     }
 
     if(_currentDirection == -1) { // ccw
-        if (fabs(_headingFact.cookedValue().toFloat() - _headingLeft) < HEADING_MARGIN) {
-//            qDebug("reached left ccw angel %f, start moving right/cw now", _headingLeft);
-            doChangeYaw(_headingRight, _sweepSpeed, false, 1);
+        if (fabs(_headingFact.cookedValue().toFloat() - _headingLeft) < HEADING_MARGIN + _sweepSpeed) {
+//            qDebug("reached left ccw angel %f, start moving right/cw now", _headingFact.cookedValue().toFloat());
+            doChangeYawStick(_headingRight, _sweepSpeed, false, 1);
         }
     } else if ( _currentDirection == 1) {
-        if (fabs(_headingFact.cookedValue().toFloat() - _headingRight) < HEADING_MARGIN) {
-//            qDebug("reached right/cw angel %f, start moving left/ccw now", _headingRight);
-            doChangeYaw(_headingLeft, _sweepSpeed, false, -1);
+        if (fabs(_headingFact.cookedValue().toFloat() - _headingRight) < HEADING_MARGIN + _sweepSpeed) {
+//            qDebug("reached right/cw angel %f, start moving left/ccw now", _headingFact.cookedValue().toFloat());
+            doChangeYawStick(_headingLeft, _sweepSpeed, false, -1);
         }
     }
 }

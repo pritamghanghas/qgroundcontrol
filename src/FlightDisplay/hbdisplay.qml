@@ -32,6 +32,7 @@ Item {
     property bool   _recordingVideo:        _videoReceiver && _videoReceiver.recording
     property bool   _mainIsMap:             QGroundControl.videoManager.hasVideo ? QGroundControl.loadBoolGlobalSetting(_mainIsMapKey,  true) : true
     property bool   _hasVideoNode:           QGroundControl.nodeSelector.hasVideoNode
+//    property bool   _hasVideoNode:           true
     property real   _margins:               ScreenTools.defaultFontPixelWidth / 2
 
     QGCPalette { id: qgcPal; colorGroupEnabled: enabled }
@@ -282,12 +283,16 @@ Item {
     function onIncrementYaw()
     {
         console.log("move yaw right by ", stepSize())
+        panSweepButton.checked = false
+        _activeVehicle.doSweepYaw(0,0)
         _activeVehicle.doChangeYaw(stepSize(), 0.0, true, 1);
     }
 
     function onDecrementYaw()
     {
         console.log("move yaw left by ", stepSize())
+        panSweepButton.checked = false
+        _activeVehicle.doSweepYaw(0,0)
         _activeVehicle.doChangeYaw(stepSize(), 0.0, true, -1);
     }
 
@@ -356,12 +361,12 @@ Item {
         RoundButton {
             id: panSweepButton
             buttonImage: "/qmlimages/rotate.svg"
-            visible: QGroundControl.hbSettings.value("enableWired", false);
+            visible: QGroundControl.hbSettings.value("enableWire", false) == "true";
             buttonAnchors.margins:  width*0.15
             z:            QGroundControl.zOrderWidgets
             onClicked: {
                 if(checked) {
-                    _activeVehicle.doSweepYaw(QGroundControl.hbSettings.value("panSweepAngle", 20), QGroundControl.hbSettings.value("panSweepAngle", 5));
+                    _activeVehicle.doSweepYaw(QGroundControl.hbSettings.value("panSweepAngle", 20), QGroundControl.hbSettings.value("panSweepSpeed", 5));
                 } else {
                     _activeVehicle.doSweepYaw(0, 0);
                 }
