@@ -299,11 +299,13 @@ Item {
     function onIncrementPitch()
     {
         console.log("move pitch down by ", stepSize())
+        // send servo set probably
     }
 
     function onDecrementPitch()
     {
         console.log("move pitch up by ", stepSize())
+        // send servo set probably
     }
 
     function startPressTimer()

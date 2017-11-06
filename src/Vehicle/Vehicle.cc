@@ -1756,12 +1756,6 @@ void Vehicle::doChangeAltitude(int height)
 
 void Vehicle::doChangeYaw(float angle, float speed, bool relative, int direction)
 {
-//    qDebug("moving yaw by angle %f and its %s", angle, relative ? "relative" : "absolute");
-
-    // this method is never used for sweep and should mean that we are done with sweep
-//    doSweepYaw(0, 0);
-
-
     mavlink_message_t msg;
     mavlink_command_long_t cmd;
 
@@ -1785,6 +1779,9 @@ void Vehicle::doChangeYaw(float angle, float speed, bool relative, int direction
 
 void Vehicle::doChangeYawStick(float angle, float speed, bool relative, int direction)
 {
+    // ensure guided mode as it is only used by sweep
+   _firmwarePlugin->setGuidedMode(this, true);
+
     _currentDirection = direction;
 
     qDebug() << "desired speed is " << speed;
@@ -1808,6 +1805,9 @@ void Vehicle::doSweepYaw(float sweepAngle, float sweepSpeed)
         _uas->setExternalControlSetpoint(0, 0, 0, 0, 0, _joystickMode);
         return;
     }
+
+     // change to guided mode
+    _firmwarePlugin->setGuidedMode(this, true);
 
     _sweepAngle = sweepAngle;
     _headingMid = _headingFact.cookedValue().toFloat();
