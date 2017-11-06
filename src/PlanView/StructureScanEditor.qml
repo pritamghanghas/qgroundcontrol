@@ -49,6 +49,11 @@ Rectangle {
 
     QGCPalette { id: qgcPal; colorGroupEnabled: true }
 
+    ExclusiveGroup {
+        id: yawRadiosGroup
+        onCurrentChanged: missionItem.yawVehicleToStructure = yawVehicleRadio.checked
+    }
+
     Column {
         id:                 editorColumn
         anchors.margins:    _margin
@@ -60,9 +65,17 @@ Rectangle {
         QGCLabel {
             anchors.left:   parent.left
             anchors.right:  parent.right
-            text:           qsTr("WARNING: WORK IN PROGRESS. USE AT YOUR OWN RISK.")
+            text:           qsTr("WORK IN PROGRESS. CAREFUL!")
             wrapMode:       Text.WordWrap
             color:          qgcPal.warningText
+        }
+
+        QGCLabel {
+            anchors.left:   parent.left
+            anchors.right:  parent.right
+            text:           qsTr("Note: Polygon respresents structure surface not vehicle flight path.")
+            wrapMode:       Text.WordWrap
+            font.pointSize: ScreenTools.smallFontPointSize
         }
 
         QGCLabel {
@@ -74,53 +87,79 @@ Rectangle {
             visible:        missionItem.cameraShots > 0 && missionItem.cameraMinTriggerInterval !== 0 && missionItem.cameraMinTriggerInterval > missionItem.timeBetweenShots
         }
 
-        GridLayout {
+        CameraCalc {
+            cameraCalc:             missionItem.cameraCalc
+            vehicleFlightIsFrontal: false
+            distanceToSurfaceLabel: qsTr("Scan Distance")
+            frontalDistanceLabel:   qsTr("Layer Height")
+            sideDistanceLabel:      qsTr("Trigger Distance")
+        }
+
+        SectionHeader {
+            id:         scanHeader
+            text:       qsTr("Scan")
+        }
+
+        Column {
             anchors.left:   parent.left
             anchors.right:  parent.right
-            columnSpacing:  _margin
-            rowSpacing:     _margin
-            columns:        2
+            spacing:        _margin
+            visible:        scanHeader.checked
 
-            QGCLabel { text: qsTr("Altitude") }
-            FactTextField {
-                fact:               missionItem.altitude
-                Layout.fillWidth:   true
+            GridLayout {
+                anchors.left:   parent.left
+                anchors.right:  parent.right
+                columnSpacing:  _margin
+                rowSpacing:     _margin
+                columns:        2
+
+                QGCLabel { text: qsTr("Layers") }
+                FactTextField {
+                    fact:               missionItem.layers
+                    Layout.fillWidth:   true
+                }
+
+                QGCLabel { text: qsTr("Altitude") }
+                FactTextField {
+                    fact:               missionItem.altitude
+                    Layout.fillWidth:   true
+                }
+
+                QGCCheckBox {
+                    text:               qsTr("Relative altitude")
+                    checked:            missionItem.altitudeRelative
+                    Layout.columnSpan:  2
+                    onClicked:          missionItem.altitudeRelative = checked
+                }
             }
 
-            QGCLabel { text: qsTr("Layers") }
-            FactTextField {
-                fact:               missionItem.layers
-                Layout.fillWidth:   true
+            QGCLabel { text: qsTr("Point camera to structure using:") }
+
+            RowLayout {
+                spacing: _margin
+
+                QGCRadioButton {
+                    id:             yawVehicleRadio
+                    text:           qsTr("Vehicle yaw")
+                    exclusiveGroup: yawRadiosGroup
+                    checked:        !!missionItem.yawVehicleToStructure
+                    enabled:        false
+                }
+
+                QGCRadioButton
+                {
+                    text:           qsTr("Gimbal yaw")
+                    exclusiveGroup: yawRadiosGroup
+                    checked:        !missionItem.yawVehicleToStructure
+                    enabled:        false
+                }
             }
 
-            QGCLabel { text: qsTr("Layer distance") }
-            FactTextField {
-                fact:               missionItem.layerDistance
-                Layout.fillWidth:   true
+            QGCButton {
+                text:       qsTr("Rotate entry point")
+                onClicked:  missionItem.rotateEntryPoint()
             }
-
-            QGCLabel { text: qsTr("Trigger Distance") }
-            FactTextField {
-                fact:               missionItem.cameraTriggerDistance
-                Layout.fillWidth:   true
-            }
-
-            QGCCheckBox {
-                text:               qsTr("Relative altitude")
-                checked:            missionItem.altitudeRelative
-                Layout.columnSpan:  2
-                onClicked:          missionItem.altitudeRelative = checked
-            }
-        }
-
-        QGCLabel { text: qsTr("Point camera to structure using:") }
-        QGCRadioButton { text: qsTr("Vehicle yaw"); enabled: false }
-        QGCRadioButton { text: qsTr("Gimbal yaw"); checked: true; enabled: false }
-
-        QGCButton {
-            text:       qsTr("Rotate entry point")
-            onClicked:  missionItem.rotateEntryPoint()
-        }
+        } // Column - Scan
 
         SectionHeader {
             id:     statsHeader
@@ -138,6 +177,5 @@ Rectangle {
             QGCLabel { text: qsTr("Photo interval") }
             QGCLabel { text: missionItem.timeBetweenShots.toFixed(1) + " " + qsTr("secs") }
         }
-    }
-}
-
+    } // Column
+} // Rectangle

@@ -45,8 +45,6 @@ QGCView {
     property var    _geoFenceController:        _planMasterController.geoFenceController
     property var    _rallyPointController:      _planMasterController.rallyPointController
     property var    _visualItems:               _missionController.visualItems
-    property var    _currentMissionItem
-    property int    _currentMissionIndex:       0
     property bool   _lightWidgetBorders:        editorMap.isSatelliteMap
     property bool   _addWaypointOnClick:        false
     property bool   _singleComplexItem:         _missionController.complexMissionItemNames.length === 1
@@ -60,7 +58,7 @@ QGCView {
 
     Component.onCompleted: {
         toolbar.planMasterController =  Qt.binding(function () { return _planMasterController })
-        toolbar.currentMissionItem =    Qt.binding(function () { return _currentMissionItem })
+        toolbar.currentMissionItem =    Qt.binding(function () { return _missionController.currentPlanViewItem })
     }
 
     function addComplexItem(complexItemName) {
@@ -73,7 +71,7 @@ QGCView {
 
     function insertComplexMissionItem(complexItemName, coordinate, index) {
         var sequenceNumber = _missionController.insertComplexMissionItem(complexItemName, coordinate, index)
-        setCurrentItem(sequenceNumber, true)
+        _missionController.setCurrentPlanViewIndex(sequenceNumber, true)
     }
 
     property bool _firstMissionLoadComplete:    false
@@ -144,12 +142,20 @@ QGCView {
         }
     }
 
+    Component {
+        id: noItemForKML
+
+        QGCViewMessage {
+            message:    qsTr("You need at least one item to create a KML.")
+        }
+    }
+
     PlanMasterController {
         id: masterController
 
         Component.onCompleted: {
             start(true /* editMode */)
-            setCurrentItem(0, true)
+            _missionController.setCurrentPlanViewIndex(0, true)
         }
 
         function upload() {
@@ -195,7 +201,7 @@ QGCView {
             if (_visualItems && _visualItems.count != 1) {
                 mapFitFunctions.fitMapViewportToMissionItems()
             }
-            setCurrentItem(0, true)
+            _missionController.setCurrentPlanViewIndex(0, true)
         }
     }
 
@@ -205,31 +211,12 @@ QGCView {
         id: _mapTypeButtonsExclusiveGroup
     }
 
-    /// Sets a new current mission item
-    ///     @param sequenceNumber - index for new item, -1 to clear current item
-    function setCurrentItem(sequenceNumber, force) {
-        if (force || sequenceNumber !== _currentMissionIndex) {
-            _currentMissionItem = undefined
-            _currentMissionIndex = -1
-            for (var i=0; i<_visualItems.count; i++) {
-                var visualItem = _visualItems.get(i)
-                if (visualItem.sequenceNumber == sequenceNumber) {
-                    _currentMissionItem = visualItem
-                    _currentMissionItem.isCurrentItem = true
-                    _currentMissionIndex = sequenceNumber
-                } else {
-                    visualItem.isCurrentItem = false
-                }
-            }
-        }
-    }
-
     /// Inserts a new simple mission item
     ///     @param coordinate Location to insert item
     ///     @param index Insert item at this index
     function insertSimpleMissionItem(coordinate, index) {
         var sequenceNumber = _missionController.insertSimpleMissionItem(coordinate, index)
-        setCurrentItem(sequenceNumber, true)
+        _missionController.setCurrentPlanViewIndex(sequenceNumber, true)
     }
 
     property int _moveDialogMissionItemIndex
@@ -250,7 +237,7 @@ QGCView {
         onAcceptedForLoad: {
             masterController.loadFromFile(file)
             masterController.fitViewportToItems()
-            setCurrentItem(0, true)
+            _missionController.setCurrentPlanViewIndex(0, true)
             close()
         }
     }
@@ -359,7 +346,7 @@ QGCView {
 
                 delegate: MissionItemMapVisual {
                     map:        editorMap
-                    onClicked:  setCurrentItem(sequenceNumber, false)
+                    onClicked:  _missionController.setCurrentPlanViewIndex(sequenceNumber, false)
                     visible:    _editingLayer == _layerMission
                 }
             }
@@ -562,7 +549,7 @@ QGCView {
                     model:          _missionController.visualItems
                     cacheBuffer:    Math.max(height * 2, 0)
                     clip:           true
-                    currentIndex:   _currentMissionIndex
+                    currentIndex:   _missionController.currentPlanViewIndex
                     highlightMoveDuration: 250
 
                     delegate: MissionItemEditor {
@@ -573,7 +560,7 @@ QGCView {
                         readOnly:           false
                         rootQgcView:        _qgcView
 
-                        onClicked:  setCurrentItem(object.sequenceNumber, false)
+                        onClicked:  _missionController.setCurrentPlanViewIndex(object.sequenceNumber, false)
 
                         onRemove: {
                             var removeIndex = index
@@ -581,8 +568,7 @@ QGCView {
                             if (removeIndex >= _missionController.visualItems.count) {
                                 removeIndex--
                             }
-                            _currentMissionIndex = -1
-                            rootQgcView.setCurrentItem(removeIndex, true)
+                            _missionController.setCurrentPlanViewIndex(removeIndex, true)
                         }
 
                         onInsertWaypoint:       insertSimpleMissionItem(editorMap.center, index)
@@ -808,6 +794,11 @@ QGCView {
                     Layout.fillWidth:   true
                     enabled:            !masterController.syncInProgress
                     onClicked: {
+                        // First point do not count
+                        if (_visualItems.count < 2) {
+                            _qgcView.showDialog(noItemForKML, qsTr("KML"), _qgcView.showDialogDefaultWidth, StandardButton.Cancel)
+                            return
+                        }
                         dropPanel.hide()
                         masterController.saveKmlToSelectedFile()
                     }
