@@ -363,7 +363,7 @@ Item {
         RoundButton {
             id: panSweepButton
             buttonImage: "/qmlimages/rotate.svg"
-            visible: QGroundControl.hbSettings.value("enableWire", false) == "true";
+            visible: QGroundControl.hbSettings.value("enableWire", false) === true
             buttonAnchors.margins:  width*0.15
             z:            QGroundControl.zOrderWidgets
             onClicked: {

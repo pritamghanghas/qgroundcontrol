@@ -1778,7 +1778,6 @@ void Vehicle::doChangeYaw(float angle, float speed, bool relative, int direction
     mavlink_msg_command_long_encode(_mavlink->getSystemId(), _mavlink->getComponentId(), &msg, &cmd);
 
     sendMessageOnLink(priorityLink(),msg);
-
 }
 
 void Vehicle::doChangeYawStick(float angle, float speed, bool relative, int direction)

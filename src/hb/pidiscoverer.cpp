@@ -82,29 +82,45 @@ void PiDiscoverer::datagramReceived()
 void PiDiscoverer::updateNode(const PiNode &node)
 {
     int index = m_discoveredNodes.indexOf(node);
-    int expectedSeqNum = m_discoveredNodes[index].lastLanSeqNum+1;
+    auto expectedSeqNum = m_discoveredNodes[index].lastLanSeqNum+1;
     if (expectedSeqNum != node.lastLanSeqNum) {
         qDebug() << "lost a packet or unordered packets coming" << "expected: " << expectedSeqNum << " last seq no: " << node.lastLanSeqNum;
-        return;
-    }
-    if (expectedSeqNum > node.lastLanSeqNum) {
-        qDebug() << "got late heartbeat " << "expected: " << expectedSeqNum << " last seq no: " << node.lastLanSeqNum;
+        if (expectedSeqNum < node.lastLanSeqNum) {
+            qDebug() << "got late heartbeat " << "expected: " << expectedSeqNum << " last seq no: " << node.lastLanSeqNum;
+        }
+        m_discoveredNodes[index].lastLanSeqNum = node.lastLanSeqNum;
         return;
     }
 
     auto newLatency = m_discoveredNodes[index].beaconTimer.restart() - node.beaconInterval;
+    newLatency = newLatency < 0 ? 0 : newLatency;
+
+//    qDebug() << "new latency" << newLatency << " beacon interval " << node.beaconInterval;
 
     auto oldLatency =  m_discoveredNodes[index].latency;
+
 
     m_discoveredNodes[index].latency = 0.8*oldLatency + 0.2*newLatency;
     m_discoveredNodes[index].lastLanSeqNum = node.lastLanSeqNum;
     m_discoveredNodes[index].heartBeatCount++;
 
-    if (m_discoveredNodes[index].heartBeatCount == 3) {
+//    if (m_discoveredNodes[index].heartBeatCount == 3) { // we will use higher count and latency determination here later.
+    if (m_discoveredNodes[index].heartBeatCount == 1) {
         Q_EMIT nodeDiscovered(m_discoveredNodes[index]);
         onNodeDiscovered(m_discoveredNodes[index]);
     }
+
+//    debugNode(m_discoveredNodes[index]);
     Q_EMIT nodeUpdated(m_discoveredNodes[index]);
+}
+
+void PiDiscoverer::debugNode(const PiNode &node)
+{
+    qDebug() << "Debug information for node";
+    qDebug() << "id : " << node.uniqueId;
+    qDebug() << "caps : " << node.caps;
+    qDebug() << "latency: " << node.latency;
+    qDebug() << "seqNum : " << node.lastLanSeqNum;
 }
 
 PiNodeList PiDiscoverer::discoveredNodes() const

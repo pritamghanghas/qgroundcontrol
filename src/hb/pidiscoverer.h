@@ -62,6 +62,7 @@ private Q_SLOTS:
 
 private:
     void updateNode(const PiNode &node);
+    void debugNode(const PiNode &node);
     QUdpSocket m_socket;
     PiNodeList m_discoveredNodes;
 };

@@ -220,7 +220,7 @@ void VideoReceiver::delayedStart(const QString &optionsString, bool recording)
 
 
     stop();
-    QTimer::singleShot(10, this, &VideoReceiver::start);
+    QTimer::singleShot(50, this, &VideoReceiver::start);
 #endif
 }
 
@@ -315,7 +315,7 @@ void VideoReceiver::start()
                 qCritical() << "VideoReceiver::start() failed. Error with gst_element_factory_make('tsdemux')";
                 break;
             }
-        } else {
+        } else if (isUdp) {
             if ((udpjitter = gst_element_factory_make("rtpjitterbuffer", "rpp-jitter-buffer")) == NULL) {
                 qCritical() << "VideoReceiver::start() failed. Error with gst_element_factory_make('rtpjitterbuffer')";
                 break;
@@ -327,8 +327,8 @@ void VideoReceiver::start()
                 break;
             }
 
-            g_object_set(G_OBJECT(udpjitter), "latency", 40, NULL);
-            g_object_set(G_OBJECT(udpjitter), "latency", 40, NULL);
+            g_object_set(G_OBJECT(udpjitter), "latency", 200, NULL);
+            g_object_set(G_OBJECT(udpjitter), "latency", 200, NULL);
         }
 
         if ((parser = gst_element_factory_make("h264parse", "h264-parser")) == NULL) {

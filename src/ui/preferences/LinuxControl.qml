@@ -256,7 +256,7 @@ QGCView {
                             QGCCheckBox {
                                 id:                 wired
                                 text:               " "
-                                checked:   QGroundControl.hbSettings.value("enableWire", false) == "true"
+                                checked:   QGroundControl.hbSettings.value("enableWire", false) === true
                                 onClicked: QGroundControl.hbSettings.setValue("enableWire", checked)
                             }
 
