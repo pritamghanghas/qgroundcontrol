@@ -49,7 +49,7 @@ void PiDiscoverer::datagramReceived()
     QStringList tokens = beacon.split(' ');
 
     if (tokens.count() < 5) {
-        qDebug() << "something wrong with the heartbeat, we have only less than 5 tokens";
+        qDebug() << "something wrong with the heartbeat, we have less than 5 tokens";
         return;
     }
 
@@ -104,7 +104,7 @@ void PiDiscoverer::updateNode(const PiNode &node)
         Q_EMIT nodeDiscovered(m_discoveredNodes[index]);
         onNodeDiscovered(m_discoveredNodes[index]);
     }
-    nodeUpdated(m_discoveredNodes[index]);
+    Q_EMIT nodeUpdated(m_discoveredNodes[index]);
 }
 
 PiNodeList PiDiscoverer::discoveredNodes() const

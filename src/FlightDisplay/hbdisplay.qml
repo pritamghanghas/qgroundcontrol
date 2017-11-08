@@ -243,7 +243,7 @@ Item {
             var optString = "-mm " + metringMode + " -awb " + awbMode + " -g " + iframeRate + " -ex " + exposureMode + " -w " + width + " -h " + height + " -fps " + fps + " -b " + bitrate + flipMode;
             console.log("lets start the video with following optons: " + optString);
             _videoReceiver.stop();
-            _videoReceiver.start(optString, recording == "rec on");
+            _videoReceiver.delayedStart(optString, recording == "rec on");
         }
     }
 

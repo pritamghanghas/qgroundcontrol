@@ -220,7 +220,7 @@ void VideoReceiver::delayedStart(const QString &optionsString, bool recording)
 
 
     stop();
-    QTimer::singleShot(1000, this, &VideoReceiver::start);
+    QTimer::singleShot(10, this, &VideoReceiver::start);
 #endif
 }
 
