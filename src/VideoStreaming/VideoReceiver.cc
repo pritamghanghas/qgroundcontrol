@@ -66,6 +66,7 @@ VideoReceiver::VideoReceiver(NodeSelector *piNodeSelector, QObject* parent)
     , _serverPresent(false)
 #endif
     , _videoSurface(NULL)
+    , _expectedLatency(20)
     , _videoRunning(false)
     , _showFullScreen(false)
 {
@@ -212,6 +213,7 @@ void VideoReceiver::delayedStart(const QString &optionsString, bool recording)
     if (!optionsString.isEmpty()) {
         // start new stream
         _nodeSelector->startStreaming(_nodeSelector->currentNode(), optionsString, recording);
+        _expectedLatency = _nodeSelector->currentNode().latency;
 
         QString newUri = QString("udp://0.0.0.0:") + QString::number(_nodeSelector->currentNode().targetStreamingPort);
         qDebug() << newUri;
@@ -327,8 +329,8 @@ void VideoReceiver::start()
                 break;
             }
 
-            g_object_set(G_OBJECT(udpjitter), "latency", 200, NULL);
-            g_object_set(G_OBJECT(udpjitter), "latency", 200, NULL);
+            // set jitter buffers latency to 2 times the initial estimates
+            g_object_set(G_OBJECT(udpjitter), "latency", _expectedLatency*2, NULL);
         }
 
         if ((parser = gst_element_factory_make("h264parse", "h264-parser")) == NULL) {

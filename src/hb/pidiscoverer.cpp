@@ -84,28 +84,29 @@ void PiDiscoverer::updateNode(const PiNode &node)
     int index = m_discoveredNodes.indexOf(node);
     auto expectedSeqNum = m_discoveredNodes[index].lastLanSeqNum+1;
     if (expectedSeqNum != node.lastLanSeqNum) {
-        qDebug() << "lost a packet or unordered packets coming" << "expected: " << expectedSeqNum << " last seq no: " << node.lastLanSeqNum;
-        if (expectedSeqNum < node.lastLanSeqNum) {
-            qDebug() << "got late heartbeat " << "expected: " << expectedSeqNum << " last seq no: " << node.lastLanSeqNum;
+//        qDebug() << "lost a packet or unordered packets coming" << "expected: " << expectedSeqNum << " last seq no: " << node.lastLanSeqNum;
+        if (expectedSeqNum > node.lastLanSeqNum) {
+//            qDebug() << "got late heartbeat " << "expected: " << expectedSeqNum << " last seq no: " << node.lastLanSeqNum;
         }
         m_discoveredNodes[index].lastLanSeqNum = node.lastLanSeqNum;
         return;
     }
 
     auto newLatency = m_discoveredNodes[index].beaconTimer.restart() - node.beaconInterval;
+
+    auto oldLatency =  m_discoveredNodes[index].latency;
     newLatency = newLatency < 0 ? 0 : newLatency;
+    newLatency = newLatency ? newLatency : oldLatency;
 
 //    qDebug() << "new latency" << newLatency << " beacon interval " << node.beaconInterval;
 
-    auto oldLatency =  m_discoveredNodes[index].latency;
 
-
-    m_discoveredNodes[index].latency = 0.8*oldLatency + 0.2*newLatency;
+    m_discoveredNodes[index].latency = oldLatency ? (0.8*oldLatency + 0.2*newLatency) : newLatency;
     m_discoveredNodes[index].lastLanSeqNum = node.lastLanSeqNum;
     m_discoveredNodes[index].heartBeatCount++;
 
-//    if (m_discoveredNodes[index].heartBeatCount == 3) { // we will use higher count and latency determination here later.
-    if (m_discoveredNodes[index].heartBeatCount == 1) {
+    if (m_discoveredNodes[index].heartBeatCount == 10) { // we will use higher count and latency determination here later.
+//    if (m_discoveredNodes[index].heartBeatCount == 1) {
         Q_EMIT nodeDiscovered(m_discoveredNodes[index]);
         onNodeDiscovered(m_discoveredNodes[index]);
     }

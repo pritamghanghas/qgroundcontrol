@@ -141,6 +141,7 @@ private:
 
     NodeSelector*   _nodeSelector;
     QString         _uri;
+    quint32         _expectedLatency;
     QString         _imageFile;
     VideoSurface*   _videoSurface;
     bool            _videoRunning;

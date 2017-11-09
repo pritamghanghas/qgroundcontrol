@@ -202,8 +202,9 @@ void NodeSelector::onNewNodeDiscovered(const PiNode &node)
             hostapdget();
         }
 
+        // start streaming automatically
         if (node.caps & PiNode::PICAM) {
-            startStreaming(node, m_picamOptString, m_recordingStatus);
+//            startStreaming(node, m_picamOptString, m_recordingStatus);
         }
 
         // check if its thermal module, if so start thermal

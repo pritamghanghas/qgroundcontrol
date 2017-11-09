@@ -285,7 +285,7 @@ Item {
         console.log("move yaw right by ", stepSize())
         panSweepButton.checked = false
         _activeVehicle.doSweepYaw(0,0)
-        _activeVehicle.doChangeYaw(stepSize(), 0.0, true, 1);
+        _activeVehicle.doChangeYaw(stepSize(), 1, true, 1);
     }
 
     function onDecrementYaw()
@@ -293,7 +293,7 @@ Item {
         console.log("move yaw left by ", stepSize())
         panSweepButton.checked = false
         _activeVehicle.doSweepYaw(0,0)
-        _activeVehicle.doChangeYaw(stepSize(), 0.0, true, -1);
+        _activeVehicle.doChangeYaw(stepSize(), 1, true, -1);
     }
 
     function onIncrementPitch()
@@ -638,7 +638,7 @@ Item {
         awbComboBox.currentIndex = 1;
         awbComboBox.currentIndex = 0;
         resolutionSelectionComboBox.currentIndex = 4;
-        bitrateSelectionComboBox.currentIndex = 3;
+        bitrateSelectionComboBox.currentIndex = 4;
         iframeSelectionComboBox.currentIndex = 1;
         iframeSelectionComboBox.currentIndex = 0;
         orientationSelectionComboBox.currentIndex = 1;
