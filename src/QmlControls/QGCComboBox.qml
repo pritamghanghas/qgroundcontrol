@@ -31,7 +31,7 @@ Button {
             top:    _verticalPadding
             bottom: _verticalPadding
             left:   _horizontalPadding
-            right:  _horizontalPadding
+            right:  _horizontalPadding + ScreenTools.defaultFontPixelHeight / 2
         }
 
         /*! This defines the background of the button. */

@@ -31,9 +31,9 @@ Item {
     property var    _videoReceiver:         QGroundControl.videoManager.videoReceiver
     property bool   _recordingVideo:        _videoReceiver && _videoReceiver.recording
     property bool   _mainIsMap:             QGroundControl.videoManager.hasVideo ? QGroundControl.loadBoolGlobalSetting(_mainIsMapKey,  true) : true
-    property bool   _hasVideoNode:           QGroundControl.nodeSelector.hasVideoNode
-//    property bool   _hasVideoNode:           true
-    property real   _margins:               ScreenTools.defaultFontPixelWidth / 2
+//    property bool   _hasVideoNode:           QGroundControl.nodeSelector.hasVideoNode // this won't work, there is no notify
+    property bool   _hasVideoNode:           true // we should make it dynamic later.
+    property real   _margins:               ScreenTools.defaultFontPixelWidth
 
     QGCPalette { id: qgcPal; colorGroupEnabled: enabled }
 
@@ -338,11 +338,11 @@ Item {
     Column {
         id:                         toolColumn
         visible:                    !_mainIsMap && _hasVideoNode
-        anchors.leftMargin:         _margins
-        anchors.topMargin:          _margins*3.5
+        anchors.margins:            _margins
+        anchors.topMargin:          _margins*2
         anchors.left:               parent.left
         anchors.top:                parent.top
-        spacing:                    ScreenTools.defaultFontPixelHeight
+        spacing:                    _margins
 
         RoundButton {
             id: videoSettings
@@ -382,19 +382,20 @@ Item {
         radius:         ScreenTools.defaultFontPixelHeight
         border.width:   ScreenTools.defaultFontPixelHeight * 0.0625
         border.color:   "white"
-        anchors.left: toolColumn.right
-        anchors.top: toolColumn.top
-        anchors.margins: _margins
-        height: parent.height/5
-        width: parent.height/5
-        color: "transparent"
-        visible: cameraAngleControlButton.checked && !_mainIsMap
+        anchors.left:   toolColumn.right
+        y:              cameraAngleControlButton.y
+        anchors.margins:        _margins*2
+        height:                 _margins*20
+        width:                  _margins*20
+        color:                  "transparent"
+        visible:                cameraAngleControlButton.checked && !_mainIsMap
 
         Item {
             anchors.left: parent.left
             width: parent.width/3
             height: parent.height/3
             anchors.verticalCenter: parent.verticalCenter
+            anchors.margins:        _margins
             Image {
                 id: leftArrow
                 rotation: 90
@@ -428,6 +429,7 @@ Item {
             width: parent.width/3
             height: parent.height/3
             anchors.horizontalCenter: parent.horizontalCenter
+            anchors.margins:        _margins
             Image {
                 id: topArrow
                 rotation: 180
@@ -460,6 +462,7 @@ Item {
             width: parent.width/3
             height: parent.height/3
             anchors.verticalCenter: parent.verticalCenter
+            anchors.margins:        _margins
             Image {
                 id: rightArrow
                 rotation: 270
@@ -492,6 +495,7 @@ Item {
             width: parent.width/3
             height: parent.height/3
             anchors.horizontalCenter: parent.horizontalCenter
+            anchors.margins:        _margins
             Image {
                 id: downArrow
                 fillMode: Qt.KeepAspectRatio
@@ -521,22 +525,26 @@ Item {
 
     Item {
         id : combo
-        width: parent.width*0.47
+//        width: parent.width*0.47
+        y: videoSettings.y + _margins*2
         anchors.left: toolColumn.right
-        anchors.top: toolColumn.top
-        anchors.leftMargin: _margins
-        x: parent.width - width;
-        y: parent.height * 0.12;
+//        anchors.top: toolColumn.top
+        anchors.margins: _margins
+//        x: parent.width - width;
+//        y: parent.height * 0.12;
         visible: videoSettings.checked && !_mainIsMap;
 
         Row {
             spacing: _margins
             layoutDirection: Qt.LeftToRight
+            anchors.margins: _margins
 
 
             QGCComboBox {
                 id:         meteringComboBox
-                width: combo.width*0.17
+//                anchors.leftMargin: _margins*2
+//                anchors.margins: _margins
+//                width: combo.width*0.17
                 visible:    false
                 model:      meteringModesList
 
@@ -547,7 +555,9 @@ Item {
 
             QGCComboBox {
                 id:    recordingComboBox
-                width: combo.width*0.12
+//                anchors.margins: _margins
+//                anchors.leftMargin: _margins*2
+//                width: combo.width*0.12
                 visible:    true
                 model:      recordingModesList
 
@@ -558,7 +568,7 @@ Item {
 
             QGCComboBox {
                 id:         exposureComboBox
-                width: combo.width*0.16
+//                width: combo.width*0.16
                 visible:    true
                 model:      exposureModesList
 
@@ -569,7 +579,7 @@ Item {
 
             QGCComboBox {
                 id:         awbComboBox
-                width: combo.width*0.13
+//                width: combo.width*0.13
                 visible:    true
                 model:      awbModesList
 
@@ -580,7 +590,7 @@ Item {
 
             QGCComboBox {
                 id:         resolutionSelectionComboBox
-                width:      combo.width*0.14
+//                width:      combo.width*0.14
                 visible:    true
                 model:      resolutionList
 
@@ -592,7 +602,7 @@ Item {
 
             QGCComboBox {
                 id:         bitrateSelectionComboBox
-                width: combo.width*0.13
+//                width: combo.width*0.13
                 visible:    true
                 model:      bitrateList
 
@@ -603,7 +613,7 @@ Item {
 
             QGCComboBox {
                 id:         iframeSelectionComboBox
-                width: combo.width*0.08
+//                width: combo.width*0.08
                 visible:    true
                 model:      iframeList
 
@@ -614,7 +624,7 @@ Item {
 
             QGCComboBox {
                 id: orientationSelectionComboBox
-                width: combo.width*0.11
+//                width: combo.width*0.11
                 visible: true
                 model: orientationModeList
 
