@@ -62,6 +62,7 @@ const char* Vehicle::_altitudeAMSLFactName =        "altitudeAMSL";
 const char* Vehicle::_flightDistanceFactName =      "flightDistance";
 const char* Vehicle::_flightTimeFactName =          "flightTime";
 const char* Vehicle::_distanceToHomeFactName =      "distanceToHome";
+const char* Vehicle::_hobbsFactName =               "hobbs";
 
 const char* Vehicle::_gpsFactGroupName =        "gps";
 const char* Vehicle::_batteryFactGroupName =    "battery";
@@ -175,6 +176,7 @@ Vehicle::Vehicle(LinkInterface*             link,
     , _flightDistanceFact   (0, _flightDistanceFactName,    FactMetaData::valueTypeDouble)
     , _flightTimeFact       (0, _flightTimeFactName,        FactMetaData::valueTypeElapsedTimeInSeconds)
     , _distanceToHomeFact   (0, _distanceToHomeFactName,    FactMetaData::valueTypeDouble)
+    , _hobbsFact            (0, _hobbsFactName,             FactMetaData::valueTypeString)
     , _gpsFactGroup(this)
     , _batteryFactGroup(this)
     , _windFactGroup(this)
@@ -194,6 +196,8 @@ Vehicle::Vehicle(LinkInterface*             link,
     connect(this, &Vehicle::_sendMessageOnLinkOnThread, this, &Vehicle::_sendMessageOnLink, Qt::QueuedConnection);
     connect(this, &Vehicle::flightModeChanged,          this, &Vehicle::_handleFlightModeChanged);
     connect(this, &Vehicle::armedChanged,               this, &Vehicle::_announceArmedChanged);
+
+    connect(_toolbox->multiVehicleManager(), &MultiVehicleManager::parameterReadyVehicleAvailableChanged, this, &Vehicle::_vehicleParamLoaded);
 
     _uas = new UAS(_mavlink, this, _firmwarePluginManager);
 
@@ -359,6 +363,7 @@ Vehicle::Vehicle(MAV_AUTOPILOT              firmwareType,
     , _flightDistanceFact   (0, _flightDistanceFactName,    FactMetaData::valueTypeDouble)
     , _flightTimeFact       (0, _flightTimeFactName,        FactMetaData::valueTypeElapsedTimeInSeconds)
     , _distanceToHomeFact   (0, _distanceToHomeFactName,    FactMetaData::valueTypeDouble)
+    , _hobbsFact            (0, _hobbsFactName,             FactMetaData::valueTypeString)
     , _gpsFactGroup(this)
     , _batteryFactGroup(this)
     , _windFactGroup(this)
@@ -374,6 +379,7 @@ void Vehicle::_commonInit(void)
 
     connect(this, &Vehicle::coordinateChanged,      this, &Vehicle::_updateDistanceToHome);
     connect(this, &Vehicle::homePositionChanged,    this, &Vehicle::_updateDistanceToHome);
+    connect(this, &Vehicle::hobbsMeterChanged,      this, &Vehicle::_updateHobbsMeter);
 
     _missionManager = new MissionManager(this);
     connect(_missionManager, &MissionManager::error,                    this, &Vehicle::_missionManagerError);
@@ -414,6 +420,9 @@ void Vehicle::_commonInit(void)
     _addFact(&_flightDistanceFact,      _flightDistanceFactName);
     _addFact(&_flightTimeFact,          _flightTimeFactName);
     _addFact(&_distanceToHomeFact,      _distanceToHomeFactName);
+
+    _hobbsFact.setRawValue(QVariant(QString("0000:00:00")));
+    _addFact(&_hobbsFact,               _hobbsFactName);
 
     _addFactGroup(&_gpsFactGroup,       _gpsFactGroupName);
     _addFactGroup(&_batteryFactGroup,   _batteryFactGroupName);
@@ -3132,6 +3141,11 @@ void Vehicle::_updateDistanceToHome(void)
     }
 }
 
+void Vehicle::_updateHobbsMeter(void)
+{
+    _hobbsFact.setRawValue(hobbsMeter());
+}
+
 void Vehicle::forceInitialPlanRequestComplete(void)
 {
     _initialPlanRequestComplete = true;
@@ -3143,6 +3157,35 @@ void Vehicle::sendPlan(QString planFile)
     PlanMasterController::sendPlanToVehicle(this, planFile);
 }
 
+QString Vehicle::hobbsMeter()
+{
+    static const char* HOOBS_HI = "LND_FLIGHT_T_HI";
+    static const char* HOOBS_LO = "LND_FLIGHT_T_LO";
+    //-- TODO: Does this exist on non PX4?
+    if (_parameterManager->parameterExists(FactSystem::defaultComponentId, HOOBS_HI) &&
+        _parameterManager->parameterExists(FactSystem::defaultComponentId, HOOBS_LO)) {
+        Fact* factHi = _parameterManager->getParameter(FactSystem::defaultComponentId, HOOBS_HI);
+        Fact* factLo = _parameterManager->getParameter(FactSystem::defaultComponentId, HOOBS_LO);
+        uint64_t hobbsTimeSeconds = ((uint64_t)factHi->rawValue().toUInt() << 32 | (uint64_t)factLo->rawValue().toUInt()) / 1000000;
+        int hours   = hobbsTimeSeconds / 3600;
+        int minutes = (hobbsTimeSeconds % 3600) / 60;
+        int seconds = hobbsTimeSeconds % 60;
+        QString timeStr;
+        timeStr.sprintf("%04d:%02d:%02d", hours, minutes, seconds);
+        qCDebug(VehicleLog) << "Hobbs Meter:" << timeStr << "(" << factHi->rawValue().toUInt() << factLo->rawValue().toUInt() << ")";
+        return timeStr;
+    }
+    return QString("0000:00:00");
+}
+
+void Vehicle::_vehicleParamLoaded(bool ready)
+{
+    //-- TODO: This seems silly but can you think of a better
+    //   way to update this?
+    if(ready) {
+        emit hobbsMeterChanged();
+    }
+}
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------

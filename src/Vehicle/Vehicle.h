@@ -320,6 +320,7 @@ public:
     Q_PROPERTY(bool              initialPlanRequestComplete READ initialPlanRequestComplete                             NOTIFY initialPlanRequestCompleteChanged)
     Q_PROPERTY(QVariantList         staticCameraList        READ staticCameraList                                       CONSTANT)
     Q_PROPERTY(QGCCameraManager*    dynamicCameras          READ dynamicCameras                                         NOTIFY dynamicCamerasChanged)
+    Q_PROPERTY(QString              hobbsMeter              READ hobbsMeter                                             NOTIFY hobbsMeterChanged)
 
     // Vehicle state used for guided control
     Q_PROPERTY(bool flying                  READ flying NOTIFY flyingChanged)                               ///< Vehicle is flying
@@ -344,6 +345,7 @@ public:
     Q_PROPERTY(Fact* altitudeAMSL       READ altitudeAMSL       CONSTANT)
     Q_PROPERTY(Fact* flightDistance     READ flightDistance     CONSTANT)
     Q_PROPERTY(Fact* distanceToHome     READ distanceToHome     CONSTANT)
+    Q_PROPERTY(Fact* hobbs              READ hobbs              CONSTANT)
 
     Q_PROPERTY(FactGroup* gps         READ gpsFactGroup         CONSTANT)
     Q_PROPERTY(FactGroup* battery     READ batteryFactGroup     CONSTANT)
@@ -622,6 +624,7 @@ public:
     Fact* altitudeAMSL      (void) { return &_altitudeAMSLFact; }
     Fact* flightDistance    (void) { return &_flightDistanceFact; }
     Fact* distanceToHome    (void) { return &_distanceToHomeFact; }
+    Fact* hobbs             (void) { return &_hobbsFact; }
 
     FactGroup* gpsFactGroup         (void) { return &_gpsFactGroup; }
     FactGroup* batteryFactGroup     (void) { return &_batteryFactGroup; }
@@ -699,7 +702,9 @@ public:
 
     bool capabilitiesKnown      (void) const { return _vehicleCapabilitiesKnown; }
     uint64_t capabilityBits     (void) const { return _capabilityBits; }    // Change signalled by capabilityBitsChanged
+
     QGCCameraManager*           dynamicCameras      () { return _cameras; }
+    QString                     hobbsMeter          ();
 
     /// @true: When flying a mission the vehicle is always facing towards the next waypoint
     bool vehicleYawsToNextWaypointInMission(void) const;
@@ -745,6 +750,7 @@ signals:
     void firmwareTypeChanged(void);
     void vehicleTypeChanged(void);
     void dynamicCamerasChanged();
+    void hobbsMeterChanged();
     void capabilitiesKnownChanged(bool capabilitiesKnown);
     void initialPlanRequestCompleteChanged(bool initialPlanRequestComplete);
     void capabilityBitsChanged(uint64_t capabilityBits);
@@ -844,6 +850,8 @@ private slots:
     void _clearTrajectoryPoints(void);
     void _clearCameraTriggerPoints(void);
     void _updateDistanceToHome(void);
+    void _updateHobbsMeter(void);
+    void _vehicleParamLoaded(bool ready);
 
     void _onHeadingChanged();
     void _on1STimerTimeout();
@@ -1074,6 +1082,7 @@ private:
     Fact _flightDistanceFact;
     Fact _flightTimeFact;
     Fact _distanceToHomeFact;
+    Fact _hobbsFact;
 
     VehicleGPSFactGroup         _gpsFactGroup;
     VehicleBatteryFactGroup     _batteryFactGroup;
@@ -1092,6 +1101,7 @@ private:
     static const char* _flightDistanceFactName;
     static const char* _flightTimeFactName;
     static const char* _distanceToHomeFactName;
+    static const char* _hobbsFactName;
 
     static const char* _gpsFactGroupName;
     static const char* _batteryFactGroupName;
