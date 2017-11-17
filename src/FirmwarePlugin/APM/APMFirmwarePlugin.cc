@@ -118,9 +118,10 @@ void APMFirmwareVersion::_parseVersion(const QString &versionText)
 /*
  * @brief APMCustomMode encapsulates the custom modes for APM
  */
-APMCustomMode::APMCustomMode(uint32_t mode, bool settable) :
+APMCustomMode::APMCustomMode(uint32_t mode, bool settable, bool safe) :
     _mode(mode),
-    _settable(settable)
+    _settable(settable),
+    _isSafe(safe)
 {
 }
 
@@ -177,12 +178,24 @@ QList<VehicleComponent*> APMFirmwarePlugin::componentsForVehicle(AutoPilotPlugin
     return QList<VehicleComponent*>();
 }
 
-QStringList APMFirmwarePlugin::flightModes(Vehicle* vehicle)
+QStringList APMFirmwarePlugin::standardFlightModes(Vehicle* vehicle)
 {
     Q_UNUSED(vehicle)
     QStringList flightModesList;
     foreach (const APMCustomMode& customMode, _supportedModes) {
-        if (customMode.canBeSet()) {
+        if (customMode.isSafe() && customMode.canBeSet()) {
+            flightModesList << customMode.modeString();
+        }
+    }
+    return flightModesList;
+}
+
+QStringList APMFirmwarePlugin::unsafeFlightModes(Vehicle* vehicle)
+{
+    Q_UNUSED(vehicle)
+    QStringList flightModesList;
+    foreach (const APMCustomMode& customMode, _supportedModes) {
+        if (!customMode.isSafe() && customMode.canBeSet()) {
             flightModesList << customMode.modeString();
         }
     }

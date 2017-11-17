@@ -48,10 +48,11 @@ private:
 class APMCustomMode
 {
 public:
-    APMCustomMode(uint32_t mode, bool settable);
+    APMCustomMode(uint32_t mode, bool settable, bool safe = true);
     uint32_t modeAsInt() const { return _mode; }
     bool canBeSet() const { return _settable; }
     QString modeString() const;
+    bool isSafe() const { return _isSafe; }
 
 protected:
     void setEnumToStringMapping(const QMap<uint32_t,QString>& enumToString);
@@ -59,6 +60,7 @@ protected:
 private:
     uint32_t               _mode;
     bool                   _settable;
+    bool                   _isSafe;
     QMap<uint32_t,QString> _enumToString;
 };
 
@@ -79,7 +81,8 @@ public:
     void                guidedModeTakeoff               (Vehicle* vehicle, double altitudeRel) override;
     void                guidedModeGotoLocation          (Vehicle* vehicle, const QGeoCoordinate& gotoCoord) override;
     void                startMission                    (Vehicle* vehicle) override;
-    QStringList         flightModes                     (Vehicle* vehicle) override;
+    QStringList         standardFlightModes             (Vehicle* vehicle) override;
+    QStringList         unsafeFlightModes               (Vehicle* vehicle) override;
     QString             flightMode                      (uint8_t base_mode, uint32_t custom_mode) const override;
     bool                setFlightMode                   (const QString& flightMode, uint8_t* base_mode, uint32_t* custom_mode) override;
     bool                isGuidedMode                    (const Vehicle* vehicle) const override;

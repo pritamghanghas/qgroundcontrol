@@ -49,8 +49,13 @@ Item {
                     flightModesMenu.removeItem(flightModesMenuItems[i])
                 }
                 flightModesMenuItems.length = 0
+                var flightmodes = _activeVehicle.standardFlightModes;
+                if (QGroundControl.hbSettings.value("unsafeModes", false) === true) {
+                    flightmodes += _activeVehicle.unsafeFlightModes;
+                }
+
                 // Add new items
-                for (var i = 0; i < _activeVehicle.flightModes.length; i++) {
+                for (var i = 0; i < flightmodes.length; i++) {
                     var menuItem = flightModeMenuItemComponent.createObject(null, { "text": _activeVehicle.flightModes[i] })
                     flightModesMenuItems.push(menuItem)
                     flightModesMenu.insertItem(i, menuItem)

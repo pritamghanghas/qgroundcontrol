@@ -41,11 +41,11 @@ public:
         THROW       = 18,
         AVOID_ADSB  = 19,
         GUIDED_NOGPS= 20,
-        SAFE_RTL   = 21,   //Safe Return to Launch
+        SAFE_RTL    = 21,   //Safe Return to Launch
     };
     static const int modeCount = 22;
 
-    APMCopterMode(uint32_t mode, bool settable);
+    APMCopterMode(uint32_t mode, bool settable, bool safe = true);
 };
 
 class ArduCopterFirmwarePlugin : public APMFirmwarePlugin

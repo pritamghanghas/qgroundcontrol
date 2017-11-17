@@ -1969,7 +1969,20 @@ void Vehicle::_checkDesiredAlitude()
 
 QStringList Vehicle::flightModes(void)
 {
-    return _firmwarePlugin->flightModes(this);
+    QStringList modes;
+    modes << standardFlightModes();
+    modes << unsafeFlightModes();
+    return modes;
+}
+
+QStringList Vehicle::standardFlightModes(void)
+{
+    return _firmwarePlugin->standardFlightModes(this);
+}
+
+QStringList Vehicle::unsafeFlightModes(void)
+{
+    return _firmwarePlugin->unsafeFlightModes(this);
 }
 
 QString Vehicle::flightMode(void) const

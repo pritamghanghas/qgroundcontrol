@@ -368,6 +368,23 @@ QGCView {
                     } // Rectangle - scout conf
                 } // scout column
 
+                Column {
+                    spacing: _margins / 2
+
+                    QGCLabel {
+                        id:         _otherSettings
+                        text:       "Other Settings"
+                        font.family: ScreenTools.demiboldFontFamily
+                    }
+
+                    QGCCheckBox {
+                        id:                 unsafeModes
+                        text:               "Enable unsafe flight modes"
+                        checked:   QGroundControl.hbSettings.value("unsafeModes", false) === true
+                        onClicked: QGroundControl.hbSettings.setValue("unsafeModes", checked)
+                    }
+                }
+
             } // flow
         } // QGCFlickable
 

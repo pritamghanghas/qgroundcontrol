@@ -142,7 +142,7 @@ QList<VehicleComponent*> PX4FirmwarePlugin::componentsForVehicle(AutoPilotPlugin
     return QList<VehicleComponent*>();
 }
 
-QStringList PX4FirmwarePlugin::flightModes(Vehicle* vehicle)
+QStringList PX4FirmwarePlugin::standardFlightModes(Vehicle* vehicle)
 {
     QStringList flightModes;
 

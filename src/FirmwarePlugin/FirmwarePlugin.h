@@ -81,7 +81,12 @@ public:
     virtual QList<VehicleComponent*> componentsForVehicle(AutoPilotPlugin* vehicle);
 
     /// Returns the list of available flight modes
-    virtual QStringList flightModes(Vehicle* vehicle) {
+    virtual QStringList standardFlightModes(Vehicle* vehicle) {
+        Q_UNUSED(vehicle);
+        return QStringList();
+    }
+
+    virtual QStringList unsafeFlightModes(Vehicle* vehicle) {
         Q_UNUSED(vehicle);
         return QStringList();
     }

@@ -19,8 +19,8 @@
 bool ArduCopterFirmwarePlugin::_remapParamNameIntialized = false;
 FirmwarePlugin::remapParamNameMajorVersionMap_t ArduCopterFirmwarePlugin::_remapParamName;
 
-APMCopterMode::APMCopterMode(uint32_t mode, bool settable) :
-    APMCustomMode(mode, settable)
+APMCopterMode::APMCopterMode(uint32_t mode, bool settable, bool safe) :
+    APMCustomMode(mode, settable, safe)
 {
     QMap<uint32_t,QString> enumToString;
     enumToString.insert(STABILIZE, "Stabilize");
@@ -50,27 +50,34 @@ APMCopterMode::APMCopterMode(uint32_t mode, bool settable) :
 ArduCopterFirmwarePlugin::ArduCopterFirmwarePlugin(void)
 {
     QList<APMCustomMode> supportedFlightModes;
-    supportedFlightModes << APMCopterMode(APMCopterMode::STABILIZE ,true);
-    supportedFlightModes << APMCopterMode(APMCopterMode::ACRO      ,true);
-    supportedFlightModes << APMCopterMode(APMCopterMode::ALT_HOLD  ,true);
-    supportedFlightModes << APMCopterMode(APMCopterMode::AUTO      ,true);
-    supportedFlightModes << APMCopterMode(APMCopterMode::GUIDED    ,true);
-    supportedFlightModes << APMCopterMode(APMCopterMode::LOITER    ,true);
-    supportedFlightModes << APMCopterMode(APMCopterMode::RTL       ,true);
-    supportedFlightModes << APMCopterMode(APMCopterMode::CIRCLE    ,true);
-    supportedFlightModes << APMCopterMode(APMCopterMode::LAND      ,true);
-    supportedFlightModes << APMCopterMode(APMCopterMode::DRIFT     ,true);
-    supportedFlightModes << APMCopterMode(APMCopterMode::SPORT     ,true);
-    supportedFlightModes << APMCopterMode(APMCopterMode::FLIP      ,true);
-    supportedFlightModes << APMCopterMode(APMCopterMode::AUTOTUNE  ,true);
-    supportedFlightModes << APMCopterMode(APMCopterMode::POS_HOLD  ,true);
-    supportedFlightModes << APMCopterMode(APMCopterMode::BRAKE     ,true);
-    supportedFlightModes << APMCopterMode(APMCopterMode::THROW     ,true);
-    supportedFlightModes << APMCopterMode(APMCopterMode::AVOID_ADSB,true);
-    supportedFlightModes << APMCopterMode(APMCopterMode::GUIDED_NOGPS,true);
-    supportedFlightModes << APMCopterMode(APMCopterMode::SAFE_RTL,true);
+    QList<APMCustomMode> standardFlightModes;
+    QList<APMCustomMode> advancedFlightModes;
+    QList<APMCustomMode> unsafeFlightModes;
 
 
+    unsafeFlightModes << APMCopterMode(APMCopterMode::STABILIZE ,true ,false);
+    unsafeFlightModes << APMCopterMode(APMCopterMode::ACRO      ,true ,false);
+    unsafeFlightModes << APMCopterMode(APMCopterMode::SPORT     ,true ,false);
+    unsafeFlightModes << APMCopterMode(APMCopterMode::FLIP      ,true ,false);
+
+    standardFlightModes << APMCopterMode(APMCopterMode::ALT_HOLD  ,true);
+    standardFlightModes << APMCopterMode(APMCopterMode::AUTO      ,true);
+    standardFlightModes << APMCopterMode(APMCopterMode::GUIDED    ,true);
+    standardFlightModes << APMCopterMode(APMCopterMode::RTL       ,true);
+    standardFlightModes << APMCopterMode(APMCopterMode::LAND      ,true);
+    standardFlightModes << APMCopterMode(APMCopterMode::POS_HOLD  ,true);
+    standardFlightModes << APMCopterMode(APMCopterMode::BRAKE     ,true);
+    standardFlightModes << APMCopterMode(APMCopterMode::THROW     ,true);
+    standardFlightModes << APMCopterMode(APMCopterMode::SAFE_RTL  ,true);
+
+    advancedFlightModes << APMCopterMode(APMCopterMode::LOITER    ,true);
+    advancedFlightModes << APMCopterMode(APMCopterMode::CIRCLE    ,true);
+    advancedFlightModes << APMCopterMode(APMCopterMode::DRIFT     ,true);
+    advancedFlightModes << APMCopterMode(APMCopterMode::AUTOTUNE  ,true);
+    advancedFlightModes << APMCopterMode(APMCopterMode::AVOID_ADSB,true);
+    advancedFlightModes << APMCopterMode(APMCopterMode::GUIDED_NOGPS,true);
+
+    supportedFlightModes << standardFlightModes << advancedFlightModes << unsafeFlightModes;
 
     setSupportedModes(supportedFlightModes);
 
