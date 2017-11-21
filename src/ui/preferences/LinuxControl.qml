@@ -256,7 +256,7 @@ QGCView {
                             QGCCheckBox {
                                 id:                 wired
                                 text:               " "
-                                checked:   QGroundControl.hbSettings.value("enableWire", false) === true
+                                checked:   QGroundControl.hbSettings.value("enableWire", "false") === "true"
                                 onClicked: QGroundControl.hbSettings.setValue("enableWire", checked)
                             }
 
@@ -347,8 +347,8 @@ QGCView {
                             QGCCheckBox {
                                 id:                 scoutMode
                                 text:               " "
-                                checked:    QGroundControl.hbSettings.value("scoutMode", false)
-                                onClicked:  QGroundControl.hbSettings.setValue("scoutMode", checked ? true : false)
+                                checked:    QGroundControl.hbSettings.value("scoutMode", "false") === "true"
+                                onClicked:  QGroundControl.hbSettings.setValue("scoutMode", checked)
                             }
 
 
@@ -380,7 +380,7 @@ QGCView {
                     QGCCheckBox {
                         id:                 unsafeModes
                         text:               "Enable unsafe flight modes"
-                        checked:   QGroundControl.hbSettings.value("unsafeModes", false) === true
+                        checked:   QGroundControl.hbSettings.value("unsafeModes", "false") === "true"
                         onClicked: QGroundControl.hbSettings.setValue("unsafeModes", checked)
                     }
                 }
