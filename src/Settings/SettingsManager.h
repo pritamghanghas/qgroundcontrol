@@ -22,6 +22,7 @@
 #include "RTKSettings.h"
 #include "GuidedSettings.h"
 #include "BrandImageSettings.h"
+//#include "LinuxSettings.h"
 
 #include <QVariantList>
 
@@ -41,6 +42,7 @@ public:
     Q_PROPERTY(QObject* rtkSettings         READ rtkSettings            CONSTANT)
     Q_PROPERTY(QObject* guidedSettings      READ guidedSettings         CONSTANT)
     Q_PROPERTY(QObject* brandImageSettings  READ brandImageSettings     CONSTANT)
+//    Q_PROPERTY(QObject* linuxSettings       READ linuxSettings          CONSTANT)
 
     // Override from QGCTool
     virtual void setToolbox(QGCToolbox *toolbox);
@@ -53,6 +55,7 @@ public:
     RTKSettings*            rtkSettings         (void) { return _rtkSettings; }
     GuidedSettings*         guidedSettings      (void) { return _guidedSettings; }
     BrandImageSettings*     brandImageSettings  (void) { return _brandImageSettings; }
+//    LinuxSettings*          linuxSettings       (void) { return _linuxSettings; }
 
 private:
     AppSettings*            _appSettings;
@@ -63,6 +66,7 @@ private:
     RTKSettings*            _rtkSettings;
     GuidedSettings*         _guidedSettings;
     BrandImageSettings*     _brandImageSettings;
+//    LinuxSettings           _linuxSettings;
 };
 
 #endif

@@ -1,0 +1,57 @@
+[
+{
+    "name":             "EnableWire",
+    "shortDescription": "Enable Tethered",
+    "longDescription":  "This will enable options for tethered height control.",
+    "type":             "bool",
+    "defaultValue":     false
+},
+{
+    "name":             "scoutMode",
+    "shortDescription": "Scout Enabled",
+    "longDescription":  "This will enable trigger based scout mode.",
+    "type":             "bool",
+    "defaultValue":     false
+},
+{
+    "name":             "unsafeModes",
+    "shortDescription": "Unsafe Modes Enabled",
+    "longDescription":  "This will enable unsafe Modes.",
+    "type":             "bool",
+    "defaultValue":     false
+},
+{
+    "name":             "panSweepSpeed",
+    "shortDescription": "Sweep Speed",
+    "longDescription":  "This controlls the sweep speed in sweeping mode.",
+    "type":             "uint16",
+    "min":              1,
+    "max":              10,
+    "defaultValue":     2
+},
+{
+    "name":             "panSweepAngle",
+    "shortDescription": "Sweep Angle",
+    "longDescription":  "Maximum angular deflection covered by sweep",
+    "type":             "uint16",
+    "min":              10,
+    "max":              300,
+    "defaultValue":     90
+},
+{
+    "name":             "wiredMaxAltitude",
+    "shortDescription": "Wired max Altitude",
+    "longDescription":  "This controlls the maximum altitude for wired.",
+    "type":             "uint16",
+    "min":              10,
+    "defaultValue":     20
+},
+{
+    "name":             "wiredMinAltitude",
+    "shortDescription": "Wired min Altitude",
+    "longDescription":  "This controls the minimum altitude for wired.",
+    "type":             "uint16",
+    "min":              4,
+    "defaultValue":     6
+}
+]
