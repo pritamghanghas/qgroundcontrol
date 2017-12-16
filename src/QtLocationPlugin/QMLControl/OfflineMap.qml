@@ -331,16 +331,16 @@ QGCView {
         id:                 panel
         anchors.fill:       parent
 
-        Map {
-            id:                 _map
-            anchors.fill:       parent
-            center:             QGroundControl.flightMapPosition
-            visible:            false
+        FlightMap {
+            id:                         _map
+            anchors.fill:               parent
+            visible:                    false
+            allowGCSLocationCenter:     true
+            allowVehicleLocationCenter: false
             gesture.flickDeceleration:  3000
+            mapName:                    "OfflineMap"
 
             property bool isSatelliteMap: activeMapType.name.indexOf("Satellite") > -1 || activeMapType.name.indexOf("Hybrid") > -1
-
-            plugin: Plugin { name: "QGroundControl" }
 
             MapRectangle {
                 id:             mapBoundary
@@ -405,6 +405,14 @@ QGCView {
                         text:           offlineMapView._currentSelection ? offlineMapView._currentSelection.name : ""
                         font.pointSize: _saveRealEstate ? ScreenTools.defaultFontPointSize : ScreenTools.mediumFontPointSize
                         horizontalAlignment: Text.AlignHCenter
+                        visible:        _defaultSet
+                    }
+                    QGCTextField {
+                        id:             editSetName
+                        anchors.left:   parent.left
+                        anchors.right:  parent.right
+                        visible:        !_defaultSet
+                        text:           offlineMapView._currentSelection ? offlineMapView._currentSelection.name : ""
                     }
                     QGCLabel {
                         anchors.left:   parent.left
@@ -500,7 +508,20 @@ QGCView {
                             onClicked:  showDialog(deleteConfirmationDialogComponent, qsTr("Confirm Delete"), qgcView.showDialogDefaultWidth, StandardButton.Yes | StandardButton.No)
                         }
                         QGCButton {
-                            text:       qsTr("Close")
+                            text:       qsTr("Ok")
+                            width:      ScreenTools.defaultFontPixelWidth * (infoView._extraButton ? 6 : 10)
+                            visible:    !_defaultSet
+                            enabled:    editSetName.text !== ""
+                            onClicked: {
+                                if(editSetName.text !== _currentSelection.name) {
+                                    QGroundControl.mapEngineManager.renameTileSet(_currentSelection, editSetName.text)
+                                }
+                                leaveInfoView()
+                                showList()
+                            }
+                        }
+                        QGCButton {
+                            text:       _defaultSet ? qsTr("Close") : qsTr("Cancel")
                             width:      ScreenTools.defaultFontPixelWidth * (infoView._extraButton ? 6 : 10)
                             onClicked: {
                                 leaveInfoView()
@@ -934,7 +955,7 @@ QGCView {
             QGCButton {
                 text:           qsTr("Import")
                 width:          _buttonSize
-                visible:        !ScreenTools.isMobile
+                visible:        QGroundControl.corePlugin.options.showOfflineMapImport
                 onClicked: {
                     QGroundControl.mapEngineManager.importAction = QGCMapEngineManager.ActionNone
                     rootLoader.sourceComponent = importDialog
@@ -943,7 +964,7 @@ QGCView {
             QGCButton {
                 text:           qsTr("Export")
                 width:          _buttonSize
-                visible:        !ScreenTools.isMobile
+                visible:        QGroundControl.corePlugin.options.showOfflineMapExport
                 enabled:        QGroundControl.mapEngineManager.tileSets.count > 1
                 onClicked:      showExport()
             }
@@ -1069,6 +1090,7 @@ QGCView {
                         visible:        !QGroundControl.mapEngineManager.exporting
                         anchors.horizontalCenter: parent.horizontalCenter
                         onClicked: {
+                            mainWindow.enableToolbar()
                             rootLoader.sourceComponent = null
                         }
                     }
@@ -1152,6 +1174,7 @@ QGCView {
                         anchors.horizontalCenter: parent.horizontalCenter
                         onClicked: {
                             showList();
+                            mainWindow.enableToolbar()
                             rootLoader.sourceComponent = null
                         }
                     }
@@ -1165,6 +1188,7 @@ QGCView {
                             onClicked: {
                                 if(!QGroundControl.mapEngineManager.importSets()) {
                                     showList();
+                                    mainWindow.enableToolbar()
                                     rootLoader.sourceComponent = null
                                 }
                             }
@@ -1174,6 +1198,7 @@ QGCView {
                             width:          _bigButtonSize * 1.25
                             onClicked: {
                                 showList();
+                                mainWindow.enableToolbar()
                                 rootLoader.sourceComponent = null
                             }
                         }

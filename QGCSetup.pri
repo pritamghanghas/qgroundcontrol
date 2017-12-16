@@ -114,13 +114,17 @@ LinuxBuild {
         libQt5PrintSupport.so.5 \
         libQt5Qml.so.5 \
         libQt5Quick.so.5 \
+        libQt5QuickControls2.so.5 \
+        libQt5QuickTemplates2.so.5 \
         libQt5QuickWidgets.so.5 \
         libQt5SerialPort.so.5 \
         libQt5Sql.so.5 \
         libQt5Svg.so.5 \
         libQt5Test.so.5 \
         libQt5Widgets.so.5 \
-        libQt5XcbQpa.so.5
+        libQt5XcbQpa.so.5 \
+        libQt5Xml.so.5 \
+        libQt5TextToSpeech.so.5
 
     !contains(DEFINES, __rasp_pi2__) {
         QT_LIB_LIST += \

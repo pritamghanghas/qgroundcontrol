@@ -4,15 +4,18 @@
 #define STREAMING_PORT_LOWEST 5003
 PiNode::PiNode()
 {
-    caps        = PiNode::None;
-    capsRunning = PiNode::None;
+    caps        = PiNode::NONE;
+    capsRunning = PiNode::NONE;
 
     targetStreamingPort = STREAMING_PORT_LOWEST;
+    beaconInterval      = 0;
+    lastLanSeqNum       = 0;
+    latency             = 0;
 }
 
 bool PiNode::operator ==(const PiNode &node) const
 {
-    return (this->addressString == node.addressString);
+    return (this->address == node.address);
 }
 
 PiDiscoverer::PiDiscoverer(QObject *parent) : QObject(parent)
@@ -36,29 +39,89 @@ void PiDiscoverer::datagramReceived()
     QHostAddress addr;
     m_socket.readDatagram(datagram.data(), datagramSize, &addr);
 
-//    qDebug() << "data received " << datagram.data();
-    PiNode node;
-    if (datagram.startsWith("raspberry")) {
-        if (datagram.contains("picam")) {
-            node.caps |= PiNode::PiCam;
-        }
-
-        if (datagram.contains("thermal")) {
-            node.caps |= PiNode::Thermal;
-        }
-
-        if (datagram.contains("mavproxy")) {
-            node.caps |= PiNode::MAVProxy;
-        }
-
-        if (datagram.contains("hostapd")) {
-            node.caps |= PiNode::AP;
-        }
-        node.targetStreamingPort = STREAMING_PORT_LOWEST + m_discoveredNodes.count();
-        node.address = addr;
-        node.addressString = addr.toString().split(":").last();
-        onNodeDiscovered(node);
+    // not our packet
+    if (!datagram.startsWith("raspberry")) {
+        return;
     }
+
+    // process packet
+    QString beacon = QString(datagram);
+    QStringList tokens = beacon.split(' ');
+
+    if (tokens.count() < 5) {
+        qDebug() << "something wrong with the heartbeat, we have less than 5 tokens";
+        return;
+    }
+
+    PiNode node;
+
+    // TODO: some optimization opportunity, we don't need to process the whole node
+    // as if it is not a new node, we need very few fields
+    node.uniqueId            = tokens.at(1);
+    node.caps                = QString(tokens.at(2)).toInt();
+    node.beaconInterval      = QString(tokens.at(3)).toInt();
+    node.heartBeatCount      = 1;
+    node.address             = addr;
+    node.addressString       = addr.toString().split(":").last();
+    node.lastLanSeqNum       = QString(tokens.at(4)).toUInt();
+    node.targetStreamingPort = STREAMING_PORT_LOWEST + m_discoveredNodes.count();
+    node.beaconTimer.start();
+
+    if (!m_discoveredNodes.contains(node)) {
+        qDebug() << "new unique node adding";
+        m_discoveredNodes << node;
+    } else {
+        updateNode(node);
+    }
+}
+
+// this is not the first heartbeat for this node.
+// we need to update the latency numbers averaged
+// and publish it as  discovered if more than 3 heartbeats
+// have been receieved for this node
+void PiDiscoverer::updateNode(const PiNode &node)
+{
+    int index = m_discoveredNodes.indexOf(node);
+    auto expectedSeqNum = m_discoveredNodes[index].lastLanSeqNum+1;
+    if (expectedSeqNum != node.lastLanSeqNum) {
+//        qDebug() << "lost a packet or unordered packets coming" << "expected: " << expectedSeqNum << " last seq no: " << node.lastLanSeqNum;
+        if (expectedSeqNum > node.lastLanSeqNum) {
+//            qDebug() << "got late heartbeat " << "expected: " << expectedSeqNum << " last seq no: " << node.lastLanSeqNum;
+        }
+        m_discoveredNodes[index].lastLanSeqNum = node.lastLanSeqNum;
+        return;
+    }
+
+    auto newLatency = m_discoveredNodes[index].beaconTimer.restart() - node.beaconInterval;
+
+    auto oldLatency =  m_discoveredNodes[index].latency;
+    newLatency = newLatency < 0 ? 0 : newLatency;
+    newLatency = newLatency ? newLatency : oldLatency;
+
+//    qDebug() << "new latency" << newLatency << " beacon interval " << node.beaconInterval;
+
+
+    m_discoveredNodes[index].latency = oldLatency ? (0.8*oldLatency + 0.2*newLatency) : newLatency;
+    m_discoveredNodes[index].lastLanSeqNum = node.lastLanSeqNum;
+    m_discoveredNodes[index].heartBeatCount++;
+
+    if (m_discoveredNodes[index].heartBeatCount == 10) { // we will use higher count and latency determination here later.
+//    if (m_discoveredNodes[index].heartBeatCount == 1) {
+        Q_EMIT nodeDiscovered(m_discoveredNodes[index]);
+        onNodeDiscovered(m_discoveredNodes[index]);
+    }
+
+//    debugNode(m_discoveredNodes[index]);
+    Q_EMIT nodeUpdated(m_discoveredNodes[index]);
+}
+
+void PiDiscoverer::debugNode(const PiNode &node)
+{
+    qDebug() << "Debug information for node";
+    qDebug() << "id : " << node.uniqueId;
+    qDebug() << "caps : " << node.caps;
+    qDebug() << "latency: " << node.latency;
+    qDebug() << "seqNum : " << node.lastLanSeqNum;
 }
 
 PiNodeList PiDiscoverer::discoveredNodes() const
@@ -73,10 +136,5 @@ void PiDiscoverer::setDiscoveredNodes(const QList<PiNode> nodes)
 
 void PiDiscoverer::onNodeDiscovered(const PiNode &node)
 {
-//    qDebug() << "node discovered " << node.addressString;
-    if (!m_discoveredNodes.contains(node)) {
-        qDebug() << "new unique node adding";
-        m_discoveredNodes << node;
-        Q_EMIT nodeDiscovered(node);
-    }
+
 }

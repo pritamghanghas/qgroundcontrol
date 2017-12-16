@@ -52,6 +52,7 @@ QGCCacheWorker::QGCCacheWorker()
     , _defaultCount(0)
     , _lastUpdate(0)
     , _updateTimeout(SHORT_TIMEOUT)
+    , _hostLookupID(0)
 {
 
 }
@@ -73,6 +74,9 @@ QGCCacheWorker::setDatabaseFile(const QString& path)
 void
 QGCCacheWorker::quit()
 {
+    if(_hostLookupID) {
+        QHostInfo::abortHostLookup(_hostLookupID);
+    }
     _mutex.lock();
     while(_taskQueue.count()) {
         QGCMapTask* task = _taskQueue.dequeue();
@@ -147,6 +151,9 @@ QGCCacheWorker::run()
                     break;
                 case QGCMapTask::taskDeleteTileSet:
                     _deleteTileSet(task);
+                    break;
+                case QGCMapTask::taskRenameTileSet:
+                    _renameTileSet(task);
                     break;
                 case QGCMapTask::taskPruneCache:
                     _pruneCache(task);
@@ -617,6 +624,22 @@ QGCCacheWorker::_deleteTileSet(QGCMapTask* mtask)
 
 //-----------------------------------------------------------------------------
 void
+QGCCacheWorker::_renameTileSet(QGCMapTask* mtask)
+{
+    if(!_testTask(mtask)) {
+        return;
+    }
+    QGCRenameTileSetTask* task = static_cast<QGCRenameTileSetTask*>(mtask);
+    QSqlQuery query(*_db);
+    QString s;
+    s = QString("UPDATE TileSets SET name = \"%1\" WHERE setID = %2").arg(task->newName()).arg(task->setID());
+    if(!query.exec(s)) {
+        task->setError("Error renaming tile set");
+    }
+}
+
+//-----------------------------------------------------------------------------
+void
 QGCCacheWorker::_resetCacheDatabase(QGCMapTask* mtask)
 {
     if(!_testTask(mtask)) {
@@ -1036,12 +1059,24 @@ QGCCacheWorker::_createDB(QSqlDatabase* db, bool createDefault)
 void
 QGCCacheWorker::_testInternet()
 {
-    QTcpSocket socket;
-    socket.connectToHost("8.8.8.8", 53);
-    if (socket.waitForConnected(2500)) {
-        qCDebug(QGCTileCacheLog) << "Yes Internet Access";
-        emit internetStatus(true);
-        return;
+    if(!_hostLookupID) {
+        _hostLookupID = QHostInfo::lookupHost("www.github.com", this, SLOT(_lookupReady(QHostInfo)));
+    }
+}
+
+//-----------------------------------------------------------------------------
+void
+QGCCacheWorker::_lookupReady(QHostInfo info)
+{
+    _hostLookupID = 0;
+    if(info.error() == QHostInfo::NoError && info.addresses().size()) {
+        QTcpSocket socket;
+        socket.connectToHost(info.addresses().first(), 80);
+        if (socket.waitForConnected(2000)) {
+            qCDebug(QGCTileCacheLog) << "Yes Internet Access";
+            emit internetStatus(true);
+            return;
+        }
     }
     qWarning() << "No Internet Access";
     emit internetStatus(false);

@@ -75,9 +75,9 @@ LinuxBuild {
 } else:AndroidBuild {
     #- gstreamer assumed to be installed in $$PWD/../../gstreamer-1.0-android-armv7-1.11.2 (or x86)
     Androidx86Build {
-        GST_ROOT = $$PWD/../../gstreamer-1.0-android-armv7-1.11.2/x86
+        GST_ROOT = $$PWD/../../gstreamer-1.0/x86
     } else {
-        GST_ROOT = $$PWD/../../gstreamer-1.0-android-armv7-1.11.2/armv7
+        GST_ROOT = $$PWD/../../gstreamer-1.0/armv7
     }
     exists($$GST_ROOT) {
         QMAKE_CXXFLAGS  += -pthread
@@ -95,7 +95,6 @@ LinuxBuild {
             -lgstsdpelem \
             -lgstvideoparsersbad \
             -lgstrtpmanager \
-            -lgstrmdemux \
             -lgstisomp4 \
             -lgstmatroska \
 

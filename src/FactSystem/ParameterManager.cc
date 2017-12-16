@@ -383,7 +383,7 @@ void ParameterManager::_valueUpdated(const QVariant& value)
     qCDebug(ParameterManagerLog) << _logVehiclePrefix(componentId) << "Set parameter - name:" << name << value << "(_waitingParamTimeoutTimer started)";
 
     if (fact->rebootRequired() && !qgcApp()->runningUnitTests()) {
-        qgcApp()->showMessage(QStringLiteral("Change of parameter %1 requires a Vehicle reboot to take effect").arg(name));
+        qgcApp()->showMessage(tr("Change of parameter %1 requires a Vehicle reboot to take effect").arg(name));
     }
 }
 
@@ -599,7 +599,7 @@ void ParameterManager::_waitingParamTimeout(void)
     if (!paramsRequested && !_waitingForDefaultComponent && !_mapParameterName2Variant.contains(_vehicle->defaultComponentId())) {
         // Initial load is complete but we still don't have any default component params. Wait one more cycle to see if the
         // any show up.
-        qCDebug(ParameterManagerLog) << _logVehiclePrefix() << "Restarting _waitingParamTimeoutTimer - still don't have default component params";
+        qCDebug(ParameterManagerLog) << _logVehiclePrefix() << "Restarting _waitingParamTimeoutTimer - still don't have default component params" << _vehicle->defaultComponentId() << _mapParameterName2Variant.keys();
         _waitingParamTimeoutTimer.start();
         _waitingForDefaultComponent = true;
         return;

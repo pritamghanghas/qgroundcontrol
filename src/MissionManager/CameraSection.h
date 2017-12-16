@@ -34,12 +34,6 @@ public:
     };    
     Q_ENUMS(CameraAction)
 
-    enum CameraMode {
-        CameraModePhoto,
-        CameraModeVideo
-    };
-    Q_ENUMS(CameraMode)
-
     Q_PROPERTY(bool     specifyGimbal                   READ specifyGimbal                  WRITE setSpecifyGimbal              NOTIFY specifyGimbalChanged)
     Q_PROPERTY(Fact*    gimbalPitch                     READ gimbalPitch                                                        CONSTANT)
     Q_PROPERTY(Fact*    gimbalYaw                       READ gimbalYaw                                                          CONSTANT)
@@ -63,6 +57,7 @@ public:
     void setSpecifyGimbal       (bool specifyGimbal);
     void setSpecifyCameraMode   (bool specifyCameraMode);
 
+    ///< Signals specifiedGimbalYawChanged
     ///< @return The gimbal yaw specified by this item, NaN if not specified
     double specifiedGimbalYaw(void) const;
 
@@ -90,6 +85,16 @@ private slots:
     void _cameraActionChanged(void);
 
 private:
+    bool _scanGimbal(QmlObjectListModel* visualItems, int scanIndex);
+    bool _scanTakePhoto(QmlObjectListModel* visualItems, int scanIndex);
+    bool _scanTakePhotosIntervalTime(QmlObjectListModel* visualItems, int scanIndex);
+    bool _scanStopTakingPhotos(QmlObjectListModel* visualItems, int scanIndex);
+    bool _scanTriggerStartDistance(QmlObjectListModel* visualItems, int scanIndex);
+    bool _scanTriggerStopDistance(QmlObjectListModel* visualItems, int scanIndex);
+    bool _scanTakeVideo(QmlObjectListModel* visualItems, int scanIndex);
+    bool _scanStopTakingVideo(QmlObjectListModel* visualItems, int scanIndex);
+    bool _scanSetCameraMode(QmlObjectListModel* visualItems, int scanIndex);
+
     bool    _available;
     bool    _settingsSpecified;
     bool    _specifyGimbal;

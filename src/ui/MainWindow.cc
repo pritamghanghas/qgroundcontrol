@@ -30,7 +30,7 @@
 #include "QGC.h"
 #include "MAVLinkProtocol.h"
 #include "MainWindow.h"
-#include "GAudioOutput.h"
+#include "AudioOutput.h"
 #ifndef __mobile__
 #include "QGCMAVLinkLogPlayer.h"
 #endif
@@ -108,10 +108,11 @@ void MainWindow::deleteInstance(void)
 ///         by MainWindow::_create method. Hence no other code should have access to
 ///         constructor.
 MainWindow::MainWindow()
-    : _lowPowerMode(false)
-    , _showStatusBar(false)
-    , _mainQmlWidgetHolder(NULL)
-    , _forceClose(false)
+    : _mavlinkDecoder       (NULL)
+    , _lowPowerMode         (false)
+    , _showStatusBar        (false)
+    , _mainQmlWidgetHolder  (NULL)
+    , _forceClose           (false)
 {
     _instance = this;
 
@@ -272,10 +273,13 @@ MainWindow::MainWindow()
 
 MainWindow::~MainWindow()
 {
-    // Enforce thread-safe shutdown of the mavlink decoder
-    mavlinkDecoder->finish();
-    mavlinkDecoder->wait(1000);
-    mavlinkDecoder->deleteLater();
+    if (_mavlinkDecoder) {
+        // Enforce thread-safe shutdown of the mavlink decoder
+        _mavlinkDecoder->finish();
+        _mavlinkDecoder->wait(1000);
+        _mavlinkDecoder->deleteLater();
+        _mavlinkDecoder = NULL;
+    }
 
     // This needs to happen before we get into the QWidget dtor
     // otherwise  the QML engine reads freed data and tries to
@@ -290,12 +294,18 @@ QString MainWindow::_getWindowGeometryKey()
 }
 
 #ifndef __mobile__
+MAVLinkDecoder* MainWindow::_mavLinkDecoderInstance(void)
+{
+    if (!_mavlinkDecoder) {
+        _mavlinkDecoder = new MAVLinkDecoder(qgcApp()->toolbox()->mavlinkProtocol());
+        connect(_mavlinkDecoder, &MAVLinkDecoder::valueChanged, this, &MainWindow::valueChanged);
+    }
+
+    return _mavlinkDecoder;
+}
+
 void MainWindow::_buildCommonWidgets(void)
 {
-    // Add generic MAVLink decoder
-    mavlinkDecoder = new MAVLinkDecoder(qgcApp()->toolbox()->mavlinkProtocol());
-    connect(mavlinkDecoder.data(), &MAVLinkDecoder::valueChanged, this, &MainWindow::valueChanged);
-
     // Log player
     // TODO: Make this optional with a preferences setting or under a "View" menu
     logPlayer = new QGCMAVLinkLogPlayer(statusBar());
@@ -303,10 +313,6 @@ void MainWindow::_buildCommonWidgets(void)
 
     // Populate widget menu
     for (int i = 0, end = ARRAY_SIZE(rgDockWidgetNames); i < end; i++) {
-        if (i == ONBOARD_FILES) {
-            // Temporarily removed until twe can fix all the problems with it
-            continue;
-        }
 
         const char* pDockWidgetName = rgDockWidgetNames[i];
 
@@ -323,11 +329,6 @@ void MainWindow::_buildCommonWidgets(void)
 /// Shows or hides the specified dock widget, creating if necessary
 void MainWindow::_showDockWidget(const QString& name, bool show)
 {
-    if (name == rgDockWidgetNames[ONBOARD_FILES]) {
-        // Temporarily disabled due to bugs
-        return;
-    }
-
     // Create the inner widget if we need to
     if (!_mapName2DockWidget.contains(name)) {
         if(!_createInnerDockWidget(name)) {
@@ -363,7 +364,7 @@ bool MainWindow::_createInnerDockWidget(const QString& widgetName)
                 widget = new HILDockWidget(widgetName, action, this);
                 break;
             case ANALYZE:
-                widget = new Linecharts(widgetName, action, mavlinkDecoder, this);
+                widget = new Linecharts(widgetName, action, _mavLinkDecoderInstance(), this);
                 break;
         }
         if(widget) {

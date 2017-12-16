@@ -54,7 +54,7 @@ stQGeoTileCacheQGCMapTypes kMapTypes[] = {
     {"Bing Street Map",         UrlFactory::BingMap},
     {"Bing Satellite Map",      UrlFactory::BingSatellite},
     {"Bing Hybrid Map",         UrlFactory::BingHybrid},
-    {"Statkart Topo2",          UrlFactory::StatkartTopo},
+    {"Statkart Terrain Map",    UrlFactory::StatkartTopo},
     /*
     {"MapQuest Street Map",     UrlFactory::MapQuestMap},
     {"MapQuest Satellite Map",  UrlFactory::MapQuestSat}
@@ -500,7 +500,10 @@ QGCMapEngine::testInternet()
 void
 QGCMapEngine::_internetStatus(bool active)
 {
-    _isInternetActive = active;
+    if(_isInternetActive != active) {
+        _isInternetActive = active;
+        emit internetUpdated();
+    }
 }
 
 // Resolution math: https://wiki.openstreetmap.org/wiki/Slippy_map_tilenames#Resolution_and_Scale

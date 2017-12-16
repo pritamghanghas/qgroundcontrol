@@ -30,7 +30,7 @@
 #include "FirmwarePluginManager.h"
 #include "MultiVehicleManager.h"
 #include "JoystickManager.h"
-#include "GAudioOutput.h"
+#include "AudioOutput.h"
 #include "UASMessageHandler.h"
 #include "FactSystem.h"
 
@@ -91,6 +91,9 @@ public:
 
     /// Do we have Bluetooth Support?
     bool isBluetoothAvailable() { return _bluetoothAvailable; }
+
+    /// Is Internet available?
+    bool isInternetAvailable();
 
 public slots:
     /// You can connect to this slot to show an information message box from a different thread.

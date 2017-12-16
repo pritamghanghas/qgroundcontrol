@@ -25,8 +25,7 @@
 #include <QNetworkReply>
 #include <QPixmap>
 #include <QQuickItem>
-
-#include "qextserialport.h"
+#include <QSerialPort>
 
 #include <stdint.h>
 
@@ -204,6 +203,7 @@ private:
     QHash<FirmwareIdentifier, QString> _rgPX4FMUV5Firmware;
     QHash<FirmwareIdentifier, QString> _rgPX4FMUV4PROFirmware;
     QHash<FirmwareIdentifier, QString> _rgPX4FMUV4Firmware;
+    QHash<FirmwareIdentifier, QString> _rgPX4FMUV3Firmware;
     QHash<FirmwareIdentifier, QString> _rgPX4FMUV2Firmware;
     QHash<FirmwareIdentifier, QString> _rgAeroCoreFirmware;
     QHash<FirmwareIdentifier, QString> _rgPX4FMUV1Firmware;

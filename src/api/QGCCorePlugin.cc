@@ -7,11 +7,14 @@
  *
  ****************************************************************************/
 
+#include "QGCApplication.h"
 #include "QGCCorePlugin.h"
 #include "QGCOptions.h"
-#include "QGCSettings.h"
+#include "QmlComponentInfo.h"
 #include "FactMetaData.h"
 #include "SettingsManager.h"
+#include "AppMessages.h"
+#include "QmlObjectListModel.h"
 
 #include <QtQml>
 #include <QQmlEngine>
@@ -24,17 +27,21 @@ class QGCCorePlugin_p
 {
 public:
     QGCCorePlugin_p()
-        : pGeneral(NULL)
-        , pLinuxBoard(NULL)
-        , pCommLinks(NULL)
-        , pOfflineMaps(NULL)
-        , pMAVLink(NULL)
-        , pConsole(NULL)
+        : pGeneral                  (NULL)
+        , pLinuxBoard               (NULL)
+        , pCommLinks                (NULL)
+        , pOfflineMaps              (NULL)
+        , pMAVLink                  (NULL)
+        , pConsole                  (NULL)
     #if defined(QT_DEBUG)
-        , pMockLink(NULL)
-        , pDebug(NULL)
+        , pMockLink                 (NULL)
+        , pDebug                    (NULL)
     #endif
-        , defaultOptions(NULL)
+        , defaultOptions            (NULL)
+        , valuesPageWidgetInfo      (NULL)
+        , cameraPageWidgetInfo      (NULL)
+        , healthPageWidgetInfo      (NULL)
+        , vibrationPageWidgetInfo   (NULL)
     {
     }
 
@@ -62,18 +69,26 @@ public:
             delete defaultOptions;
     }
 
-    QGCSettings* pGeneral;
-    QGCSettings* pLinuxBoard;
-    QGCSettings* pCommLinks;
-    QGCSettings* pOfflineMaps;
-    QGCSettings* pMAVLink;
-    QGCSettings* pConsole;
+    QmlComponentInfo* pGeneral;
+    QmlComponentInfo* pLinuxBoard;
+    QmlComponentInfo* pCommLinks;
+    QmlComponentInfo* pOfflineMaps;
+    QmlComponentInfo* pMAVLink;
+    QmlComponentInfo* pConsole;
 #if defined(QT_DEBUG)
-    QGCSettings* pMockLink;
-    QGCSettings* pDebug;
+    QmlComponentInfo* pMockLink;
+    QmlComponentInfo* pDebug;
 #endif
     QVariantList settingsList;
     QGCOptions*  defaultOptions;
+
+    QmlComponentInfo*   valuesPageWidgetInfo;
+    QmlComponentInfo*   cameraPageWidgetInfo;
+    QmlComponentInfo*   healthPageWidgetInfo;
+    QmlComponentInfo*   vibrationPageWidgetInfo;
+    QVariantList        instrumentPageWidgetList;
+
+    QmlObjectListModel _emptyCustomMapItems;
 };
 
 QGCCorePlugin::~QGCCorePlugin()
@@ -101,43 +116,59 @@ void QGCCorePlugin::setToolbox(QGCToolbox *toolbox)
 
 QVariantList &QGCCorePlugin::settingsPages()
 {
-    //-- If this hasn't been overridden, create default set of settings
     if(!_p->pGeneral) {
-        //-- Default Settings
-        _p->pGeneral = new QGCSettings(tr("General"),
+        _p->pGeneral = new QmlComponentInfo(tr("General"),
                                        QUrl::fromUserInput("qrc:/qml/GeneralSettings.qml"),
                                        QUrl::fromUserInput("qrc:/res/gear-white.svg"));
-        _p->settingsList.append(QVariant::fromValue((QGCSettings*)_p->pGeneral));
-        _p->pLinuxBoard = new QGCSettings(tr("Sys Control"),
+
+        _p->pLinuxBoard = new QmlComponentInfo(tr("Sys Control"),
             QUrl::fromUserInput("qrc:/qml/LinuxControl.qml"),
             QUrl::fromUserInput("qrc:/res/tux.svg"));
-        _p->settingsList.append(QVariant::fromValue((QGCSettings*)_p->pLinuxBoard));
-        _p->pCommLinks = new QGCSettings(tr("Comm Links"),
+        _p->settingsList.append(QVariant::fromValue((QmlComponentInfo*)_p->pLinuxBoard));
+
+        _p->settingsList.append(QVariant::fromValue((QmlComponentInfo*)_p->pGeneral));
+        _p->pCommLinks = new QmlComponentInfo(tr("Comm Links"),
                                          QUrl::fromUserInput("qrc:/qml/LinkSettings.qml"),
                                          QUrl::fromUserInput("qrc:/res/waves.svg"));
-        _p->settingsList.append(QVariant::fromValue((QGCSettings*)_p->pCommLinks));
-        _p->pOfflineMaps = new QGCSettings(tr("Offline Maps"),
+        _p->settingsList.append(QVariant::fromValue((QmlComponentInfo*)_p->pCommLinks));
+        _p->pOfflineMaps = new QmlComponentInfo(tr("Offline Maps"),
                                            QUrl::fromUserInput("qrc:/qml/OfflineMap.qml"),
                                            QUrl::fromUserInput("qrc:/res/waves.svg"));
-        _p->settingsList.append(QVariant::fromValue((QGCSettings*)_p->pOfflineMaps));
-        _p->pMAVLink = new QGCSettings(tr("MAVLink"),
+        _p->settingsList.append(QVariant::fromValue((QmlComponentInfo*)_p->pOfflineMaps));
+        _p->pMAVLink = new QmlComponentInfo(tr("MAVLink"),
                                        QUrl::fromUserInput("qrc:/qml/MavlinkSettings.qml"),
                                        QUrl::fromUserInput("qrc:/res/waves.svg"));
-        _p->settingsList.append(QVariant::fromValue((QGCSettings*)_p->pMAVLink));
-        _p->pConsole = new QGCSettings(tr("Console"),
+        _p->settingsList.append(QVariant::fromValue((QmlComponentInfo*)_p->pMAVLink));
+        _p->pConsole = new QmlComponentInfo(tr("Console"),
                                        QUrl::fromUserInput("qrc:/qml/QGroundControl/Controls/AppMessages.qml"));
-        _p->settingsList.append(QVariant::fromValue((QGCSettings*)_p->pConsole));
+        _p->settingsList.append(QVariant::fromValue((QmlComponentInfo*)_p->pConsole));
 #if defined(QT_DEBUG)
         //-- These are always present on Debug builds
-        _p->pMockLink = new QGCSettings(tr("Mock Link"),
+        _p->pMockLink = new QmlComponentInfo(tr("Mock Link"),
                                         QUrl::fromUserInput("qrc:/qml/MockLink.qml"));
-        _p->settingsList.append(QVariant::fromValue((QGCSettings*)_p->pMockLink));
-        _p->pDebug = new QGCSettings(tr("Debug"),
+        _p->settingsList.append(QVariant::fromValue((QmlComponentInfo*)_p->pMockLink));
+        _p->pDebug = new QmlComponentInfo(tr("Debug"),
                                      QUrl::fromUserInput("qrc:/qml/DebugWindow.qml"));
-        _p->settingsList.append(QVariant::fromValue((QGCSettings*)_p->pDebug));
+        _p->settingsList.append(QVariant::fromValue((QmlComponentInfo*)_p->pDebug));
 #endif
     }
     return _p->settingsList;
+}
+
+QVariantList& QGCCorePlugin::instrumentPages(void)
+{
+    if (!_p->valuesPageWidgetInfo) {
+        _p->valuesPageWidgetInfo = new QmlComponentInfo(tr("Values"), QUrl::fromUserInput("qrc:/qml/ValuePageWidget.qml"));
+        _p->cameraPageWidgetInfo = new QmlComponentInfo(tr("Camera"), QUrl::fromUserInput("qrc:/qml/CameraPageWidget.qml"));
+        _p->healthPageWidgetInfo = new QmlComponentInfo(tr("Health"), QUrl::fromUserInput("qrc:/qml/HealthPageWidget.qml"));
+        _p->vibrationPageWidgetInfo = new QmlComponentInfo(tr("Vibration"), QUrl::fromUserInput("qrc:/qml/VibrationPageWidget.qml"));
+
+        _p->instrumentPageWidgetList.append(QVariant::fromValue(_p->valuesPageWidgetInfo));
+        _p->instrumentPageWidgetList.append(QVariant::fromValue(_p->cameraPageWidgetInfo));
+        _p->instrumentPageWidgetList.append(QVariant::fromValue(_p->healthPageWidgetInfo));
+        _p->instrumentPageWidgetList.append(QVariant::fromValue(_p->vibrationPageWidgetInfo));
+    }
+    return _p->instrumentPageWidgetList;
 }
 
 int QGCCorePlugin::defaultSettings()
@@ -177,10 +208,17 @@ bool QGCCorePlugin::adjustSettingMetaData(FactMetaData& metaData)
     } else if (metaData.name() == AppSettings::telemetrySaveName) {
 #if defined (__mobile__)
         metaData.setRawDefaultValue(false);
-        return false;
+        return true;
 #else
         metaData.setRawDefaultValue(true);
         return true;
+#endif
+#if defined(__ios__)
+    } else if (metaData.name() == AppSettings::savePathName) {
+        QString appName = qgcApp()->applicationName();
+        QDir rootDir = QDir(QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation));
+        metaData.setRawDefaultValue(rootDir.filePath(appName));
+        return false;
 #endif
     }
     return true; // Show setting in ui
@@ -220,4 +258,28 @@ void QGCCorePlugin::valuesWidgetDefaultSettings(QStringList& largeValues, QStrin
 {
     Q_UNUSED(smallValues);
     largeValues << "Vehicle.altitudeRelative" << "Vehicle.groundSpeed" << "Vehicle.flightTime";
+}
+
+QQmlApplicationEngine* QGCCorePlugin::createRootWindow(QObject *parent)
+{
+    QQmlApplicationEngine* pEngine = new QQmlApplicationEngine(parent);
+    pEngine->addImportPath("qrc:/qml");
+    pEngine->rootContext()->setContextProperty("joystickManager", qgcApp()->toolbox()->joystickManager());
+    pEngine->rootContext()->setContextProperty("debugMessageModel", AppMessages::getModel());
+    pEngine->load(QUrl(QStringLiteral("qrc:/qml/MainWindowNative.qml")));
+    return pEngine;
+}
+
+bool QGCCorePlugin::mavlinkMessage(Vehicle* vehicle, LinkInterface* link, mavlink_message_t message)
+{
+    Q_UNUSED(vehicle);
+    Q_UNUSED(link);
+    Q_UNUSED(message);
+
+    return true;
+}
+
+QmlObjectListModel* QGCCorePlugin::customMapItems(void)
+{
+    return &_p->_emptyCustomMapItems;
 }

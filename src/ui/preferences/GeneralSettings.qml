@@ -35,6 +35,8 @@ QGCView {
     property Fact _percentRemainingAnnounce:    QGroundControl.settingsManager.appSettings.batteryPercentRemainingAnnounce
     property Fact _savePath:                    QGroundControl.settingsManager.appSettings.savePath
     property Fact _appFontPointSize:            QGroundControl.settingsManager.appSettings.appFontPointSize
+    property Fact _userBrandImageIndoor:        QGroundControl.settingsManager.brandImageSettings.userBrandImageIndoor
+    property Fact _userBrandImageOutdoor:       QGroundControl.settingsManager.brandImageSettings.userBrandImageOutdoor
     property real _labelWidth:                  ScreenTools.defaultFontPixelWidth * 15
     property real _editFieldWidth:              ScreenTools.defaultFontPixelWidth * 30
     property Fact _mapProvider:                 QGroundControl.settingsManager.flightMapSettings.mapProvider
@@ -253,7 +255,7 @@ QGCView {
                             id:         promptSaveLog
                             text:       qsTr("Save telemetry log after each flight")
                             fact:       _telemetrySave
-                            visible:    !ScreenTools.isMobile && _telemetrySave.visible
+                            visible:    _telemetrySave.visible
                             property Fact _telemetrySave: QGroundControl.settingsManager.appSettings.telemetrySave
                         }
                         //-----------------------------------------------------------------
@@ -261,7 +263,7 @@ QGCView {
                         FactCheckBox {
                             text:       qsTr("Save telemetry log even if vehicle was not armed")
                             fact:       _telemetrySaveNotArmed
-                            visible:    !ScreenTools.isMobile && _telemetrySaveNotArmed.visible
+                            visible:    _telemetrySaveNotArmed.visible
                             enabled:    promptSaveLog.checked
                             property Fact _telemetrySaveNotArmed: QGroundControl.settingsManager.appSettings.telemetrySaveNotArmed
                         }
@@ -294,7 +296,8 @@ QGCView {
                         //-----------------------------------------------------------------
                         //-- Battery talker
                         Row {
-                            spacing: ScreenTools.defaultFontPixelWidth
+                            spacing:    ScreenTools.defaultFontPixelWidth
+                            visible:    QGroundControl.settingsManager.appSettings.batteryPercentRemainingAnnounce.visible
                             QGCCheckBox {
                                 id:                 announcePercentCheckbox
                                 text:               qsTr("Announce battery lower than:")
@@ -358,7 +361,7 @@ QGCView {
                         //-- Save path
                         Row {
                             spacing:    ScreenTools.defaultFontPixelWidth
-                            visible:    _savePath.visible
+                            visible:    _savePath.visible && !ScreenTools.isMobile
 
                             QGCLabel {
                                 anchors.baseline:   savePathBrowse.baseline
@@ -529,7 +532,7 @@ QGCView {
                         }
                         Row {
                             spacing:    ScreenTools.defaultFontPixelWidth
-                            visible:    QGroundControl.settingsManager.videoSettings.udpPort.visible && QGroundControl.videoManager.isGStreamer && videoSource.currentIndex === 0
+                            visible:    QGroundControl.settingsManager.videoSettings.udpPort.visible && QGroundControl.videoManager.isGStreamer && videoSource.currentIndex === 1
                             QGCLabel {
                                 text:               qsTr("UDP Port:")
                                 width:              _labelWidth
@@ -543,7 +546,7 @@ QGCView {
                         }
                         Row {
                             spacing:    ScreenTools.defaultFontPixelWidth
-                            visible:    QGroundControl.settingsManager.videoSettings.rtspUrl.visible && QGroundControl.videoManager.isGStreamer && videoSource.currentIndex === 1
+                            visible:    QGroundControl.settingsManager.videoSettings.rtspUrl.visible && QGroundControl.videoManager.isGStreamer && videoSource.currentIndex === 2
                             QGCLabel {
                                 anchors.verticalCenter: parent.verticalCenter
                                 text:               qsTr("RTSP URL:")
@@ -557,7 +560,21 @@ QGCView {
                         }
                         Row {
                             spacing:    ScreenTools.defaultFontPixelWidth
-                            visible:    QGroundControl.videoManager.isGStreamer && videoSource.currentIndex < 2 && QGroundControl.settingsManager.videoSettings.aspectRatio.visible
+                            visible:    QGroundControl.settingsManager.videoSettings.tcpUrl.visible && QGroundControl.videoManager.isGStreamer && videoSource.currentIndex === 3
+                            QGCLabel {
+                                text:               qsTr("TCP URL:")
+                                width:              _labelWidth
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+                            FactTextField {
+                                width:              _editFieldWidth
+                                fact:               QGroundControl.settingsManager.videoSettings.tcpUrl
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+                        }
+                        Row {
+                            spacing:    ScreenTools.defaultFontPixelWidth
+                            visible:    QGroundControl.videoManager.isGStreamer && videoSource.currentIndex && videoSource.currentIndex < 3 && QGroundControl.settingsManager.videoSettings.aspectRatio.visible
                             QGCLabel {
                                 text:               qsTr("Aspect Ratio:")
                                 width:              _labelWidth
@@ -571,7 +588,7 @@ QGCView {
                         }
                         Row {
                             spacing:    ScreenTools.defaultFontPixelWidth
-                            visible:    QGroundControl.videoManager.isGStreamer && videoSource.currentIndex < 2 && QGroundControl.settingsManager.videoSettings.gridLines.visible
+                            visible:    QGroundControl.videoManager.isGStreamer && videoSource.currentIndex && videoSource.currentIndex < 3 && QGroundControl.settingsManager.videoSettings.gridLines.visible
                             QGCLabel {
                                 text:               qsTr("Grid Lines:")
                                 width:              _labelWidth
@@ -613,7 +630,21 @@ QGCView {
                         anchors.centerIn: parent
                         Row {
                             spacing:    ScreenTools.defaultFontPixelWidth
-                            visible:    QGroundControl.videoManager.isGStreamer && videoSource.currentIndex < 2 && QGroundControl.settingsManager.videoSettings.maxVideoSize.visible
+                            visible:    QGroundControl.videoManager.isGStreamer && videoSource.currentIndex && videoSource.currentIndex < 4 && QGroundControl.settingsManager.videoSettings.enableStorageLimit.visible
+                            QGCLabel {
+                                text:               qsTr("Auto-Delete Files:")
+                                width:              _labelWidth
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+                            FactCheckBox {
+                                text:                   ""
+                                fact:                   QGroundControl.settingsManager.videoSettings.enableStorageLimit
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+                        }
+                        Row {
+                            spacing:    ScreenTools.defaultFontPixelWidth
+                            visible:    QGroundControl.videoManager.isGStreamer && videoSource.currentIndex && videoSource.currentIndex < 4 && QGroundControl.settingsManager.videoSettings.maxVideoSize.visible && QGroundControl.settingsManager.videoSettings.enableStorageLimit.value
                             QGCLabel {
                                 text:               qsTr("Max Storage Usage:")
                                 width:              _labelWidth
@@ -627,7 +658,7 @@ QGCView {
                         }
                         Row {
                             spacing:    ScreenTools.defaultFontPixelWidth
-                            visible:    QGroundControl.videoManager.isGStreamer && videoSource.currentIndex < 2 && QGroundControl.settingsManager.videoSettings.recordingFormat.visible
+                            visible:    QGroundControl.videoManager.isGStreamer && videoSource.currentIndex && videoSource.currentIndex < 4 && QGroundControl.settingsManager.videoSettings.recordingFormat.visible
                             QGCLabel {
                                 text:               qsTr("Video File Format:")
                                 width:              _labelWidth
@@ -637,6 +668,112 @@ QGCView {
                                 width:              _editFieldWidth
                                 fact:               QGroundControl.settingsManager.videoSettings.recordingFormat
                                 anchors.verticalCenter: parent.verticalCenter
+                            }
+                        }
+                    }
+                }
+
+                //-----------------------------------------------------------------
+                //-- Custom Brand Image
+                Item {
+                    width:                      _qgcView.width * 0.8
+                    height:                     userBrandImageLabel.height
+                    anchors.margins:            ScreenTools.defaultFontPixelWidth
+                    anchors.horizontalCenter:   parent.horizontalCenter
+                    visible:                    QGroundControl.settingsManager.brandImageSettings.visible && !ScreenTools.isMobile
+                    QGCLabel {
+                        id:             userBrandImageLabel
+                        text:           qsTr("Brand Image")
+                        font.family:    ScreenTools.demiboldFontFamily
+                    }
+                }
+                Rectangle {
+                    height:                     userBrandImageCol.height + (ScreenTools.defaultFontPixelHeight * 2)
+                    width:                      _qgcView.width * 0.8
+                    color:                      qgcPal.windowShade
+                    anchors.margins:            ScreenTools.defaultFontPixelWidth
+                    anchors.horizontalCenter:   parent.horizontalCenter
+                    visible:                    QGroundControl.settingsManager.brandImageSettings.visible && !ScreenTools.isMobile
+
+                    Column {
+                        id:         userBrandImageCol
+                        spacing:    ScreenTools.defaultFontPixelWidth
+                        anchors.centerIn: parent
+                        Row {
+                            spacing:    ScreenTools.defaultFontPixelWidth
+                            visible:    _userBrandImageIndoor.visible
+
+                            QGCLabel {
+                                anchors.baseline:   userBrandImageIndoorBrowse.baseline
+                                width:              _labelWidth*1.5
+                                text:               qsTr("Indoor Brand Image Path:")
+                            }
+                            QGCTextField {
+                                anchors.baseline:   userBrandImageIndoorBrowse.baseline
+                                readOnly:           true
+                                width:              _editFieldWidth
+                                text:               _userBrandImageIndoor.valueString.replace("file:///","")
+                            }
+                            QGCButton {
+                                id:         userBrandImageIndoorBrowse
+                                text:       "Browse"
+                                onClicked:  userBrandImageIndoorBrowseDialog.openForLoad()
+
+                                QGCFileDialog {
+                                    id:             userBrandImageIndoorBrowseDialog
+                                    qgcView:        _qgcView
+                                    title:          qsTr("Choose custom brand image file:")
+                                    folder:         _userBrandImageIndoor.rawValue.replace("file:///","")
+                                    selectExisting: true
+                                    selectFolder:   false
+
+                                    onAcceptedForLoad: _userBrandImageIndoor.rawValue = "file:///" + file
+                                }
+                            }
+                        }
+                        Row {
+                            spacing:    ScreenTools.defaultFontPixelWidth
+                            visible:    _userBrandImageOutdoor.visible
+
+                            QGCLabel {
+                                anchors.baseline:   userBrandImageOutdoorBrowse.baseline
+                                width:              _labelWidth*1.5
+                                text:               qsTr("Outdoor Brand Image Path:")
+                            }
+                            QGCTextField {
+                                anchors.baseline:   userBrandImageOutdoorBrowse.baseline
+                                readOnly:           true
+                                width:              _editFieldWidth
+                                text:               _userBrandImageOutdoor.valueString.replace("file:///","")
+                            }
+                            QGCButton {
+                                id:         userBrandImageOutdoorBrowse
+                                text:       "Browse"
+                                onClicked:  userBrandImageOutdoorBrowseDialog.openForLoad()
+
+                                QGCFileDialog {
+                                    id:             userBrandImageOutdoorBrowseDialog
+                                    qgcView:        _qgcView
+                                    title:          qsTr("Choose custom brand image file:")
+                                    folder:         _userBrandImageOutdoor.rawValue.replace("file:///","")
+                                    selectExisting: true
+                                    selectFolder:   false
+
+                                    onAcceptedForLoad: _userBrandImageOutdoor.rawValue = "file:///" + file
+                                }
+                            }
+                        }
+                        Row {
+                            spacing:    ScreenTools.defaultFontPixelWidth
+                            visible:    _userBrandImageIndoor.visible
+
+                            QGCButton {
+                                id:         userBrandImageReset
+                                text:       "Reset Default Brand Image"
+                                onClicked:  {
+                                    _userBrandImageIndoor.rawValue = ""
+                                    _userBrandImageOutdoor.rawValue = ""
+                                }
                             }
                         }
                     }

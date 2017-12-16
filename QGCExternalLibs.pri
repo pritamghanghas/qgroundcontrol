@@ -80,53 +80,16 @@ MacBuild {
 } else:LinuxBuild {
     PKGCONFIG = sdl2
 } else:WindowsBuild {
-    INCLUDEPATH += \
-        $$BASEDIR/libs/lib/sdl2/msvc/include \
+    INCLUDEPATH += $$BASEDIR/libs/lib/sdl2/msvc/include
 
+    contains(QT_ARCH, i386) {
+        LIBS += -L$$BASEDIR/libs/lib/sdl2/msvc/lib/x86
+    } else {
+        LIBS += -L$$BASEDIR/libs/lib/sdl2/msvc/lib/x64
+    }
     LIBS += \
-        -L$$BASEDIR/libs/lib/sdl2/msvc/lib/x86 \
         -lSDL2main \
         -lSDL2
-}
-
-##
-# [OPTIONAL] Speech synthesis library support.
-# Can be forcibly disabled by adding a `DEFINES+=DISABLE_SPEECH` argument to qmake.
-# Linux support requires the eSpeak speech synthesizer (espeak).
-# Mac support is provided in Snow Leopard and newer (10.6+)
-# Windows is supported as of Windows 7
-#
-contains (DEFINES, DISABLE_SPEECH) {
-    message("Skipping support for speech output (manual override from command line)")
-    DEFINES -= DISABLE_SPEECH
-# Otherwise the user can still disable this feature in the user_config.pri file.
-} else:exists(user_config.pri):infile(user_config.pri, DEFINES, DISABLE_SPEECH) {
-    message("Skipping support for speech output (manual override from user_config.pri)")
-} else:LinuxBuild {
-    exists(/usr/include/espeak) | exists(/usr/local/include/espeak) {
-        message("Including support for speech output")
-        DEFINES += QGC_SPEECH_ENABLED
-        LIBS += \
-        -lespeak
-    } else {
-        warning("Skipping support for speech output (missing libraries, see README)")
-    }
-}
-# Mac support is built into OS 10.6+.
-else:MacBuild|iOSBuild {
-    message("Including support for speech output")
-    DEFINES += QGC_SPEECH_ENABLED
-}
-# Windows supports speech through native API.
-else:WindowsBuild {
-    message("Including support for speech output")
-    DEFINES += QGC_SPEECH_ENABLED
-    LIBS    += -lOle32
-}
-# Android supports speech through native (Java) API.
-else:AndroidBuild {
-    message("Including support for speech output")
-    DEFINES += QGC_SPEECH_ENABLED
 }
 
 #

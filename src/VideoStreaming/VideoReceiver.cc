@@ -24,6 +24,7 @@
 #include <QDir>
 #include <QDateTime>
 #include <QSysInfo>
+#include <QThread>
 
 QGC_LOGGING_CATEGORY(VideoReceiverLog, "VideoReceiverLog")
 
@@ -64,14 +65,23 @@ VideoReceiver::VideoReceiver(NodeSelector *piNodeSelector, QObject* parent)
     , _socket(NULL)
     , _serverPresent(false)
 #endif
+    , _videoSurface(NULL)
+    , _expectedLatency(20)
+    , _videoRunning(false)
+    , _showFullScreen(false)
 {
     _nodeSelector = piNodeSelector;
+    _videoSurface  = new VideoSurface;
 #if defined(QGC_GST_STREAMING)
+    _setVideoSink(_videoSurface->videoSink());
     _timer.setSingleShot(true);
     connect(&_timer, &QTimer::timeout, this, &VideoReceiver::_timeout);
     connect(this, &VideoReceiver::msgErrorReceived, this, &VideoReceiver::_handleError);
     connect(this, &VideoReceiver::msgEOSReceived, this, &VideoReceiver::_handleEOS);
     connect(this, &VideoReceiver::msgStateChangedReceived, this, &VideoReceiver::_handleStateChanged);
+    connect(&_frameTimer, &QTimer::timeout, this, &VideoReceiver::_updateTimer);
+//    connect(&_statsTimer, &QTimer::timeout, this, &VideoReceiver::_onStatsTimer);
+    _frameTimer.start(1000);
 #endif
 }
 
@@ -82,11 +92,17 @@ VideoReceiver::~VideoReceiver()
     if(_socket) {
         delete _socket;
     }
+    if (_videoSink) {
+        gst_object_unref(_videoSink);
+    }
 #endif
+    if(_videoSurface)
+        delete _videoSurface;
 }
 
 #if defined(QGC_GST_STREAMING)
-void VideoReceiver::setVideoSink(GstElement* sink)
+void
+VideoReceiver::_setVideoSink(GstElement* sink)
 {
     if (_videoSink) {
         gst_object_unref(_videoSink);
@@ -99,18 +115,28 @@ void VideoReceiver::setVideoSink(GstElement* sink)
 }
 #endif
 
+//-----------------------------------------------------------------------------
+void
+VideoReceiver::grabImage(QString imageFile)
+{
+    _imageFile = imageFile;
+    emit imageFileChanged();
+}
+
+//-----------------------------------------------------------------------------
 #if defined(QGC_GST_STREAMING)
-static void newPadCB(GstElement* element, GstPad* pad, gpointer data)
+static void
+newPadCB(GstElement* element, GstPad* pad, gpointer data)
 {
     gchar* name;
     name = gst_pad_get_name(pad);
-    g_print("A new pad %s was created\n", name);
+    //g_print("A new pad %s was created\n", name);
     GstCaps* p_caps = gst_pad_get_pad_template_caps (pad);
     gchar* description = gst_caps_to_string(p_caps);
     qCDebug(VideoReceiverLog) << p_caps << ", " << description;
     g_free(description);
-    GstElement* p_rtph264depay = GST_ELEMENT(data);
-    if(gst_element_link_pads(element, name, p_rtph264depay, "sink") == false)
+    GstElement* sink = GST_ELEMENT(data);
+    if(gst_element_link_pads(element, name, sink, "sink") == false)
         qCritical() << "newPadCB : failed to link elements\n";
     g_free(name);
 }
@@ -128,8 +154,10 @@ void VideoReceiver::previous()
 //    start();
 }
 
+//-----------------------------------------------------------------------------
 #if defined(QGC_GST_STREAMING)
-void VideoReceiver::_connected()
+void
+VideoReceiver::_connected()
 {
     //-- Server showed up. Now we start the stream.
     _timer.stop();
@@ -140,8 +168,10 @@ void VideoReceiver::_connected()
 }
 #endif
 
+//-----------------------------------------------------------------------------
 #if defined(QGC_GST_STREAMING)
-void VideoReceiver::_socketError(QAbstractSocket::SocketError socketError)
+void
+VideoReceiver::_socketError(QAbstractSocket::SocketError socketError)
 {
     Q_UNUSED(socketError);
     _socket->deleteLater();
@@ -151,8 +181,10 @@ void VideoReceiver::_socketError(QAbstractSocket::SocketError socketError)
 }
 #endif
 
+//-----------------------------------------------------------------------------
 #if defined(QGC_GST_STREAMING)
-void VideoReceiver::_timeout()
+void
+VideoReceiver::_timeout()
 {
     //-- If socket is live, we got no connection nor a socket error
     if(_socket) {
@@ -165,6 +197,7 @@ void VideoReceiver::_timeout()
     //   found to be working, only then we actually start the stream.
     QUrl url(_uri);
     _socket = new QTcpSocket;
+    _socket->setProxy(QNetworkProxy::NoProxy);
     connect(_socket, static_cast<void (QTcpSocket::*)(QAbstractSocket::SocketError)>(&QTcpSocket::error), this, &VideoReceiver::_socketError);
     connect(_socket, &QTcpSocket::connected, this, &VideoReceiver::_connected);
     //qCDebug(VideoReceiverLog) << "Trying to connect to:" << url.host() << url.port();
@@ -174,6 +207,27 @@ void VideoReceiver::_timeout()
 #endif
 
 
+void VideoReceiver::delayedStart(const QString &optionsString, bool recording)
+{
+#if defined(QGC_GST_STREAMING)
+    if (!optionsString.isEmpty()) {
+        // start new stream
+        _nodeSelector->startStreaming(_nodeSelector->currentNode(), optionsString, recording);
+        _expectedLatency = _nodeSelector->currentNode().latency;
+
+        QString newUri = QString("udp://0.0.0.0:") + QString::number(_nodeSelector->currentNode().targetStreamingPort);
+        qDebug() << newUri;
+        setUri(newUri);
+    }
+
+
+    stop();
+    start();
+//    QTimer::singleShot(50, this, &VideoReceiver::start);
+#endif
+}
+
+//-----------------------------------------------------------------------------
 // When we finish our pipeline will look like this:
 //
 //                                   +-->queue-->decoder-->_videosink
@@ -183,16 +237,10 @@ void VideoReceiver::_timeout()
 //                                   ^
 //                                   |
 //                                   +-Here we will later link elements for recording
-void VideoReceiver::start(const QString &optionsString, bool recording)
+void VideoReceiver::start()
 {
 #if defined(QGC_GST_STREAMING)
     qCDebug(VideoReceiverLog) << "start()";
-
-    if (!optionsString.isEmpty()) {
-        QString newUri = QString("udp://0.0.0.0:") + QString::number(_nodeSelector->currentNode().targetStreamingPort);
-        qDebug() << newUri;
-        setUri(newUri);
-    }
 
     if (_uri.isEmpty()) {
         qCritical() << "VideoReceiver::start() failed because URI is not specified";
@@ -209,21 +257,19 @@ void VideoReceiver::start(const QString &optionsString, bool recording)
 
     _starting = true;
 
-    bool isUdp = _uri.contains("udp://");
+    bool isUdp  = _uri.contains("udp://");
+    bool isRtsp = _uri.contains("rtsp://");
+    bool isTCP  = _uri.contains("tcp://");
 
-    //-- For RTSP, check to see if server is there first
-    if(!_serverPresent && !isUdp) {
+    //-- For RTSP and TCP, check to see if server is there first
+    if(!_serverPresent && (isRtsp || isTCP)) {
         _timer.start(100);
         qDebug() << "rtsp server not preset, not procceding";
         return;
     }
 
-    if (!optionsString.isEmpty()) {
-        // start new stream
-        _nodeSelector->startStreaming(_nodeSelector->currentNode(), optionsString, recording);
-    }
-
     bool running = false;
+    bool pipelineUp = false;
 
     GstElement*     dataSource  = NULL;
     GstCaps*        caps        = NULL;
@@ -231,7 +277,8 @@ void VideoReceiver::start(const QString &optionsString, bool recording)
     GstElement*     parser      = NULL;
     GstElement*     queue       = NULL;
     GstElement*     decoder     = NULL;
-    GstElement*     queue1     = NULL;
+    GstElement*     queue1      = NULL;
+    GstElement*     udpjitter   = NULL;
 
     do {
         if ((_pipeline = gst_pipeline_new("receiver")) == NULL) {
@@ -241,6 +288,8 @@ void VideoReceiver::start(const QString &optionsString, bool recording)
 
         if(isUdp) {
             dataSource = gst_element_factory_make("udpsrc", "udp-source");
+        } else if(isTCP) {
+            dataSource = gst_element_factory_make("tcpclientsrc", "tcpclient-source");
         } else {
             dataSource = gst_element_factory_make("rtspsrc", "rtsp-source");
         }
@@ -256,17 +305,33 @@ void VideoReceiver::start(const QString &optionsString, bool recording)
                 break;
             }
             g_object_set(G_OBJECT(dataSource), "uri", qPrintable(_uri), "caps", caps, NULL);
+        } else if(isTCP) {
+            QUrl url(_uri);
+            g_object_set(G_OBJECT(dataSource), "host", qPrintable(url.host()), "port", url.port(), NULL );
         } else {
             g_object_set(G_OBJECT(dataSource), "location", qPrintable(_uri), "latency", 17, "udp-reconnect", 1, "timeout", static_cast<guint64>(5000000), NULL);
         }
 
-        if ((demux = gst_element_factory_make("rtph264depay", "rtp-h264-depacketizer")) == NULL) {
-            qCritical() << "VideoReceiver::start() failed. Error with gst_element_factory_make('rtph264depay')";
-            break;
-        }
+        // Currently, we expect H264 when using anything except for TCP.  Long term we may want this to be settable
+        if (isTCP) {
+            if ((demux = gst_element_factory_make("tsdemux", "mpeg2-ts-demuxer")) == NULL) {
+                qCritical() << "VideoReceiver::start() failed. Error with gst_element_factory_make('tsdemux')";
+                break;
+            }
+        } else if (isUdp) {
+            if ((udpjitter = gst_element_factory_make("rtpjitterbuffer", "rpp-jitter-buffer")) == NULL) {
+                qCritical() << "VideoReceiver::start() failed. Error with gst_element_factory_make('rtpjitterbuffer')";
+                break;
+            }
+            _jitterBuffer = udpjitter;
+            _statsTimer.start(1000);
+            if ((demux = gst_element_factory_make("rtph264depay", "rtp-h264-depacketizer")) == NULL) {
+                qCritical() << "VideoReceiver::start() failed. Error with gst_element_factory_make('rtph264depay')";
+                break;
+            }
 
-        if(!isUdp) {
-            g_signal_connect(dataSource, "pad-added", G_CALLBACK(newPadCB), demux);
+            // set jitter buffers latency to 2 times the initial estimates
+            g_object_set(G_OBJECT(udpjitter), "latency", _expectedLatency*2, NULL);
         }
 
         if ((parser = gst_element_factory_make("h264parse", "h264-parser")) == NULL) {
@@ -280,6 +345,8 @@ void VideoReceiver::start(const QString &optionsString, bool recording)
         }
 
         if((queue = gst_element_factory_make("queue", NULL)) == NULL)  {
+            // TODO: We may want to add queue2 max-size-buffers=1 to get lower latency
+            //       We should compare gstreamer scripts to QGroundControl to determine the need
             qCritical() << "VideoReceiver::start() failed. Error with gst_element_factory_make('queue')";
             break;
         }
@@ -294,22 +361,34 @@ void VideoReceiver::start(const QString &optionsString, bool recording)
             break;
         }
 
-        gst_bin_add_many(GST_BIN(_pipeline), dataSource, demux, parser, _tee, queue, decoder, queue1, _videoSink, NULL);
+        gst_bin_add_many(GST_BIN(_pipeline), dataSource, udpjitter, demux, parser, _tee, queue, decoder, queue1, _videoSink, NULL);
+        pipelineUp = true;
 
         if(isUdp) {
             // Link the pipeline in front of the tee
-            if(!gst_element_link_many(dataSource, demux, parser, _tee, queue, decoder, queue1, _videoSink, NULL)) {
-                qCritical() << "Unable to link elements.";
+            if(!gst_element_link_many(dataSource, udpjitter, demux, parser, _tee, queue, decoder, queue1, _videoSink, NULL)) {
+                qCritical() << "Unable to link UDP elements.";
                 break;
             }
+        } else if (isTCP) {
+            if(!gst_element_link(dataSource, demux)) {
+                qCritical() << "Unable to link TCP dataSource to Demux.";
+                break;
+            }
+            if(!gst_element_link_many(parser, _tee, queue, decoder, queue1, _videoSink, NULL)) {
+                qCritical() << "Unable to link TCP pipline to parser.";
+                break;
+            }
+            g_signal_connect(demux, "pad-added", G_CALLBACK(newPadCB), parser);
         } else {
+            g_signal_connect(dataSource, "pad-added", G_CALLBACK(newPadCB), demux);
             if(!gst_element_link_many(demux, parser, _tee, queue, decoder, _videoSink, NULL)) {
-                qCritical() << "Unable to link elements.";
+                qCritical() << "Unable to link RTSP elements.";
                 break;
             }
         }
 
-        dataSource = demux = parser = queue = decoder = NULL;
+        dataSource = demux = parser = queue = decoder = queue1 = NULL;
 
         GstBus* bus = NULL;
 
@@ -332,39 +411,43 @@ void VideoReceiver::start(const QString &optionsString, bool recording)
     if (!running) {
         qCritical() << "VideoReceiver::start() failed";
 
-        if (decoder != NULL) {
-            gst_object_unref(decoder);
-            decoder = NULL;
-        }
-
-        if (parser != NULL) {
-            gst_object_unref(parser);
-            parser = NULL;
-        }
-
-        if (demux != NULL) {
-            gst_object_unref(demux);
-            demux = NULL;
-        }
-
-        if (dataSource != NULL) {
-            gst_object_unref(dataSource);
-            dataSource = NULL;
-        }
-
-        if (_tee != NULL) {
-            gst_object_unref(_tee);
-            dataSource = NULL;
-        }
-
-        if (queue != NULL) {
-            gst_object_unref(queue);
-            dataSource = NULL;
-        }
-
+        // In newer versions, the pipeline will clean up all references that are added to it
         if (_pipeline != NULL) {
             gst_object_unref(_pipeline);
             _pipeline = NULL;
+        }
+
+        // If we failed before adding items to the pipeline, then clean up
+        if (!pipelineUp) {
+            if (decoder != NULL) {
+                gst_object_unref(decoder);
+                decoder = NULL;
+            }
+
+            if (parser != NULL) {
+                gst_object_unref(parser);
+                parser = NULL;
+            }
+
+            if (demux != NULL) {
+                gst_object_unref(demux);
+                demux = NULL;
+            }
+
+            if (dataSource != NULL) {
+                gst_object_unref(dataSource);
+                dataSource = NULL;
+            }
+
+            if (_tee != NULL) {
+                gst_object_unref(_tee);
+                dataSource = NULL;
+            }
+
+            if (queue != NULL) {
+                gst_object_unref(queue);
+                dataSource = NULL;
+            }
         }
 
         _running = false;
@@ -374,9 +457,13 @@ void VideoReceiver::start(const QString &optionsString, bool recording)
     }
     _starting = false;
 #endif
+
+    qDebug("done with actual start");
 }
 
-void VideoReceiver::stop()
+//-----------------------------------------------------------------------------
+void
+VideoReceiver::stop()
 {
 #if defined(QGC_GST_STREAMING)
     qCDebug(VideoReceiverLog) << "stop()";
@@ -400,13 +487,17 @@ void VideoReceiver::stop()
 #endif
 }
 
-void VideoReceiver::setUri(const QString & uri)
+//-----------------------------------------------------------------------------
+void
+VideoReceiver::setUri(const QString & uri)
 {
     _uri = uri;
 }
 
+//-----------------------------------------------------------------------------
 #if defined(QGC_GST_STREAMING)
-void VideoReceiver::_shutdownPipeline() {
+void
+VideoReceiver::_shutdownPipeline() {
     if(!_pipeline) {
         qCDebug(VideoReceiverLog) << "No pipeline";
         return;
@@ -428,40 +519,54 @@ void VideoReceiver::_shutdownPipeline() {
     _recording = false;
     _stopping = false;
     _running = false;
+
+    _statsTimer.stop();
+    _jitterBuffer = NULL;
+
     emit recordingChanged();
 }
 #endif
 
+//-----------------------------------------------------------------------------
 #if defined(QGC_GST_STREAMING)
-void VideoReceiver::_handleError() {
+void
+VideoReceiver::_handleError() {
     qCDebug(VideoReceiverLog) << "Gstreamer error!";
     _shutdownPipeline();
 }
 #endif
 
+//-----------------------------------------------------------------------------
 #if defined(QGC_GST_STREAMING)
-void VideoReceiver::_handleEOS() {
+void
+VideoReceiver::_handleEOS() {
     if(_stopping) {
         _shutdownPipeline();
         qCDebug(VideoReceiverLog) << "Stopped";
     } else if(_recording && _sink->removing) {
         _shutdownRecordingBranch();
     } else {
-        qCritical() << "VideoReceiver: Unexpected EOS!";
+        qWarning() << "VideoReceiver: Unexpected EOS!";
         _shutdownPipeline();
     }
 }
 #endif
 
+//-----------------------------------------------------------------------------
 #if defined(QGC_GST_STREAMING)
-void VideoReceiver::_handleStateChanged() {
-    _streaming = GST_STATE(_pipeline) == GST_STATE_PLAYING;
-    qCDebug(VideoReceiverLog) << "State changed, _streaming:" << _streaming;
+void
+VideoReceiver::_handleStateChanged() {
+    if(_pipeline) {
+        _streaming = GST_STATE(_pipeline) == GST_STATE_PLAYING;
+        qCDebug(VideoReceiverLog) << "State changed, _streaming:" << _streaming;
+    }
 }
 #endif
 
+//-----------------------------------------------------------------------------
 #if defined(QGC_GST_STREAMING)
-gboolean VideoReceiver::_onBusMessage(GstBus* bus, GstMessage* msg, gpointer data)
+gboolean
+VideoReceiver::_onBusMessage(GstBus* bus, GstMessage* msg, gpointer data)
 {
     Q_UNUSED(bus)
     Q_ASSERT(msg != NULL && data != NULL);
@@ -493,40 +598,109 @@ gboolean VideoReceiver::_onBusMessage(GstBus* bus, GstMessage* msg, gpointer dat
 #endif
 
 #if defined(QGC_GST_STREAMING)
-void VideoReceiver::_cleanupOldVideos()
+void VideoReceiver::_onStatsTimer()
 {
-    QString savePath = qgcApp()->toolbox()->settingsManager()->appSettings()->videoSavePath();
-    QDir videoDir = QDir(savePath);
-    videoDir.setFilter(QDir::Files | QDir::Readable | QDir::NoSymLinks | QDir::Writable);
-    videoDir.setSorting(QDir::Time);
-    //-- All the movie extensions we support
-    QStringList nameFilters;
-    for(uint32_t i = 0; i < NUM_MUXES; i++) {
-        nameFilters << QString("*.") + QString(kVideoExtensions[i]);
+    // figure out if we need to switch streaming rates or latency.
+    if (!_pipeline || !_jitterBuffer) {
+        return;
     }
-    videoDir.setNameFilters(nameFilters);
-    //-- get the list of videos stored
-    QFileInfoList vidList = videoDir.entryInfoList();
-    if(!vidList.isEmpty()) {
-        uint64_t total   = 0;
-        //-- Settings are stored using MB
-        uint64_t maxSize = (qgcApp()->toolbox()->settingsManager()->videoSettings()->maxVideoSize()->rawValue().toUInt() * 1024 * 1024);
-        //-- Compute total used storage
-        for(int i = 0; i < vidList.size(); i++) {
-            total += vidList[i].size();
+
+    GstStructure *stats;
+    gint fill_percent = 0;
+
+    g_object_get(_jitterBuffer, "stats", &stats, NULL);
+    g_object_get(_jitterBuffer, "percent", &fill_percent, NULL);
+
+    guint64 num_pushed = 0;
+    guint64 num_lost = 0;
+    guint64 num_late = 0;
+    guint64 num_duplicates = 0;
+    guint64 rtx_count = 0;
+    guint64 rtx_success_count = 0;
+    gdouble rtx_per_packet = 0;
+    guint64 rtx_rtt = 0;
+
+    gst_structure_get(stats, "num-pushed",
+                      gst_structure_get_field_type(stats,"num-pushed"),
+                      &num_pushed, NULL);
+    gst_structure_get(stats, "num-lost",
+                      gst_structure_get_field_type(stats,"num-lost"),
+                      &num_lost, NULL);
+    gst_structure_get(stats, "num-late",
+                      gst_structure_get_field_type(stats,"num-late"),
+                      &num_late, NULL);
+    gst_structure_get(stats, "num-duplicates",
+                      gst_structure_get_field_type(stats,"num-duplicates"),
+                      &num_duplicates, NULL);
+    gst_structure_get(stats, "rtx-count",
+                      gst_structure_get_field_type(stats,"rtx-count"),
+                      &rtx_count, NULL);
+    gst_structure_get(stats, "rtx-success-count",
+                      gst_structure_get_field_type(stats,"rtx-success-count"),
+                      &rtx_success_count, NULL);
+    gst_structure_get(stats, "rtx-per-packet",
+                      gst_structure_get_field_type(stats,"rtx-per-packet"),
+                      &rtx_per_packet, NULL);
+    gst_structure_get(stats, "rtx-rtt",
+                      gst_structure_get_field_type(stats,"rtx-rtt"),
+                      &rtx_rtt, NULL);
+
+    qDebug() << "Stats structure: " << gst_structure_get_name(stats);
+    qDebug() << "Stats structure num-pushed: " << num_pushed;
+    qDebug() << "Stats structure num-lost: " << num_lost;
+    qDebug() << "Stats structure num-late: " << num_late;
+    qDebug() << "Stats structure num-duplicates: " << num_duplicates;
+    qDebug() << "Stats structure rtx-count: " << rtx_count;
+    qDebug() << "Stats structure rtx-success-count: " << rtx_success_count;
+    qDebug() << "Stats structure rtx-per-packet: " << rtx_per_packet;
+    qDebug() << "Stats structure rtx-rtt: " << rtx_rtt;
+    qDebug() << "buffer filled percentage" << fill_percent;
+
+    gst_structure_free (stats);
+}
+#endif
+
+//-----------------------------------------------------------------------------
+#if defined(QGC_GST_STREAMING)
+void
+VideoReceiver::_cleanupOldVideos()
+{
+    //-- Only perform cleanup if storage limit is enabled
+    if(qgcApp()->toolbox()->settingsManager()->videoSettings()->enableStorageLimit()->rawValue().toBool()) {
+        QString savePath = qgcApp()->toolbox()->settingsManager()->appSettings()->videoSavePath();
+        QDir videoDir = QDir(savePath);
+        videoDir.setFilter(QDir::Files | QDir::Readable | QDir::NoSymLinks | QDir::Writable);
+        videoDir.setSorting(QDir::Time);
+        //-- All the movie extensions we support
+        QStringList nameFilters;
+        for(uint32_t i = 0; i < NUM_MUXES; i++) {
+            nameFilters << QString("*.") + QString(kVideoExtensions[i]);
         }
-        //-- Remove old movies until max size is satisfied.
-        while(total >= maxSize && !vidList.isEmpty()) {
-            total -= vidList.last().size();
-            qCDebug(VideoReceiverLog) << "Removing old video file:" << vidList.last().filePath();
-            QFile file (vidList.last().filePath());
-            file.remove();
-            vidList.removeLast();
+        videoDir.setNameFilters(nameFilters);
+        //-- get the list of videos stored
+        QFileInfoList vidList = videoDir.entryInfoList();
+        if(!vidList.isEmpty()) {
+            uint64_t total   = 0;
+            //-- Settings are stored using MB
+            uint64_t maxSize = (qgcApp()->toolbox()->settingsManager()->videoSettings()->maxVideoSize()->rawValue().toUInt() * 1024 * 1024);
+            //-- Compute total used storage
+            for(int i = 0; i < vidList.size(); i++) {
+                total += vidList[i].size();
+            }
+            //-- Remove old movies until max size is satisfied.
+            while(total >= maxSize && !vidList.isEmpty()) {
+                total -= vidList.last().size();
+                qCDebug(VideoReceiverLog) << "Removing old video file:" << vidList.last().filePath();
+                QFile file (vidList.last().filePath());
+                file.remove();
+                vidList.removeLast();
+            }
         }
     }
 }
 #endif
 
+//-----------------------------------------------------------------------------
 // When we finish our pipeline will look like this:
 //
 //                                   +-->queue-->decoder-->_videosink
@@ -538,7 +712,8 @@ void VideoReceiver::_cleanupOldVideos()
 //   we are adding these elements->  +->teepad-->queue-->matroskamux-->_filesink |
 //                                        |                                      |
 //                                        +--------------------------------------+
-void VideoReceiver::startRecording(void)
+void
+VideoReceiver::startRecording(void)
 {
 #if defined(QGC_GST_STREAMING)
 
@@ -606,7 +781,9 @@ void VideoReceiver::startRecording(void)
 #endif
 }
 
-void VideoReceiver::stopRecording(void)
+//-----------------------------------------------------------------------------
+void
+VideoReceiver::stopRecording(void)
 {
 #if defined(QGC_GST_STREAMING)
     qCDebug(VideoReceiverLog) << "stopRecording()";
@@ -620,13 +797,15 @@ void VideoReceiver::stopRecording(void)
 #endif
 }
 
+//-----------------------------------------------------------------------------
 // This is only installed on the transient _pipelineStopRec in order
 // to finalize a video file. It is not used for the main _pipeline.
 // -EOS has appeared on the bus of the temporary pipeline
 // -At this point all of the recoring elements have been flushed, and the video file has been finalized
 // -Now we can remove the temporary pipeline and its elements
 #if defined(QGC_GST_STREAMING)
-void VideoReceiver::_shutdownRecordingBranch()
+void
+VideoReceiver::_shutdownRecordingBranch()
 {
     gst_bin_remove(GST_BIN(_pipelineStopRec), _sink->queue);
     gst_bin_remove(GST_BIN(_pipelineStopRec), _sink->parse);
@@ -656,12 +835,14 @@ void VideoReceiver::_shutdownRecordingBranch()
 }
 #endif
 
+//-----------------------------------------------------------------------------
 // -Unlink the recording branch from the tee in the main _pipeline
 // -Create a second temporary pipeline, and place the recording branch elements into that pipeline
 // -Setup watch and handler for EOS event on the temporary pipeline's bus
 // -Send an EOS event at the beginning of that pipeline
 #if defined(QGC_GST_STREAMING)
-void VideoReceiver::_detachRecordingBranch(GstPadProbeInfo* info)
+void
+VideoReceiver::_detachRecordingBranch(GstPadProbeInfo* info)
 {
     Q_UNUSED(info)
 
@@ -697,16 +878,63 @@ void VideoReceiver::_detachRecordingBranch(GstPadProbeInfo* info)
 }
 #endif
 
+//-----------------------------------------------------------------------------
 #if defined(QGC_GST_STREAMING)
-GstPadProbeReturn VideoReceiver::_unlinkCallBack(GstPad* pad, GstPadProbeInfo* info, gpointer user_data)
+GstPadProbeReturn
+VideoReceiver::_unlinkCallBack(GstPad* pad, GstPadProbeInfo* info, gpointer user_data)
 {
     Q_UNUSED(pad);
-    Q_ASSERT(info != NULL && user_data != NULL);
-    VideoReceiver* pThis = (VideoReceiver*)user_data;
-    // We will only act once
-    if(g_atomic_int_compare_and_exchange(&pThis->_sink->removing, FALSE, TRUE))
-        pThis->_detachRecordingBranch(info);
-
+    if(info != NULL && user_data != NULL) {
+        VideoReceiver* pThis = (VideoReceiver*)user_data;
+        // We will only act once
+        if(g_atomic_int_compare_and_exchange(&pThis->_sink->removing, FALSE, TRUE)) {
+            pThis->_detachRecordingBranch(info);
+        }
+    }
     return GST_PAD_PROBE_REMOVE;
 }
 #endif
+
+//-----------------------------------------------------------------------------
+void
+VideoReceiver::_updateTimer()
+{
+#if defined(QGC_GST_STREAMING)
+    if(_videoSurface) {
+        if(stopping() || starting()) {
+            return;
+        }
+        if(streaming()) {
+            if(!_videoRunning) {
+                _videoSurface->setLastFrame(0);
+                _videoRunning = true;
+                emit videoRunningChanged();
+            }
+        } else {
+            if(_videoRunning) {
+                _videoRunning = false;
+                emit videoRunningChanged();
+            }
+        }
+        if(_videoRunning) {
+            uint32_t timeout = 1;
+            if(qgcApp()->toolbox() && qgcApp()->toolbox()->settingsManager()) {
+                timeout = qgcApp()->toolbox()->settingsManager()->videoSettings()->rtspTimeout()->rawValue().toUInt();
+            }
+            time_t elapsed = 0;
+            time_t lastFrame = _videoSurface->lastFrame();
+            if(lastFrame != 0) {
+                elapsed = time(0) - _videoSurface->lastFrame();
+            }
+            if(elapsed > (time_t)timeout && _videoSurface) {
+                stop();
+            }
+        } else {
+            if(!running() && !_uri.isEmpty()) {
+                start();
+            }
+        }
+    }
+#endif
+}
+

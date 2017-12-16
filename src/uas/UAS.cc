@@ -26,7 +26,7 @@
 #include "UAS.h"
 #include "LinkInterface.h"
 #include "QGC.h"
-#include "GAudioOutput.h"
+#include "AudioOutput.h"
 #include "MAVLinkProtocol.h"
 #include "QGCMAVLink.h"
 #include "LinkManager.h"
@@ -131,17 +131,11 @@ UAS::UAS(MAVLinkProtocol* protocol, Vehicle* vehicle, FirmwarePluginManager * fi
     _firmwarePluginManager(firmwarePluginManager)
 {
 
-    for (unsigned int i = 0; i<255;++i)
-    {
-        componentID[i] = -1;
-        componentMulti[i] = false;
-    }
-
 #ifndef __mobile__
     connect(_vehicle, &Vehicle::mavlinkMessageReceived, &fileManager, &FileManager::receiveMessage);
+    color = UASInterface::getNextColor();
 #endif
 
-    color = UASInterface::getNextColor();
 }
 
 /**
@@ -210,10 +204,11 @@ void UAS::receiveMessage(mavlink_message_t message)
         }
 
         // Store component ID
-        if (componentID[message.msgid] == -1)
+        if (!componentID.contains(message.msgid))
         {
             // Prefer the first component
             componentID[message.msgid] = message.compid;
+            componentMulti[message.msgid] = false;
         }
         else
         {
@@ -225,7 +220,9 @@ void UAS::receiveMessage(mavlink_message_t message)
             }
         }
 
-        if (componentMulti[message.msgid] == true) multiComponentSourceDetected = true;
+        if (componentMulti[message.msgid] == true) {
+            multiComponentSourceDetected = true;
+        }
 
 
         switch (message.msgid)
@@ -978,7 +975,7 @@ void UAS::processParamValueMsg(mavlink_message_t& msg, const QString& paramName,
 * Set the manual control commands.
 * This can only be done if the system has manual inputs enabled and is armed.
 */
-void UAS::setExternalControlSetpoint(float roll, float pitch, float yaw, float thrust, quint16 buttons, int joystickMode)
+void UAS::setExternalControlSetpoint(float roll, float pitch, float yaw, float thrust, quint16 buttons, int joystickMode, float channel6, float channel7, float channel8)
 {
     if (!_vehicle) {
         return;
@@ -993,6 +990,9 @@ void UAS::setExternalControlSetpoint(float roll, float pitch, float yaw, float t
     static float manualPitchAngle = 0.0;
     static float manualYawAngle = 0.0;
     static float manualThrust = 0.0;
+    static float manualChannel6 = 0.0;
+    static float manualChannel7 = 0.0;
+    static float manualChannel8 = 0.0;
     static quint16 manualButtons = 0;
     static quint8 countSinceLastTransmission = 0; // Track how many calls to this function have occurred since the last MAVLink transmission
 
@@ -1006,8 +1006,10 @@ void UAS::setExternalControlSetpoint(float roll, float pitch, float yaw, float t
         sendCommand = true;
         countSinceLastTransmission = 0;
     } else if ((!qIsNaN(roll) && roll != manualRollAngle) || (!qIsNaN(pitch) && pitch != manualPitchAngle) ||
-             (!qIsNaN(yaw) && yaw != manualYawAngle) || (!qIsNaN(thrust) && thrust != manualThrust) ||
-             buttons != manualButtons) {
+               (!qIsNaN(yaw) && yaw != manualYawAngle) || (!qIsNaN(thrust) && thrust != manualThrust) ||
+               (!qIsNaN(channel6) && channel6 != manualChannel6) || (!qIsNaN(channel7) && channel7 != manualChannel7) ||
+               (!qIsNaN(channel8) && channel8 != manualChannel8) ||
+               buttons != manualButtons) {
         sendCommand = true;
 
         // Ensure that another message will be sent the next time this function is called
@@ -1022,6 +1024,9 @@ void UAS::setExternalControlSetpoint(float roll, float pitch, float yaw, float t
         manualYawAngle = yaw;
         manualThrust = thrust;
         manualButtons = buttons;
+        manualChannel6 = channel6;
+        manualChannel7 = channel7;
+        manualChannel8 = channel8;
 
         mavlink_message_t message;
 
@@ -1135,13 +1140,6 @@ void UAS::setExternalControlSetpoint(float roll, float pitch, float yaw, float t
                                                                 yawrate);
         } else if (joystickMode == Vehicle::JoystickModeRC) {
 
-            // Save the new manual control inputs
-            manualRollAngle = roll;
-            manualPitchAngle = pitch;
-            manualYawAngle = yaw;
-            manualThrust = thrust;
-            manualButtons = buttons;
-
             // Store scaling values for all 3 axes
             const float axesScaling = 1.0 * 1000.0;
 
@@ -1162,30 +1160,33 @@ void UAS::setExternalControlSetpoint(float roll, float pitch, float yaw, float t
                                                  this->uasId,
                                                  newPitchCommand, newRollCommand, newThrustCommand, newYawCommand, buttons);
        } else if(joystickMode == Vehicle::JoystickMode_OVERRIDE) {
-            // Save the new manual control inputs
-            manualRollAngle = roll;
-            manualPitchAngle = pitch;
-            manualYawAngle = yaw;
-            manualThrust = thrust;
-            manualButtons = buttons;
 
-            // Store scaling values for all 3 axes
-            const float axesScaling = 1.0 * 1000.0;
+            // Store scaling values for all axes
+            // assuming all our systems will be belheli based and all pwm controls are 1000 to 2000pwm
+            const float lowPoint   = 1020;
+            const float highPoint  = 1960;
+            const float midPoint   = (lowPoint+highPoint)/2;
+            const float axesScaling = 1.0 * (highPoint-lowPoint);
 
             // Calculate the new commands for roll, pitch, yaw, and thrust
-            // assuming all our systems will be belheli based and all pwm controls are 1000 to 2000pwm
-            const float newRollCommand = 1500 + (roll * axesScaling)/2;
-            const float newPitchCommand = 1500 + (pitch * axesScaling)/2;
-            const float newYawCommand = 1500 + (yaw * axesScaling)/2;
-            const float newThrustCommand = 1000+ (thrust * axesScaling);
+
+            const float newRollCommand = midPoint + (roll * axesScaling)/2;
+            const float newPitchCommand = midPoint + (pitch * axesScaling)/2;
+            const float newYawCommand = midPoint + (yaw * axesScaling)/2;
+            const float newThrustCommand = lowPoint + (thrust * axesScaling);
+            const float newChannel6Command = channel6 < 0 ? -1 : (lowPoint + (channel6 * axesScaling));
+            const float newChannel7Command = channel7 < 0 ? -1 : (lowPoint + (channel7 * axesScaling));
+            const float newChannel8Command = channel8 < 0 ? -1 : (lowPoint + (channel8 * axesScaling));
 
             qCDebug(UASLog) << "roll:" << newRollCommand << "pitch:" << newPitchCommand
-                            << "yaw:" << newYawCommand << "thrust:" << newThrustCommand;
+                            << "yaw:" << newYawCommand << "thrust:" << newThrustCommand
+                            << "channel6:" << newChannel6Command << "channel7:"
+                            << newChannel7Command << "channel8:" << newChannel8Command;
 
             // Send the rcoverride message
             mavlink_msg_rc_channels_override_pack(mavlink->getSystemId(), mavlink->getComponentId(), &message, this->uasId,
                                                   0, (uint16_t)newRollCommand,(uint16_t)newPitchCommand,
-                                                  (uint16_t)newThrustCommand, (uint16_t)newYawCommand, 0, 0, 0, 0);
+                                                  (uint16_t)newThrustCommand, (uint16_t)newYawCommand, -1, newChannel6Command, newChannel7Command, newChannel8Command);
         }
 
         _vehicle->sendMessageOnLink(_vehicle->priorityLink(), message);

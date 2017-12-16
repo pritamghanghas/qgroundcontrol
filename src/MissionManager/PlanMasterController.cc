@@ -14,7 +14,9 @@
 #include "AppSettings.h"
 #include "JsonHelper.h"
 #include "MissionManager.h"
+#include "KML.h"
 
+#include <QDomDocument>
 #include <QJsonDocument>
 #include <QFileInfo>
 
@@ -89,6 +91,16 @@ void PlanMasterController::_activeVehicleChanged(Vehicle* activeVehicle)
 
     qCDebug(PlanMasterControllerLog) << "_activeVehicleChanged" << activeVehicle;
 
+    if (_managerVehicle) {
+        // Disconnect old vehicle
+        disconnect(_managerVehicle->missionManager(),       &MissionManager::newMissionItemsAvailable,  this, &PlanMasterController::_loadMissionComplete);
+        disconnect(_managerVehicle->geoFenceManager(),      &GeoFenceManager::loadComplete,             this, &PlanMasterController::_loadGeoFenceComplete);
+        disconnect(_managerVehicle->rallyPointManager(),    &RallyPointManager::loadComplete,           this, &PlanMasterController::_loadRallyPointsComplete);
+        disconnect(_managerVehicle->missionManager(),       &MissionManager::sendComplete,              this, &PlanMasterController::_sendMissionComplete);
+        disconnect(_managerVehicle->geoFenceManager(),      &GeoFenceManager::sendComplete,             this, &PlanMasterController::_sendGeoFenceComplete);
+        disconnect(_managerVehicle->rallyPointManager(),    &RallyPointManager::sendComplete,           this, &PlanMasterController::_sendRallyPointsComplete);
+    }
+
     bool newOffline = false;
     if (activeVehicle == NULL) {
         // Since there is no longer an active vehicle we use the offline controller vehicle as the manager vehicle
@@ -155,6 +167,7 @@ void PlanMasterController::loadFromVehicle(void)
         _loadGeoFence = true;
         _syncInProgress = true;
         emit syncInProgressChanged(true);
+        qCDebug(PlanMasterControllerLog) << "PlanMasterController::loadFromVehicle _missionController.loadFromVehicle";
         _missionController.loadFromVehicle();
         setDirty(false);
     }
@@ -166,7 +179,14 @@ void PlanMasterController::_loadMissionComplete(void)
     if (_editMode && _loadGeoFence) {
         _loadGeoFence = false;
         _loadRallyPoints = true;
-        _geoFenceController.loadFromVehicle();
+        if (_geoFenceController.supported()) {
+            qCDebug(PlanMasterControllerLog) << "PlanMasterController::_loadMissionComplete _geoFenceController.loadFromVehicle";
+            _geoFenceController.loadFromVehicle();
+        } else {
+            qCDebug(PlanMasterControllerLog) << "PlanMasterController::_loadMissionComplete GeoFence not supported skipping";
+            _geoFenceController.removeAll();
+            _loadGeoFenceComplete();
+        }
         setDirty(false);
     }
 }
@@ -175,7 +195,14 @@ void PlanMasterController::_loadGeoFenceComplete(void)
 {
     if (_editMode && _loadRallyPoints) {
         _loadRallyPoints = false;
-        _rallyPointController.loadFromVehicle();
+        if (_rallyPointController.supported()) {
+            qCDebug(PlanMasterControllerLog) << "PlanMasterController::_loadGeoFenceComplete _rallyPointController.loadFromVehicle";
+            _rallyPointController.loadFromVehicle();
+        } else {
+            qCDebug(PlanMasterControllerLog) << "PlanMasterController::_loadMissionComplete Rally Points not supported skipping";
+            _rallyPointController.removeAll();
+            _loadRallyPointsComplete();
+        }
         setDirty(false);
     }
 }
@@ -191,10 +218,15 @@ void PlanMasterController::_loadRallyPointsComplete(void)
 void PlanMasterController::_sendMissionComplete(void)
 {
     if (_sendGeoFence) {
-        qCDebug(PlanMasterControllerLog) << "PlanMasterController::sendToVehicle start fence sendToVehicle";
         _sendGeoFence = false;
         _sendRallyPoints = true;
-        _geoFenceController.sendToVehicle();
+        if (_geoFenceController.supported()) {
+            qCDebug(PlanMasterControllerLog) << "PlanMasterController::sendToVehicle start GeoFence sendToVehicle";
+            _geoFenceController.sendToVehicle();
+        } else {
+            qCDebug(PlanMasterControllerLog) << "PlanMasterController::sendToVehicle GeoFence not supported skipping";
+            _sendGeoFenceComplete();
+        }
         setDirty(false);
     }
 }
@@ -202,16 +234,21 @@ void PlanMasterController::_sendMissionComplete(void)
 void PlanMasterController::_sendGeoFenceComplete(void)
 {
     if (_sendRallyPoints) {
-        qCDebug(PlanMasterControllerLog) << "PlanMasterController::sendToVehicle start rally sendToVehicle";
         _sendRallyPoints = false;
-        _rallyPointController.sendToVehicle();
+        if (_rallyPointController.supported()) {
+            qCDebug(PlanMasterControllerLog) << "PlanMasterController::sendToVehicle start rally sendToVehicle";
+            _rallyPointController.sendToVehicle();
+        } else {
+            qCDebug(PlanMasterControllerLog) << "PlanMasterController::sendToVehicle Rally Points not support skipping";
+            _sendRallyPointsComplete();
+        }
     }
 }
 
 void PlanMasterController::_sendRallyPointsComplete(void)
 {
     if (_syncInProgress) {
-        qCDebug(PlanMasterControllerLog) << "PlanMasterController::sendToVehicle rally point send complete";
+        qCDebug(PlanMasterControllerLog) << "PlanMasterController::sendToVehicle Rally Point send complete";
         _syncInProgress = false;
         emit syncInProgressChanged(false);
     }
@@ -246,6 +283,7 @@ void PlanMasterController::loadFromFile(const QString& filename)
 
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
         errorString = file.errorString() + QStringLiteral(" ") + filename;
+        qgcApp()->showMessage(errorMessage.arg(errorString));
         return;
     }
 
@@ -336,6 +374,30 @@ void PlanMasterController::saveToFile(const QString& filename)
     }
 }
 
+void PlanMasterController::saveToKml(const QString& filename)
+{
+    if (filename.isEmpty()) {
+        return;
+    }
+
+    QString kmlFilename = filename;
+    if (!QFileInfo(filename).fileName().contains(".")) {
+        kmlFilename += QString(".%1").arg(kmlFileExtension());
+    }
+
+    QFile file(kmlFilename);
+
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        qgcApp()->showMessage(tr("KML save error %1 : %2").arg(filename).arg(file.errorString()));
+    } else {
+        QDomDocument domDocument;
+        _missionController.convertToKMLDocument(domDocument);
+        QTextStream stream(&file);
+        stream << domDocument.toString();
+        file.close();
+    }
+}
+
 void PlanMasterController::removeAll(void)
 {
     _missionController.removeAll();
@@ -347,8 +409,13 @@ void PlanMasterController::removeAllFromVehicle(void)
 {
     if (!offline()) {
         _missionController.removeAllFromVehicle();
-        _geoFenceController.removeAllFromVehicle();
-        _rallyPointController.removeAllFromVehicle();
+        if (_geoFenceController.supported()) {
+            _geoFenceController.removeAllFromVehicle();
+        }
+        if (_rallyPointController.supported()) {
+            _rallyPointController.removeAllFromVehicle();
+        }
+        setDirty(false);
     } else {
         qWarning() << "PlanMasterController::removeAllFromVehicle called while offline";
     }
@@ -376,6 +443,11 @@ QString PlanMasterController::fileExtension(void) const
     return AppSettings::planFileExtension;
 }
 
+QString PlanMasterController::kmlFileExtension(void) const
+{
+    return AppSettings::kmlFileExtension;
+}
+
 QStringList PlanMasterController::loadNameFilters(void) const
 {
     QStringList filters;
@@ -394,6 +466,14 @@ QStringList PlanMasterController::saveNameFilters(void) const
     return filters;
 }
 
+QStringList PlanMasterController::saveKmlFilters(void) const
+{
+    QStringList filters;
+
+    filters << tr("KML Files (*.%1)").arg(kmlFileExtension()) << tr("All Files (*.*)");
+    return filters;
+}
+
 void PlanMasterController::sendPlanToVehicle(Vehicle* vehicle, const QString& filename)
 {
     // Use a transient PlanMasterController to accomplish this
@@ -406,6 +486,14 @@ void PlanMasterController::sendPlanToVehicle(Vehicle* vehicle, const QString& fi
 
 void PlanMasterController::_showPlanFromManagerVehicle(void)
 {
+    if (!_managerVehicle->initialPlanRequestComplete() &&
+            !_missionController.syncInProgress() &&
+            !_geoFenceController.syncInProgress() &&
+            !_rallyPointController.syncInProgress()) {
+        // Something went wrong with initial load. All controllers are idle, so just force it off
+        _managerVehicle->forceInitialPlanRequestComplete();
+    }
+
     // The crazy if structure is to handle the load propogating by itself through the system
     if (!_missionController.showPlanFromManagerVehicle()) {
         if (!_geoFenceController.showPlanFromManagerVehicle()) {

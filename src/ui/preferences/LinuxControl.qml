@@ -250,11 +250,23 @@ QGCView {
                             columns: 2
 
                             QGCLabel {
+                                text: "Enable Wire"
+                            }
+
+                            QGCCheckBox {
+                                id:                 wired
+                                text:               " "
+                                checked:   QGroundControl.hbSettings.value("enableWire", "false") === "true"
+                                onClicked: QGroundControl.hbSettings.setValue("enableWire", checked)
+                            }
+
+                            QGCLabel {
                                 text: "Sweep Angle (degrees)"
                             }
                             QGCTextField {
                                 text: QGroundControl.hbSettings.value("panSweepAngle", 20)
                                 maximumLength:  3
+                                enabled: wired.checked
                                 validator: IntValidator { bottom: 5; top: 160 }
                                 onEditingFinished: {
                                     QGroundControl.hbSettings.setValue("panSweepAngle", text);
@@ -265,19 +277,23 @@ QGCView {
                                 text : "sweep speed (degree/s)"
                             }
                             QGCTextField {
-                                validator: IntValidator { bottom: 1; top: 20 }
+                                validator: IntValidator { bottom: 1; top: 10 }
                                 maximumLength: 2
+                                enabled: wired.checked
                                 text: QGroundControl.hbSettings.value("panSweepSpeed", 5)
                                 onEditingFinished: {
                                     QGroundControl.hbSettings.setValue("panSweepSpeed", text);
                                 }
                             }
+
+
                             QGCLabel {
                                 text : "Min Alt"
                             }
                             QGCTextField {
                                 text: QGroundControl.hbSettings.value("wiredMinAltitude", 5)
                                 maximumLength:  4
+                                enabled: wired.checked
                                 validator: IntValidator { bottom: 5; top: 2000 }
                                 onEditingFinished: {
                                     QGroundControl.hbSettings.setValue("wiredMinAltitude", text);
@@ -290,6 +306,7 @@ QGCView {
                             QGCTextField {
                                 text: QGroundControl.hbSettings.value("wiredMaxAltitude", 60)
                                 maximumLength: 4
+                                enabled: wired.checked
                                 validator: IntValidator { bottom: 5; top: 2000 }
                                 onEditingFinished: {
                                     QGroundControl.hbSettings.setValue("wiredMaxAltitude", text);
@@ -330,8 +347,8 @@ QGCView {
                             QGCCheckBox {
                                 id:                 scoutMode
                                 text:               " "
-                                checked:    QGroundControl.hbSettings.value("scoutMode", false)
-                                onClicked:  QGroundControl.hbSettings.setValue("scoutMode", checked ? true : false)
+                                checked:    QGroundControl.hbSettings.value("scoutMode", "false") === "true"
+                                onClicked:  QGroundControl.hbSettings.setValue("scoutMode", checked)
                             }
 
 
@@ -350,6 +367,23 @@ QGCView {
                         }
                     } // Rectangle - scout conf
                 } // scout column
+
+                Column {
+                    spacing: _margins / 2
+
+                    QGCLabel {
+                        id:         _otherSettings
+                        text:       "Other Settings"
+                        font.family: ScreenTools.demiboldFontFamily
+                    }
+
+                    QGCCheckBox {
+                        id:                 unsafeModes
+                        text:               "Enable unsafe flight modes"
+                        checked:   QGroundControl.hbSettings.value("unsafeModes", "false") === "true"
+                        onClicked: QGroundControl.hbSettings.setValue("unsafeModes", checked)
+                    }
+                }
 
             } // flow
         } // QGCFlickable

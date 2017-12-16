@@ -39,6 +39,20 @@ const char* Joystick::_rgFunctionSettingsKey[Joystick::maxFunction] = {
     "ThrottleAxis"
 };
 
+float _incrementChannel(float channel, float incrementValue)
+{
+    channel += incrementValue;
+    channel = channel > 1 ? 1 : channel;
+    return channel;
+}
+
+float _decrementChannel(float channel, float decrementvalue)
+{
+    channel -= decrementvalue;
+    channel = channel < 0 ? 0 : channel;
+    return channel;
+}
+
 int Joystick::_transmitterMode = 2;
 
 Joystick::Joystick(const QString& name, int axisCount, int buttonCount, int hatCount, MultiVehicleManager* multiVehicleManager)
@@ -55,6 +69,7 @@ Joystick::Joystick(const QString& name, int axisCount, int buttonCount, int hatC
     , _rgButtonValues(NULL)
     , _lastButtonBits(0)
     , _throttleMode(ThrottleModeCenterZero)
+    , _negativeThrust(false)
     , _exponential(0)
     , _accumulator(false)
     , _deadband(false)
@@ -73,6 +88,8 @@ Joystick::Joystick(const QString& name, int axisCount, int buttonCount, int hatC
     for (int i=0; i<_totalButtonCount; i++) {
         _rgButtonValues[i] = false;
     }
+
+    _updateTXModeSettingsKey(_multiVehicleManager->activeVehicle());
 
     _loadSettings();
 
@@ -118,7 +135,7 @@ void Joystick::_setDefaultCalibration(void) {
     _saveSettings();
 }
 
-void Joystick::_activeVehicleChanged(Vehicle *activeVehicle)
+void Joystick::_updateTXModeSettingsKey(Vehicle* activeVehicle)
 {
     if(activeVehicle) {
         if(activeVehicle->fixedWing()) {
@@ -136,7 +153,16 @@ void Joystick::_activeVehicleChanged(Vehicle *activeVehicle)
             qWarning() << "No valid joystick TXmode settings key for selected vehicle";
             return;
         }
+    } else {
+        _txModeSettingsKey = NULL;
+    }
+}
 
+void Joystick::_activeVehicleChanged(Vehicle* activeVehicle)
+{
+    _updateTXModeSettingsKey(activeVehicle);
+
+    if(activeVehicle) {
         QSettings settings;
         settings.beginGroup(_settingsGroup);
         int mode = settings.value(_txModeSettingsKey, activeVehicle->firmwarePlugin()->defaultJoystickTXMode()).toInt();
@@ -151,8 +177,10 @@ void Joystick::_loadSettings(void)
 
     settings.beginGroup(_settingsGroup);
 
-    if(_txModeSettingsKey)
-        _transmitterMode = settings.value(_txModeSettingsKey, 2).toInt();
+    Vehicle* activeVehicle = _multiVehicleManager->activeVehicle();
+
+    if(_txModeSettingsKey && activeVehicle)
+        _transmitterMode = settings.value(_txModeSettingsKey, activeVehicle->firmwarePlugin()->defaultJoystickTXMode()).toInt();
 
     settings.beginGroup(_name);
 
@@ -462,7 +490,9 @@ void Joystick::run(void)
 
             // Adjust throttle to 0:1 range
             if (_throttleMode == ThrottleModeCenterZero && _activeVehicle->supportsThrottleModeCenterZero()) {
-                throttle = std::max(0.0f, throttle);
+                if (!_activeVehicle->supportsNegativeThrust() || !_negativeThrust) {
+                    throttle = std::max(0.0f, throttle);
+                }
             } else {
                 throttle = (throttle + 1.0f) / 2.0f;
             }
@@ -478,6 +508,23 @@ void Joystick::run(void)
             quint16 newButtonBits = 0;      // New set of button which are down
             quint16 buttonPressedBits = 0;  // Buttons pressed for manualControl signal
 
+            static float channel6 = -1.0f;
+            static float channel7 = -1.0f;
+            static float channel8 = -1.0f;
+            static float increment = 0.5*40/1000; // goes to full/zero in one second assuming 40ms loop
+
+            if (actions().contains("channel6Inc") && channel6 < 0) {
+                channel6 = 0.5f;
+            }
+
+            if (actions().contains("channel7Inc") && channel7 < 0) {
+                channel7 = 0.5f;
+            }
+
+            if (actions().contains("channel8Inc") && channel8 < 0) {
+                channel8 = 0.5f;
+            }
+
             for (int buttonIndex=0; buttonIndex<_totalButtonCount; buttonIndex++) {
                 quint16 buttonBit = 1 << buttonIndex;
 
@@ -485,16 +532,33 @@ void Joystick::run(void)
                     // Button up, just record it
                     newButtonBits |= buttonBit;
                 } else {
-                    if (_lastButtonBits & buttonBit) {
-                        // Button was up last time through, but is now down which indicates a button press
-                        qCDebug(JoystickLog) << "button triggered" << buttonIndex;
 
-                        if (buttonIndex >= reservedButtonCount) {
-                            // Button is above firmware reserved set
-                            QString buttonAction =_rgButtonActions[buttonIndex];
+                    if (buttonIndex >= reservedButtonCount) {
+                        // Button is above firmware reserved set
+                        QString buttonAction =_rgButtonActions[buttonIndex];
+
+                        if (_lastButtonBits & buttonBit) {
+                            // Button was up last time through, but is now down which indicates a button press
+                            qCDebug(JoystickLog) << "button triggered" << buttonIndex;
+
                             if (!buttonAction.isEmpty()) {
                                 _buttonAction(buttonAction);
-                            }
+
+                            } // button checks end here
+                        }
+
+                        if (buttonAction == "channel6Inc") {
+                            channel6 = _incrementChannel(channel6, increment);
+                        } else if (buttonAction == "channel6Dec") {
+                            channel6 = _decrementChannel(channel6, increment);
+                        } else if (buttonAction == "channel7Inc") {
+                            channel7 = _incrementChannel(channel7,increment);
+                        } else if (buttonAction == "channel7Dec") {
+                            channel7 = _decrementChannel(channel7, increment);
+                        } else if (buttonAction == "channel8Inc") {
+                            channel8 = _incrementChannel(channel8,increment);
+                        } else if (buttonAction == "channel8Dec") {
+                            channel8 = _decrementChannel(channel8, increment);
                         }
                     }
 
@@ -505,9 +569,9 @@ void Joystick::run(void)
 
             _lastButtonBits = newButtonBits;
 
-            qCDebug(JoystickValuesLog) << "name:roll:pitch:yaw:throttle" << name() << roll << -pitch << yaw << throttle;
+            qCDebug(JoystickValuesLog) << "name:roll:pitch:yaw:throttle:channel6:channel7:channel8" << name() << roll << -pitch << yaw << throttle << channel6 << channel7 << channel8 ;
 
-            emit manualControl(roll, -pitch, yaw, throttle, buttonPressedBits, _activeVehicle->joystickMode());
+            emit manualControl(roll, -pitch, yaw, throttle, buttonPressedBits, _activeVehicle->joystickMode(), channel6, channel7, channel8);
         }
 
         // Sleep, update rate of joystick is approx. 25 Hz (1000 ms / 25 = 40 ms)
@@ -628,6 +692,8 @@ QStringList Joystick::actions(void)
         list << _activeVehicle->flightModes();
     }
 
+    list << "channel6Inc" << "channel6Dec" << "channel7Inc" << "channel7Dec" << "channel8Inc" << "channel8Dec";
+
     return list;
 }
 
@@ -685,6 +751,22 @@ void Joystick::setThrottleMode(int mode)
 
     _saveSettings();
     emit throttleModeChanged(_throttleMode);
+}
+
+bool Joystick::negativeThrust(void)
+{
+    return _negativeThrust;
+}
+
+void Joystick::setNegativeThrust(bool allowNegative)
+{
+    if (_negativeThrust == allowNegative) {
+        return;
+    }
+    _negativeThrust = allowNegative;
+
+    _saveSettings();
+    emit negativeThrustChanged(_negativeThrust);
 }
 
 float Joystick::exponential(void)
