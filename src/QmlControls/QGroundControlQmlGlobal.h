@@ -146,8 +146,8 @@ public:
     QGCCorePlugin*          corePlugin          ()  { return _corePlugin; }
     SettingsManager*        settingsManager     ()  { return _settingsManager; }
     FactGroup*              gpsRtkFactGroup     ()  { return &_gpsRtkFactGroup; }
-    static QGeoCoordinate   flightMapPosition   ();
-    static double           flightMapZoom       ();
+    static QGeoCoordinate   flightMapPosition   ()  { return _coord; }
+    static double           flightMapZoom       ()  { return _zoom; }
 
     qreal zOrderTopMost             () { return 1000; }
     qreal zOrderWidgets             () { return 100; }
@@ -217,6 +217,9 @@ private:
     static const char* _flightMapPositionLatitudeSettingsKey;
     static const char* _flightMapPositionLongitudeSettingsKey;
     static const char* _flightMapZoomSettingsKey;
+
+    static QGeoCoordinate   _coord;
+    static double           _zoom;
 };
 
 #endif

@@ -156,6 +156,7 @@ public:
     Q_PROPERTY(Fact* current            READ current            CONSTANT)
     Q_PROPERTY(Fact* temperature        READ temperature        CONSTANT)
     Q_PROPERTY(Fact* cellCount          READ cellCount          CONSTANT)
+    Q_PROPERTY(Fact* instantPower       READ instantPower       CONSTANT)
 
     Fact* voltage                   (void) { return &_voltageFact; }
     Fact* percentRemaining          (void) { return &_percentRemainingFact; }
@@ -163,6 +164,7 @@ public:
     Fact* current                   (void) { return &_currentFact; }
     Fact* temperature               (void) { return &_temperatureFact; }
     Fact* cellCount                 (void) { return &_cellCountFact; }
+    Fact* instantPower              (void) { return &_instantPowerFact; }
 
 
     static const char* _voltageFactName;
@@ -171,6 +173,7 @@ public:
     static const char* _currentFactName;
     static const char* _temperatureFactName;
     static const char* _cellCountFactName;
+    static const char* _instantPowerFactName;
 
     static const char* _settingsGroup;
 
@@ -180,6 +183,7 @@ public:
     static const int    _currentUnavailable;
     static const double _temperatureUnavailable;
     static const int    _cellCountUnavailable;
+    static const double _instantPowerUnavailable;
 
 private:
     Fact            _voltageFact;
@@ -188,6 +192,7 @@ private:
     Fact            _currentFact;
     Fact            _temperatureFact;
     Fact            _cellCountFact;
+    Fact            _instantPowerFact;
 };
 
 class VehicleTemperatureFactGroup : public FactGroup
@@ -217,6 +222,32 @@ private:
     Fact            _temperature1Fact;
     Fact            _temperature2Fact;
     Fact            _temperature3Fact;
+};
+
+class VehicleClockFactGroup : public FactGroup
+{
+    Q_OBJECT
+
+public:
+    VehicleClockFactGroup(QObject* parent = NULL);
+
+    Q_PROPERTY(Fact* currentTime        READ currentTime        CONSTANT)
+    Q_PROPERTY(Fact* currentDate        READ currentDate        CONSTANT)
+
+    Fact* currentTime (void) { return &_currentTimeFact; }
+    Fact* currentDate (void) { return &_currentDateFact; }
+
+    static const char* _currentTimeFactName;
+    static const char* _currentDateFactName;
+
+    static const char* _settingsGroup;
+
+private slots:
+    void _updateAllValues(void) override;
+
+private:
+    Fact            _currentTimeFact;
+    Fact            _currentDateFact;
 };
 
 class Vehicle : public FactGroup
@@ -317,7 +348,7 @@ public:
     Q_PROPERTY(unsigned int         telemetryTXBuffer       READ telemetryTXBuffer                                      NOTIFY telemetryTXBufferChanged)
     Q_PROPERTY(int                  telemetryLNoise         READ telemetryLNoise                                        NOTIFY telemetryLNoiseChanged)
     Q_PROPERTY(int                  telemetryRNoise         READ telemetryRNoise                                        NOTIFY telemetryRNoiseChanged)
-    Q_PROPERTY(QVariantList         toolBarIndicators       READ toolBarIndicators                                      CONSTANT)
+    Q_PROPERTY(QVariantList         toolBarIndicators       READ toolBarIndicators                                      NOTIFY toolBarIndicatorsChanged)
     Q_PROPERTY(QmlObjectListModel*  adsbVehicles            READ adsbVehicles                                           CONSTANT)
     Q_PROPERTY(bool              initialPlanRequestComplete READ initialPlanRequestComplete                             NOTIFY initialPlanRequestCompleteChanged)
     Q_PROPERTY(QVariantList         staticCameraList        READ staticCameraList                                       CONSTANT)
@@ -354,6 +385,7 @@ public:
     Q_PROPERTY(FactGroup* wind        READ windFactGroup        CONSTANT)
     Q_PROPERTY(FactGroup* vibration   READ vibrationFactGroup   CONSTANT)
     Q_PROPERTY(FactGroup* temperature READ temperatureFactGroup CONSTANT)
+    Q_PROPERTY(FactGroup* clock       READ clockFactGroup       CONSTANT)
 
     Q_PROPERTY(int      firmwareMajorVersion        READ firmwareMajorVersion       NOTIFY firmwareVersionChanged)
     Q_PROPERTY(int      firmwareMinorVersion        READ firmwareMinorVersion       NOTIFY firmwareVersionChanged)
@@ -635,6 +667,7 @@ public:
     FactGroup* windFactGroup        (void) { return &_windFactGroup; }
     FactGroup* vibrationFactGroup   (void) { return &_vibrationFactGroup; }
     FactGroup* temperatureFactGroup (void) { return &_temperatureFactGroup; }
+    FactGroup* clockFactGroup       (void) { return &_clockFactGroup; }
 
     void setConnectionLostEnabled(bool connectionLostEnabled);
 
@@ -758,6 +791,7 @@ signals:
     void capabilitiesKnownChanged(bool capabilitiesKnown);
     void initialPlanRequestCompleteChanged(bool initialPlanRequestComplete);
     void capabilityBitsChanged(uint64_t capabilityBits);
+    void toolBarIndicatorsChanged(void);
 
     void messagesReceivedChanged    ();
     void messagesSentChanged        ();
@@ -1093,6 +1127,7 @@ private:
     VehicleWindFactGroup        _windFactGroup;
     VehicleVibrationFactGroup   _vibrationFactGroup;
     VehicleTemperatureFactGroup _temperatureFactGroup;
+    VehicleClockFactGroup       _clockFactGroup;
 
     static const char* _rollFactName;
     static const char* _pitchFactName;
@@ -1112,6 +1147,7 @@ private:
     static const char* _windFactGroupName;
     static const char* _vibrationFactGroupName;
     static const char* _temperatureFactGroupName;
+    static const char* _clockFactGroupName;
 
     static const int _vehicleUIUpdateRateMSecs = 100;
 
