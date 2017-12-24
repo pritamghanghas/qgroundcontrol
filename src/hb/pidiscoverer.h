@@ -34,7 +34,7 @@ public:
     int                     heartBeatCount;
     quint32                 lastLanSeqNum;
     QHostAddress            address;
-    quint32                 latency;
+    quint32                 latency; // milliseconds
     QString                 addressString,
                             uniqueId;
     QVariantMap             hostAPDConf;

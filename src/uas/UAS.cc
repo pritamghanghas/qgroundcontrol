@@ -1159,7 +1159,35 @@ void UAS::setExternalControlSetpoint(float roll, float pitch, float yaw, float t
                                                  &message,
                                                  this->uasId,
                                                  newPitchCommand, newRollCommand, newThrustCommand, newYawCommand, buttons);
-       } else if(joystickMode == Vehicle::JoystickMode_OVERRIDE) {
+       } else if (joystickMode == Vehicle::JoystickMode_OVERRIDE_FIXED) {
+
+            // Store scaling values for all axes
+            // assuming all our systems will be belheli based and all pwm controls are 1000 to 2000pwm
+            const float lowPoint   = 1020;
+            const float highPoint  = 1960;
+            const float midPoint   = (lowPoint+highPoint)/2;
+            const float axesScaling = 1.0 * (highPoint-lowPoint);
+
+            // Calculate the new commands for roll, pitch, yaw, and thrust
+
+            const float newRollCommand = midPoint + (roll * axesScaling)/2;
+            const float newPitchCommand = midPoint + (pitch * axesScaling)/2;
+            const float newYawCommand = midPoint + (yaw * axesScaling)/2;
+            const float newThrustCommand = lowPoint + (thrust * axesScaling);
+            const float newChannel6Command = channel6 < 0 ? -1 : (lowPoint + (channel6 * axesScaling));
+            const float newChannel7Command = channel7 < 0 ? -1 : (lowPoint + (channel7 * axesScaling));
+            const float newChannel8Command = channel8 < 0 ? -1 : (lowPoint + (channel8 * axesScaling));
+
+            qCDebug(UASLog) << "roll:" << newRollCommand << "pitch:" << newPitchCommand
+                            << "yaw:" << newYawCommand << "thrust:" << newThrustCommand
+                            << "channel6:" << newChannel6Command << "channel7:"
+                            << newChannel7Command << "channel8:" << newChannel8Command;
+
+            // Send the rcoverride message
+            mavlink_msg_rc_channels_override_pack(mavlink->getSystemId(), mavlink->getComponentId(), &message, this->uasId,
+                                                  0, (uint16_t)newRollCommand,(uint16_t)newPitchCommand,
+                                                  (uint16_t)newThrustCommand, (uint16_t)newYawCommand, -1, newChannel6Command, newChannel7Command, newChannel8Command);
+        } else if (joystickMode == Vehicle::JoystickMode_OVERRIDE) {
 
             // Store scaling values for all axes
             // assuming all our systems will be belheli based and all pwm controls are 1000 to 2000pwm

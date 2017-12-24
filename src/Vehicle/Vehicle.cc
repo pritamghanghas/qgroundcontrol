@@ -1642,10 +1642,11 @@ void Vehicle::_loadSettings(void)
     _joystickMode = (JoystickMode_t)settings.value(_joystickModeSettingsKey, JoystickModeRC).toInt(&convertOk);
     if (!convertOk) {
         _joystickMode = JoystickModeRC;
+        if (_firmwarePlugin->supportsRCOverRide()) {
+            _joystickMode = JoystickMode_OVERRIDE;
+        }
     }
-    if (_firmwarePlugin->supportsRCOverRide()) {
-        _joystickMode = JoystickMode_OVERRIDE;
-    }
+
 
     // Joystick enabled is a global setting so first make sure there are any joysticks connected
     if (_toolbox->joystickManager()->joysticks().count()) {

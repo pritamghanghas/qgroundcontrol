@@ -331,7 +331,7 @@ void VideoReceiver::start()
                 break;
             }
         } else if (isUdp) {
-            if ((udpjitter = gst_element_factory_make("rtpjitterbuffer", "rpp-jitter-buffer")) == NULL) {
+            if ((udpjitter = gst_element_factory_make("rtpjitterbuffer", "rtp-jitter-buffer")) == NULL) {
                 qCritical() << "VideoReceiver::start() failed. Error with gst_element_factory_make('rtpjitterbuffer')";
                 break;
             }
@@ -344,6 +344,8 @@ void VideoReceiver::start()
 
             // set jitter buffers latency to 2 times the initial estimates
             g_object_set(G_OBJECT(udpjitter), "latency", _expectedLatency*2, NULL);
+            g_object_set(G_OBJECT(udpjitter), "do-lost", true, NULL);
+            g_object_set(G_OBJECT(udpjitter), "do-retransmission", true, NULL);
         }
 
         if ((parser = gst_element_factory_make("h264parse", "h264-parser")) == NULL) {

@@ -83,29 +83,36 @@ void PiDiscoverer::updateNode(const PiNode &node)
 {
     int index = m_discoveredNodes.indexOf(node);
     auto expectedSeqNum = m_discoveredNodes[index].lastLanSeqNum+1;
+    static auto unordered = 0;
     if (expectedSeqNum != node.lastLanSeqNum) {
-//        qDebug() << "lost a packet or unordered packets coming" << "expected: " << expectedSeqNum << " last seq no: " << node.lastLanSeqNum;
+        qDebug() << "lost a packet or unordered packets coming" << "expected: " << expectedSeqNum << " last seq no: " << node.lastLanSeqNum;
         if (expectedSeqNum > node.lastLanSeqNum) {
-//            qDebug() << "got late heartbeat " << "expected: " << expectedSeqNum << " last seq no: " << node.lastLanSeqNum;
+            qDebug() << "got late heartbeat " << "expected: " << expectedSeqNum << " last seq no: " << node.lastLanSeqNum;
         }
         m_discoveredNodes[index].lastLanSeqNum = node.lastLanSeqNum;
+//        m_discoveredNodes[index].beaconTimer.restart();
+        unordered++;
         return;
     }
 
-    auto newLatency = m_discoveredNodes[index].beaconTimer.restart() - node.beaconInterval;
+    qDebug() << "unordered lost till now" << unordered;
+    auto newLatency = m_discoveredNodes[index].beaconTimer.restart() - node.beaconInterval*(unordered+1);
+    qDebug() << "calculated latency" << newLatency;
+    unordered = 0;
 
     auto oldLatency =  m_discoveredNodes[index].latency;
     newLatency = newLatency < 0 ? 0 : newLatency;
     newLatency = newLatency ? newLatency : oldLatency;
 
-//    qDebug() << "new latency" << newLatency << " beacon interval " << node.beaconInterval;
+    qDebug() << "adjusted new latency" << newLatency << " beacon interval " << node.beaconInterval;
 
 
-    m_discoveredNodes[index].latency = oldLatency ? (0.8*oldLatency + 0.2*newLatency) : newLatency;
+//    m_discoveredNodes[index].latency = oldLatency ? (0.7*oldLatency + 0.3*newLatency) : newLatency;
+    m_discoveredNodes[index].latency = 1000;
     m_discoveredNodes[index].lastLanSeqNum = node.lastLanSeqNum;
     m_discoveredNodes[index].heartBeatCount++;
 
-    if (m_discoveredNodes[index].heartBeatCount == 10) { // we will use higher count and latency determination here later.
+    if (m_discoveredNodes[index].heartBeatCount == 30) { // we will use higher count and latency determination here later.
 //    if (m_discoveredNodes[index].heartBeatCount == 1) {
         Q_EMIT nodeDiscovered(m_discoveredNodes[index]);
         onNodeDiscovered(m_discoveredNodes[index]);

@@ -493,6 +493,7 @@ public:
         JoystickModeForce,
         JoystickModeVelocity,
         JoystickMode_OVERRIDE,
+        JoystickMode_OVERRIDE_FIXED,
         JoystickModeMax
     } JoystickMode_t;
 
