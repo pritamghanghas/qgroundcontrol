@@ -85,9 +85,9 @@ void PiDiscoverer::updateNode(const PiNode &node)
     auto expectedSeqNum = m_discoveredNodes[index].lastLanSeqNum+1;
     static auto unordered = 0;
     if (expectedSeqNum != node.lastLanSeqNum) {
-        qDebug() << "lost a packet or unordered packets coming" << "expected: " << expectedSeqNum << " last seq no: " << node.lastLanSeqNum;
+//        qDebug() << "lost a packet or unordered packets coming" << "expected: " << expectedSeqNum << " last seq no: " << node.lastLanSeqNum;
         if (expectedSeqNum > node.lastLanSeqNum) {
-            qDebug() << "got late heartbeat " << "expected: " << expectedSeqNum << " last seq no: " << node.lastLanSeqNum;
+//            qDebug() << "got late heartbeat " << "expected: " << expectedSeqNum << " last seq no: " << node.lastLanSeqNum;
         }
         m_discoveredNodes[index].lastLanSeqNum = node.lastLanSeqNum;
 //        m_discoveredNodes[index].beaconTimer.restart();
@@ -95,16 +95,16 @@ void PiDiscoverer::updateNode(const PiNode &node)
         return;
     }
 
-    qDebug() << "unordered lost till now" << unordered;
+//    qDebug() << "unordered lost till now" << unordered;
     auto newLatency = m_discoveredNodes[index].beaconTimer.restart() - node.beaconInterval*(unordered+1);
-    qDebug() << "calculated latency" << newLatency;
+//    qDebug() << "calculated latency" << newLatency;
     unordered = 0;
 
     auto oldLatency =  m_discoveredNodes[index].latency;
     newLatency = newLatency < 0 ? 0 : newLatency;
     newLatency = newLatency ? newLatency : oldLatency;
 
-    qDebug() << "adjusted new latency" << newLatency << " beacon interval " << node.beaconInterval;
+//    qDebug() << "adjusted new latency" << newLatency << " beacon interval " << node.beaconInterval;
 
 
 //    m_discoveredNodes[index].latency = oldLatency ? (0.7*oldLatency + 0.3*newLatency) : newLatency;
