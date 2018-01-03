@@ -38,6 +38,7 @@
 #include "Vehicle.h"
 #include "Joystick.h"
 #include "QGCApplication.h"
+#include "ParameterManager.h"
 
 QGC_LOGGING_CATEGORY(UASLog, "UASLog")
 
@@ -1189,6 +1190,59 @@ void UAS::setExternalControlSetpoint(float roll, float pitch, float yaw, float t
                                                   (uint16_t)newThrustCommand, (uint16_t)newYawCommand, -1, newChannel6Command, newChannel7Command, newChannel8Command);
         } else if (joystickMode == Vehicle::JoystickMode_OVERRIDE) {
 
+            // unspecified axis still follow ur fixed endpoints
+            const float lowPoint   = 1020;
+            const float highPoint  = 1960;
+            const float midPoint   = (lowPoint+highPoint)/2;
+            const float axesScaling = 1.0 * (highPoint-lowPoint);
+
+            ParameterManager *paramMgr = _vehicle->parameterManager();
+
+            // channel1
+            const float lowPoint1   = paramMgr->getParameter(-1, "RC1_MIN")->rawValue().toFloat();
+            const float highPoint1  = paramMgr->getParameter(-1, "RC1_MAX")->rawValue().toFloat();
+            const float midPoint1   = paramMgr->getParameter(-1, "RC1_TRIM")->rawValue().toFloat();
+            const float axesScaling1 = 1.0 * (highPoint1-lowPoint1);
+
+            //channel2
+            const float lowPoint2   = paramMgr->getParameter(-1, "RC2_MIN")->rawValue().toFloat();
+            const float highPoint2  = paramMgr->getParameter(-1, "RC2_MAX")->rawValue().toFloat();
+            const float midPoint2   = paramMgr->getParameter(-1, "RC2_TRIM")->rawValue().toFloat();
+            const float axesScaling2 = 1.0 * (highPoint2-lowPoint2);
+
+            //channel3
+            const float lowPoint3   = paramMgr->getParameter(-1, "RC3_MIN")->rawValue().toFloat();
+            const float highPoint3  = paramMgr->getParameter(-1, "RC3_MAX")->rawValue().toFloat();
+            const float midPoint3   = paramMgr->getParameter(-1, "RC3_TRIM")->rawValue().toFloat();
+            const float axesScaling3 = 1.0 * (highPoint3-lowPoint3);
+
+            //channel4
+            const float lowPoint4   = paramMgr->getParameter(-1, "RC4_MIN")->rawValue().toFloat();
+            const float highPoint4  = paramMgr->getParameter(-1, "RC4_MAX")->rawValue().toFloat();
+            const float midPoint4   = paramMgr->getParameter(-1, "RC4_TRIM")->rawValue().toFloat();
+            const float axesScaling4 = 1.0 * (highPoint4-lowPoint4);
+
+            // Calculate the new commands for roll, pitch, yaw, and thrust
+
+            const float newRollCommand = midPoint1 + (roll * axesScaling1)/2;
+            const float newPitchCommand = midPoint2 + (pitch * axesScaling2)/2;
+            const float newYawCommand = midPoint4 + (yaw * axesScaling4)/2;
+            const float newThrustCommand = lowPoint3 + (thrust * axesScaling3);
+            const float newChannel6Command = channel6 < 0 ? -1 : (lowPoint + (channel6 * axesScaling));
+            const float newChannel7Command = channel7 < 0 ? -1 : (lowPoint + (channel7 * axesScaling));
+            const float newChannel8Command = channel8 < 0 ? -1 : (lowPoint + (channel8 * axesScaling));
+
+            qCDebug(UASLog) << "roll:" << newRollCommand << "pitch:" << newPitchCommand
+                            << "yaw:" << newYawCommand << "thrust:" << newThrustCommand
+                            << "channel6:" << newChannel6Command << "channel7:"
+                            << newChannel7Command << "channel8:" << newChannel8Command;
+
+            // Send the rcoverride message
+            mavlink_msg_rc_channels_override_pack(mavlink->getSystemId(), mavlink->getComponentId(), &message, this->uasId,
+                                                  0, (uint16_t)newRollCommand,(uint16_t)newPitchCommand,
+                                                  (uint16_t)newThrustCommand, (uint16_t)newYawCommand, -1, newChannel6Command, newChannel7Command, newChannel8Command);
+        } else if (joystickMode == Vehicle::JoystickMode_OVERRIDE_FIXED) {
+
             // Store scaling values for all axes
             // assuming all our systems will be belheli based and all pwm controls are 1000 to 2000pwm
             const float lowPoint   = 1020;
@@ -1216,7 +1270,6 @@ void UAS::setExternalControlSetpoint(float roll, float pitch, float yaw, float t
                                                   0, (uint16_t)newRollCommand,(uint16_t)newPitchCommand,
                                                   (uint16_t)newThrustCommand, (uint16_t)newYawCommand, -1, newChannel6Command, newChannel7Command, newChannel8Command);
         }
-
         _vehicle->sendMessageOnLink(_vehicle->priorityLink(), message);
     }
 }
