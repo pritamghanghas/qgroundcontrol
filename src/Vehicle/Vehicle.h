@@ -355,6 +355,7 @@ public:
     Q_PROPERTY(QGCCameraManager*    dynamicCameras          READ dynamicCameras                                         NOTIFY dynamicCamerasChanged)
     Q_PROPERTY(QString              hobbsMeter              READ hobbsMeter                                             NOTIFY hobbsMeterChanged)
     Q_PROPERTY(bool                 vtolInFwdFlight         READ vtolInFwdFlight        WRITE setVtolInFwdFlight        NOTIFY vtolInFwdFlightChanged)
+    Q_PROPERTY(bool                 highLatencyLink         READ highLatencyLink                                        NOTIFY highLatencyLinkChanged)
 
     // Vehicle state used for guided control
     Q_PROPERTY(bool flying                  READ flying NOTIFY flyingChanged)                               ///< Vehicle is flying
@@ -363,7 +364,7 @@ public:
     Q_PROPERTY(bool guidedModeSupported     READ guidedModeSupported CONSTANT)                              ///< Guided mode commands are supported by this vehicle
     Q_PROPERTY(bool pauseVehicleSupported   READ pauseVehicleSupported CONSTANT)                            ///< Pause vehicle command is supported
     Q_PROPERTY(bool orbitModeSupported      READ orbitModeSupported CONSTANT)                               ///< Orbit mode is supported by this vehicle
-    Q_PROPERTY(bool takeoffVehicleSupported READ takeoffVehicleSupported CONSTANT)                          ///< Guided takeoff supported    
+    Q_PROPERTY(bool takeoffVehicleSupported READ takeoffVehicleSupported CONSTANT)                          ///< Guided takeoff supported
 
     Q_PROPERTY(ParameterManager* parameterManager READ parameterManager CONSTANT)
 
@@ -430,6 +431,9 @@ public:
 
     /// Command vehicle to takeoff from current location
     Q_INVOKABLE void guidedModeTakeoff(double altitudeRelative);
+
+    /// @return The minimum takeoff altitude (relative) for guided takeoff.
+    Q_INVOKABLE double minimumTakeoffAltitude(void);
 
     /// Command vehicle to move to specified location (altitude is included and relative)
     Q_INVOKABLE void guidedModeGotoLocation(const QGeoCoordinate& gotoCoord);
@@ -649,6 +653,7 @@ public:
     int             telemetryLNoise         () { return _telemetryLNoise; }
     int             telemetryRNoise         () { return _telemetryRNoise; }
     bool            autoDisarm              ();
+    bool            highLatencyLink         () const { return _highLatencyLink; }
     /// Get the maximum MAVLink protocol version supported
     /// @return the maximum version
     unsigned        maxProtoVersion         () const { return _maxProtoVersion; }
@@ -797,6 +802,7 @@ signals:
     void initialPlanRequestCompleteChanged(bool initialPlanRequestComplete);
     void capabilityBitsChanged(uint64_t capabilityBits);
     void toolBarIndicatorsChanged(void);
+    void highLatencyLinkChanged(bool highLatencyLink);
 
     void messagesReceivedChanged    ();
     void messagesSentChanged        ();
@@ -874,6 +880,7 @@ private slots:
     void _offlineCruiseSpeedSettingChanged(QVariant value);
     void _offlineHoverSpeedSettingChanged(QVariant value);
     void flyToLocation(const QGeoCoordinate& coord, double altitudeRel);
+    void _updateHighLatencyLink(void);
 
     void _handleTextMessage                 (int newCount);
     void _handletextMessageReceived         (UASMessage* message);
@@ -1016,6 +1023,7 @@ private:
     unsigned        _maxProtoVersion;
     bool            _vehicleCapabilitiesKnown;
     uint64_t        _capabilityBits;
+    bool            _highLatencyLink;
 
     QGCCameraManager* _cameras;
 

@@ -161,9 +161,11 @@ void Fact::_containerSetRawValue(const QVariant& value)
     if(_rawValue != value) {
         _rawValue = value;
         _sendValueChangedSignal(cookedValue());
-        emit vehicleUpdated(_rawValue);
         emit rawValueChanged(_rawValue);
     }
+
+    // This always need to be signalled in order to support forceSetRawValue usage and waiting for vehicleUpdated signal
+    emit vehicleUpdated(_rawValue);
 }
 
 QString Fact::name(void) const
@@ -497,6 +499,16 @@ int Fact::decimalPlaces(void) const
     }
 }
 
+QString Fact::category(void) const
+{
+    if (_metaData) {
+        return _metaData->category();
+    } else {
+        qWarning() << kMissingMetadata << name();
+        return QString();
+    }
+}
+
 QString Fact::group(void) const
 {
     if (_metaData) {
@@ -645,6 +657,16 @@ bool Fact::readOnly(void) const
 {
     if (_metaData) {
         return _metaData->readOnly();
+    } else {
+        qWarning() << kMissingMetadata << name();
+        return false;
+    }
+}
+
+bool Fact::volatileValue(void) const
+{
+    if (_metaData) {
+        return _metaData->volatileValue();
     } else {
         qWarning() << kMissingMetadata << name();
         return false;

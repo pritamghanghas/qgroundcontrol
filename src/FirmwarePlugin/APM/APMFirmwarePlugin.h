@@ -80,6 +80,7 @@ public:
     void                setGuidedMode                   (Vehicle* vehicle, bool guidedMode) override;
     void                guidedModeTakeoff               (Vehicle* vehicle, double altitudeRel) override;
     void                guidedModeGotoLocation          (Vehicle* vehicle, const QGeoCoordinate& gotoCoord) override;
+    double              minimumTakeoffAltitude          (Vehicle* vehicle) override;
     void                startMission                    (Vehicle* vehicle) override;
     QStringList         standardFlightModes             (Vehicle* vehicle) override;
     QStringList         unsafeFlightModes               (Vehicle* vehicle) override;

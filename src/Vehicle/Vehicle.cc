@@ -131,6 +131,7 @@ Vehicle::Vehicle(LinkInterface*             link,
     , _maxProtoVersion(0)
     , _vehicleCapabilitiesKnown(false)
     , _capabilityBits(0)
+    , _highLatencyLink(false)
     , _cameras(NULL)
     , _connectionLost(false)
     , _connectionLostEnabled(true)
@@ -326,6 +327,7 @@ Vehicle::Vehicle(MAV_AUTOPILOT              firmwareType,
     , _defaultHoverSpeed(_settingsManager->appSettings()->offlineEditingHoverSpeed()->rawValue().toDouble())
     , _vehicleCapabilitiesKnown(true)
     , _capabilityBits(_firmwareType == MAV_AUTOPILOT_ARDUPILOTMEGA ? 0 : MAV_PROTOCOL_CAPABILITY_MISSION_FENCE | MAV_PROTOCOL_CAPABILITY_MISSION_RALLY)
+    , _highLatencyLink(false)
     , _cameras(NULL)
     , _connectionLost(false)
     , _connectionLostEnabled(true)
@@ -1016,7 +1018,11 @@ void Vehicle::_handleExtendedSysState(mavlink_message_t& message)
     }
 
     if (vtol()) {
-        setVtolInFwdFlight(extendedState.vtol_state == MAV_VTOL_STATE_FW);
+        bool vtolInFwdFlight = extendedState.vtol_state == MAV_VTOL_STATE_FW;
+        if (vtolInFwdFlight != _vtolInFwdFlight) {
+            _vtolInFwdFlight = vtolInFwdFlight;
+            emit vtolInFwdFlightChanged(vtolInFwdFlight);
+        }
     }
 }
 
@@ -1369,6 +1375,7 @@ void Vehicle::_addLink(LinkInterface* link)
         _updatePriorityLink();
         connect(_toolbox->linkManager(), &LinkManager::linkInactive, this, &Vehicle::_linkInactiveOrDeleted);
         connect(_toolbox->linkManager(), &LinkManager::linkDeleted, this, &Vehicle::_linkInactiveOrDeleted);
+        connect(link, &LinkInterface::highLatencyChanged, this, &Vehicle::_updateHighLatencyLink);
     }
 }
 
@@ -2322,6 +2329,11 @@ void Vehicle::setConnectionLostEnabled(bool connectionLostEnabled)
 
 void Vehicle::_connectionLostTimeout(void)
 {
+    if (highLatencyLink()) {
+        // No connection timeout on high latency links
+        return;
+    }
+
     if (_connectionLostEnabled && !_connectionLost) {
         _connectionLost = true;
         _heardFrom = false;
@@ -2548,6 +2560,11 @@ void Vehicle::guidedModeTakeoff(double altitudeRelative)
     }
     setGuidedMode(true);
     _firmwarePlugin->guidedModeTakeoff(this, altitudeRelative);
+}
+
+double Vehicle::minimumTakeoffAltitude(void)
+{
+    return _firmwarePlugin->minimumTakeoffAltitude(this);
 }
 
 void Vehicle::startMission(void)
@@ -2972,8 +2989,11 @@ void Vehicle::triggerCamera(void)
 void Vehicle::setVtolInFwdFlight(bool vtolInFwdFlight)
 {
     if (_vtolInFwdFlight != vtolInFwdFlight) {
-        _vtolInFwdFlight = vtolInFwdFlight;
-        emit vtolInFwdFlightChanged(vtolInFwdFlight);
+        sendMavCommand(_defaultComponentId,
+                       MAV_CMD_DO_VTOL_TRANSITION,
+                       true,                                                    // show errors
+                       vtolInFwdFlight ? MAV_VTOL_STATE_FW : MAV_VTOL_STATE_MC, // transition state
+                       0, 0, 0, 0, 0, 0);                                       // param 2-7 unused
     }
 }
 
@@ -3231,6 +3251,14 @@ void Vehicle::_vehicleParamLoaded(bool ready)
     //   way to update this?
     if(ready) {
         emit hobbsMeterChanged();
+    }
+}
+
+void Vehicle::_updateHighLatencyLink(void)
+{
+    if (_priorityLink->highLatency() != _highLatencyLink) {
+        _highLatencyLink = _priorityLink->highLatency();
+        emit highLatencyLinkChanged(_highLatencyLink);
     }
 }
 

@@ -48,6 +48,7 @@ public:
     Q_PROPERTY(QStringList  enumStrings             READ enumStrings                                        NOTIFY enumsChanged)
     Q_PROPERTY(QString      enumStringValue         READ enumStringValue        WRITE setEnumStringValue    NOTIFY valueChanged)
     Q_PROPERTY(QVariantList enumValues              READ enumValues                                         NOTIFY enumsChanged)
+    Q_PROPERTY(QString      category                READ category                                              CONSTANT)
     Q_PROPERTY(QString      group                   READ group                                              CONSTANT)
     Q_PROPERTY(QString      longDescription         READ longDescription                                    CONSTANT)
     Q_PROPERTY(QVariant     max                     READ cookedMax                                          CONSTANT)
@@ -70,6 +71,7 @@ public:
     Q_PROPERTY(bool         typeIsBool              READ typeIsBool                                         CONSTANT)
     Q_PROPERTY(bool         hasControl              READ hasControl                                         CONSTANT)
     Q_PROPERTY(bool         readOnly                READ readOnly                                           CONSTANT)
+    Q_PROPERTY(bool         volatileValue           READ volatileValue                                      CONSTANT)
 
     /// Convert and validate value
     ///     @param convertOnly true: validate type conversion only, false: validate against meta data as well
@@ -91,6 +93,7 @@ public:
     QStringList     enumStrings             (void) const;
     QString         enumStringValue         (void);         // This is not const, since an unknown value can modify the enum lists
     QVariantList    enumValues              (void) const;
+    QString         category                (void) const;
     QString         group                   (void) const;
     QString         longDescription         (void) const;
     QVariant        rawMax                  (void) const;
@@ -116,6 +119,7 @@ public:
     bool            typeIsBool              (void) const { return type() == FactMetaData::valueTypeBool; }
     bool            hasControl              (void) const;
     bool            readOnly                (void) const;
+    bool            volatileValue            (void) const;
 
     /// Returns the values as a string with full 18 digit precision if float/double.
     QString rawValueStringFullPrecision(void) const;
