@@ -227,6 +227,7 @@ QGCView {
                 //start wired specific settings in a column
                 Column {
                     spacing: _margins / 2
+                    visible: false
 
                     QGCLabel {
                         id:         _wiredConfColumn
@@ -319,6 +320,7 @@ QGCView {
                 //start scout column
                 Column {
                     spacing: _margins / 2
+                    visible: false
 
                     QGCLabel {
                         id:         _scoutConfColumn
@@ -370,6 +372,7 @@ QGCView {
 
                 Column {
                     spacing: _margins / 2
+                    visible: false
 
                     QGCLabel {
                         id:         _otherSettings

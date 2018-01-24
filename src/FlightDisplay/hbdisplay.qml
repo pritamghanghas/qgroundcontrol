@@ -357,6 +357,7 @@ Item {
             buttonImage: "/qmlimages/look.svg"
             buttonAnchors.margins:  width*0.15
             z:            QGroundControl.zOrderWidgets
+            visible: false
         }
 
           // yaw sweep code, disabling for the time being
