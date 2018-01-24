@@ -372,7 +372,6 @@ QGCView {
 
                 Column {
                     spacing: _margins / 2
-                    visible: false
 
                     QGCLabel {
                         id:         _otherSettings
@@ -383,7 +382,7 @@ QGCView {
                     QGCCheckBox {
                         id:                 unsafeModes
                         text:               "Enable unsafe flight modes"
-                        checked:   QGroundControl.hbSettings.value("unsafeModes", "false") === "true"
+                        checked:   QGroundControl.hbSettings.value("unsafeModes", "true") === "true"
                         onClicked: QGroundControl.hbSettings.setValue("unsafeModes", checked)
                     }
                 }

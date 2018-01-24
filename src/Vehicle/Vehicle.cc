@@ -38,6 +38,7 @@
 #include "QGCCameraManager.h"
 #include "VideoReceiver.h"
 #include "VideoManager.h"
+#include "hbsettings.h"
 
 #include "sensornotification.h"
 
@@ -699,7 +700,7 @@ void Vehicle::_mavlinkMessageReceived(LinkInterface* link, mavlink_message_t mes
         break;
     case MAVLINK_MSG_ID_SCALED_PRESSURE3:
         _handleScaledPressure3(message);
-        break;        
+        break;
     case MAVLINK_MSG_ID_CAMERA_IMAGE_CAPTURED:
         _handleCameraImageCaptured(message);
         break;
@@ -2005,7 +2006,9 @@ QStringList Vehicle::flightModes(void)
 {
     QStringList modes;
     modes << standardFlightModes();
-    modes << unsafeFlightModes();
+    if (_toolbox->hbSettings()->value("unsafeModes", true) == true ) {
+        modes << unsafeFlightModes();
+    }
     return modes;
 }
 
