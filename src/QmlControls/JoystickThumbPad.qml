@@ -8,18 +8,18 @@ Item {
     id:             _joyRoot
 
     property alias  lightColors:    mapPal.lightColors  ///< true: use light colors from QGCMapPalette for drawing
-    property real   xAxis:          0                   ///< Value range [-1,1], negative values left stick, positive values right stick
-    property real   yAxis:          0                   ///< Value range [-1,1], negative values up stick, positive values down stick
-    property bool   yAxisThrottle:  false               ///< true: yAxis used for throttle, range [1,0], positive value are stick up
-    property real   xPositionDelta: 0                   ///< Amount to move the control on x axis
-    property real   yPositionDelta: 0                   ///< Amount to move the control on y axis
+    property real   xAxis:             0                   ///< Value range [-1,1], negative values left stick, positive values right stick
+    property real   yAxis:             0                   ///< Value range [-1,1], negative values up stick, positive values down stick
+    property bool   yAxisThrottle:     false               ///< true: yAxis used for throttle, range [1,0], positive value are stick up
+    property bool   yAxisSpringLoaded: true                ///< true: yAxis is centered otherwise at bottom
+    property real   xPositionDelta:    0                   ///< Amount to move the control on x axis
+    property real   yPositionDelta:    0                   ///< Amount to move the control on y axis
 
     property real   _centerXY:              width / 2
     property bool   _processTouchPoints:    false
     property bool   _stickCenteredOnce:     false
     property real   stickPositionX:         _centerXY
-    property real   stickPositionY:         yAxisThrottle ? height : _centerXY
-
+    property real   stickPositionY:         yAxisSpringLoaded ? _centerXY : height
     QGCMapPalette { id: mapPal }
 
     onStickPositionXChanged: {
@@ -49,7 +49,7 @@ Item {
 
         // Center sticks
         stickPositionX = _centerXY
-        if (!yAxisThrottle) {
+        if (yAxisSpringLoaded) {
             stickPositionY = _centerXY
         }
     }
@@ -58,7 +58,7 @@ Item {
     {
         // Position the control around the initial thumb position
         xPositionDelta = touchPoints[0].x - _centerXY
-        if (yAxisThrottle) {
+        if (yAxisSpringLoaded) {
             yPositionDelta = touchPoints[0].y - stickPositionY
         } else {
             yPositionDelta = touchPoints[0].y - _centerXY
