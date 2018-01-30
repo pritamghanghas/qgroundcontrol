@@ -16,7 +16,7 @@
 class AppSettings : public SettingsGroup
 {
     Q_OBJECT
-    
+
 public:
     AppSettings(QObject* parent = NULL);
 
@@ -32,6 +32,7 @@ public:
     Q_PROPERTY(Fact* telemetrySaveNotArmed              READ telemetrySaveNotArmed              CONSTANT)
     Q_PROPERTY(Fact* audioMuted                         READ audioMuted                         CONSTANT)
     Q_PROPERTY(Fact* virtualJoystick                    READ virtualJoystick                    CONSTANT)
+    Q_PROPERTY(Fact* virtualJoystickSpringLoaded        READ virtualJoystickSpringLoaded        CONSTANT)
     Q_PROPERTY(Fact* appFontPointSize                   READ appFontPointSize                   CONSTANT)
     Q_PROPERTY(Fact* indoorPalette                      READ indoorPalette                      CONSTANT)
     Q_PROPERTY(Fact* showLargeCompass                   READ showLargeCompass                   CONSTANT)
@@ -68,6 +69,7 @@ public:
     Fact* telemetrySaveNotArmed             (void);
     Fact* audioMuted                        (void);
     Fact* virtualJoystick                   (void);
+    Fact* virtualJoystickSpringLoaded       (void);
     Fact* appFontPointSize                  (void);
     Fact* indoorPalette                     (void);
     Fact* showLargeCompass                  (void);
@@ -101,6 +103,7 @@ public:
     static const char* telemetrySaveNotArmedName;
     static const char* audioMutedName;
     static const char* virtualJoystickName;
+    static const char* virtualJoystickSpringLoadedName;
     static const char* appFontPointSizeName;
     static const char* indoorPaletteName;
     static const char* showLargeCompassName;
@@ -149,6 +152,7 @@ private:
     SettingsFact* _telemetrySaveNotArmedFact;
     SettingsFact* _audioMutedFact;
     SettingsFact* _virtualJoystickFact;
+    SettingsFact* _virtualJoystickSpringLoadedFact;
     SettingsFact* _appFontPointSizeFact;
     SettingsFact* _indoorPaletteFact;
     SettingsFact* _showLargeCompassFact;

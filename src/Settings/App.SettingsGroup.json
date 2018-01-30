@@ -104,6 +104,13 @@
     "defaultValue":     false
 },
 {
+    "name":             "VirtualTabletJoystickSpringLoaded",
+    "shortDescription": "virtual joystick's throttle is spring loaded.",
+    "longDescription":  "If this option is enabled the virtual joystick will have spring loaded throttle that returns to center after releasing.",
+    "type":             "bool",
+    "defaultValue":     false
+},
+{
     "name":             "GstreamerDebugLevel",
     "shortDescription": "Video streaming debug",
     "longDescription":  "Sets the environment variable GST_DEBUG for all pipeline elements on boot.",

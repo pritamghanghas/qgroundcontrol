@@ -39,6 +39,7 @@ Item {
         width:                  parent.height
         height:                 parent.height
         yAxisThrottle:          true
+        yAxisSpringLoaded:      QGroundControl.settingsManager.appSettings.virtualJoystickSpringLoaded.value
         lightColors:            useLightColors
     }
 

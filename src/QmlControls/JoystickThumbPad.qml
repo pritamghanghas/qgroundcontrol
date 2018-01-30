@@ -58,7 +58,7 @@ Item {
     {
         // Position the control around the initial thumb position
         xPositionDelta = touchPoints[0].x - _centerXY
-        if (yAxisSpringLoaded) {
+        if (yAxisThrottle) {
             yPositionDelta = touchPoints[0].y - stickPositionY
         } else {
             yPositionDelta = touchPoints[0].y - _centerXY

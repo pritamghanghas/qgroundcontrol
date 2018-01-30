@@ -28,6 +28,7 @@ const char* AppSettings::telemetrySaveName =                            "PromptF
 const char* AppSettings::telemetrySaveNotArmedName =                    "PromptFLightDataSaveNotArmed";
 const char* AppSettings::audioMutedName =                               "AudioMuted";
 const char* AppSettings::virtualJoystickName =                          "VirtualTabletJoystick";
+const char* AppSettings::virtualJoystickSpringLoadedName =              "VirtualTabletJoystickSpringLoaded";
 const char* AppSettings::appFontPointSizeName =                         "BaseDeviceFontPointSize";
 const char* AppSettings::indoorPaletteName =                            "StyleIsDark";
 const char* AppSettings::showLargeCompassName =                         "ShowLargeCompass";
@@ -68,6 +69,7 @@ AppSettings::AppSettings(QObject* parent)
     , _telemetrySaveNotArmedFact(NULL)
     , _audioMutedFact(NULL)
     , _virtualJoystickFact(NULL)
+    , _virtualJoystickSpringLoadedFact(NULL)
     , _appFontPointSizeFact(NULL)
     , _indoorPaletteFact(NULL)
     , _showLargeCompassFact(NULL)
@@ -232,6 +234,15 @@ Fact* AppSettings::virtualJoystick(void)
     }
 
     return _virtualJoystickFact;
+}
+
+Fact* AppSettings::virtualJoystickSpringLoaded(void)
+{
+    if (!_virtualJoystickSpringLoadedFact) {
+        _virtualJoystickSpringLoadedFact = _createSettingsFact(virtualJoystickSpringLoadedName);
+    }
+
+    return _virtualJoystickSpringLoadedFact;
 }
 
 Fact* AppSettings::gstDebug(void)
