@@ -70,6 +70,8 @@ void PiDiscoverer::datagramReceived()
     if (!m_discoveredNodes.contains(node)) {
         qDebug() << "new unique node adding";
         m_discoveredNodes << node;
+        Q_EMIT nodeDiscovered(m_discoveredNodes[index]);
+        onNodeDiscovered(m_discoveredNodes[index]);
     } else {
         updateNode(node);
     }
@@ -114,8 +116,10 @@ void PiDiscoverer::updateNode(const PiNode &node)
 
     if (m_discoveredNodes[index].heartBeatCount == 30) { // we will use higher count and latency determination here later.
 //    if (m_discoveredNodes[index].heartBeatCount == 1) {
-        Q_EMIT nodeDiscovered(m_discoveredNodes[index]);
-        onNodeDiscovered(m_discoveredNodes[index]);
+//        Q_EMIT nodeDiscovered(m_discoveredNodes[index]);
+//        onNodeDiscovered(m_discoveredNodes[index]);
+        // not waiting for latency number before claiming we have one.
+        // we are not uing latency anyway
     }
 
 //    debugNode(m_discoveredNodes[index]);

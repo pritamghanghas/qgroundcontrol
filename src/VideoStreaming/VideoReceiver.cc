@@ -345,7 +345,8 @@ void VideoReceiver::start()
             }
 
             // set jitter buffers latency to 2 times the initial estimates
-            g_object_set(G_OBJECT(udpjitter), "latency", _expectedLatency*2, NULL);
+//            g_object_set(G_OBJECT(udpjitter), "latency", _expectedLatency*2, NULL);
+            g_object_set(G_OBJECT(udpjitter), "latency", 20, NULL); //hardcoded for the time being
             g_object_set(G_OBJECT(udpjitter), "do-lost", true, NULL);
             g_object_set(G_OBJECT(udpjitter), "do-retransmission", true, NULL);
         }
