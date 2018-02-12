@@ -94,19 +94,21 @@ Item {
     readonly property int actionVtolTransitionToMRFlight:   21
 
     property bool showEmergenyStop:     !_hideEmergenyStop && _activeVehicle && _vehicleArmed && _vehicleFlying
-    property bool showArm:              true
-    property bool showDisarm:           true
-    property bool showRTL:              true
-    property bool showTakeoff:          true
-    property bool showLand:             true
-    property bool showStartMission:     true
-    property bool showContinueMission:  true
-    property bool showResumeMission:    true
-    property bool showPause:            true
-    property bool showChangeAlt:        true
-    property bool showOrbit:            true
-    property bool showLandAbort:        true
-    property bool showGotoLocation:     true
+    property bool showArm:              _activeVehicle && !_vehicleArmed
+    property bool showDisarm:           _activeVehicle && _vehicleArmed && !_vehicleFlying
+    property bool showRTL:              _activeVehicle && _vehicleArmed && _activeVehicle.guidedModeSupported && _vehicleFlying && !_vehicleInRTLMode
+    property bool showTakeoff:          _activeVehicle && _activeVehicle.takeoffVehicleSupported && !_vehicleFlying
+    property bool showLand:             _activeVehicle && _activeVehicle.guidedModeSupported && _vehicleArmed && !_activeVehicle.fixedWing && !_vehicleInLandMode
+    property bool showStartMission:     _activeVehicle && _missionAvailable && !_missionActive && !_vehicleFlying
+    property bool showContinueMission:  _activeVehicle && _missionAvailable && !_missionActive && _vehicleFlying && (_currentMissionIndex < missionController.visualItems.count - 1)
+    property bool showPause:            _activeVehicle && _vehicleArmed && _activeVehicle.pauseVehicleSupported && _vehicleFlying && !_vehiclePaused
+    property bool showChangeAlt:        (_activeVehicle && _vehicleFlying) && _activeVehicle.guidedModeSupported && _vehicleArmed && !_missionActive
+    property bool showOrbit:            !_hideOrbit && _activeVehicle && _vehicleFlying && _activeVehicle.orbitModeSupported && _vehicleArmed && !_missionActive
+    property bool showLandAbort:        _activeVehicle && _vehicleFlying && _activeVehicle.fixedWing && _vehicleLanding
+    property bool showGotoLocation:     _activeVehicle && _vehicleFlying
+
+    // Note: The 'missionController.visualItems.count - 3' is a hack to not trigger resume mission when a mission ends with an RTL item
+    property bool showResumeMission:    _activeVehicle && !_vehicleArmed && _vehicleWasFlying && _missionAvailable && _resumeMissionIndex > 0 && (_resumeMissionIndex < missionController.visualItems.count - 3)
 
     property bool guidedUIVisible:      guidedActionConfirm.visible || guidedActionList.visible
 
