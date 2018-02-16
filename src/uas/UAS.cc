@@ -987,10 +987,10 @@ void UAS::setExternalControlSetpoint(float roll, float pitch, float yaw, float t
     }
 
     // Store the previous manual commands
-    static float manualRollAngle = 0.0;
-    static float manualPitchAngle = 0.0;
-    static float manualYawAngle = 0.0;
-    static float manualThrust = 0.0;
+    static float manualRollAngle = 0.5;
+    static float manualPitchAngle = 0.5;
+    static float manualYawAngle = 0.5;
+    static float manualThrust = 0.5;
     static float manualChannel6 = 0.0;
     static float manualChannel7 = 0.0;
     static float manualChannel8 = 0.0;
@@ -1020,6 +1020,37 @@ void UAS::setExternalControlSetpoint(float roll, float pitch, float yaw, float t
     // Now if we should trigger an update, let's do that
     if (sendCommand) {
         // Save the new manual control inputs
+
+        // use the old values in case values are bad
+        if (qIsNaN(roll) || qIsInf(roll)) {
+            qCDebug(UASLog) << "not using invalid value of roll" << roll;
+            roll = manualRollAngle;
+        }
+        if (qIsNaN(pitch) || qIsInf(pitch)) {
+            qCDebug(UASLog) << "not using invalid value of pitch" << pitch;
+            pitch = manualPitchAngle;
+        }
+        if (qIsNaN(yaw) || qIsInf(yaw)) {
+            qCDebug(UASLog) << "not using invalid value of yaw" << yaw;
+            yaw = manualYawAngle;
+        }
+        if (qIsNaN(thrust) || qIsInf(thrust)) {
+            qCDebug(UASLog) << "not using invalid value of thrust" << thrust;
+            thrust = manualThrust;
+        }
+        if (qIsNaN(channel6) || qIsInf(channel6)) {
+            qCDebug(UASLog) << "not using invalid value of channel6" << channel6;
+            channel6 = manualChannel6;
+        }
+        if (qIsNaN(channel7) || qIsInf(channel7)) {
+            qCDebug(UASLog) << "not using invalid value of channel7" << channel7;
+            channel7 = manualChannel7;
+        }
+        if (qIsNaN(channel8) || qIsInf(channel8)) {
+            qCDebug(UASLog) << "not using invalid value of channel8" << channel8;
+            channel8 = manualChannel8;
+        }
+
         manualRollAngle = roll;
         manualPitchAngle = pitch;
         manualYawAngle = yaw;
@@ -1240,35 +1271,7 @@ void UAS::setExternalControlSetpoint(float roll, float pitch, float yaw, float t
             // Send the rcoverride message
             mavlink_msg_rc_channels_override_pack(mavlink->getSystemId(), mavlink->getComponentId(), &message, this->uasId,
                                                   0, (uint16_t)newRollCommand,(uint16_t)newPitchCommand,
-                                                  (uint16_t)newThrustCommand, (uint16_t)newYawCommand, -1, newChannel6Command, newChannel7Command, newChannel8Command);
-        } else if (joystickMode == Vehicle::JoystickMode_OVERRIDE_FIXED) {
-
-            // Store scaling values for all axes
-            // assuming all our systems will be belheli based and all pwm controls are 1000 to 2000pwm
-            const float lowPoint   = 1020;
-            const float highPoint  = 1960;
-            const float midPoint   = (lowPoint+highPoint)/2;
-            const float axesScaling = 1.0 * (highPoint-lowPoint);
-
-            // Calculate the new commands for roll, pitch, yaw, and thrust
-
-            const float newRollCommand = midPoint + (roll * axesScaling)/2;
-            const float newPitchCommand = midPoint + (pitch * axesScaling)/2;
-            const float newYawCommand = midPoint + (yaw * axesScaling)/2;
-            const float newThrustCommand = lowPoint + (thrust * axesScaling);
-            const float newChannel6Command = channel6 < 0 ? -1 : (lowPoint + (channel6 * axesScaling));
-            const float newChannel7Command = channel7 < 0 ? -1 : (lowPoint + (channel7 * axesScaling));
-            const float newChannel8Command = channel8 < 0 ? -1 : (lowPoint + (channel8 * axesScaling));
-
-            qCDebug(UASLog) << "roll:" << newRollCommand << "pitch:" << newPitchCommand
-                            << "yaw:" << newYawCommand << "thrust:" << newThrustCommand
-                            << "channel6:" << newChannel6Command << "channel7:"
-                            << newChannel7Command << "channel8:" << newChannel8Command;
-
-            // Send the rcoverride message
-            mavlink_msg_rc_channels_override_pack(mavlink->getSystemId(), mavlink->getComponentId(), &message, this->uasId,
-                                                  0, (uint16_t)newRollCommand,(uint16_t)newPitchCommand,
-                                                  (uint16_t)newThrustCommand, (uint16_t)newYawCommand, -1, newChannel6Command, newChannel7Command, newChannel8Command);
+                                                  (uint16_t)newThrustCommand, (uint16_t)newYawCommand, -1, -1, -1, -1);
         }
         _vehicle->sendMessageOnLink(_vehicle->priorityLink(), message);
     }

@@ -70,8 +70,8 @@ void PiDiscoverer::datagramReceived()
     if (!m_discoveredNodes.contains(node)) {
         qDebug() << "new unique node adding";
         m_discoveredNodes << node;
-        Q_EMIT nodeDiscovered(m_discoveredNodes[index]);
-        onNodeDiscovered(m_discoveredNodes[index]);
+        Q_EMIT nodeDiscovered(node);
+        onNodeDiscovered(node);
     } else {
         updateNode(node);
     }

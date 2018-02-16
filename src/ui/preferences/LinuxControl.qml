@@ -27,6 +27,8 @@ import QGroundControl               1.0
 import QGroundControl.Controls      1.0
 import QGroundControl.Palette       1.0
 import QGroundControl.ScreenTools   1.0
+import QGroundControl.FactSystem    1.0
+import QGroundControl.FactControls  1.0
 
 QGCView {
     id:                 _hoverbirdsView
@@ -43,6 +45,8 @@ QGCView {
     property real _fontPointSize: ScreenTools.isMobile ? ScreenTools.largeFontPointSize : ScreenTools.defaultFontPointSize
 
     property int    confirmActionCode
+
+    property var _activeVehicle:    QGroundControl.multiVehicleManager.activeVehicle
 
     Timer {
         id:             confirmSlideHideTimer
@@ -386,6 +390,92 @@ QGCView {
                         onClicked: QGroundControl.hbSettings.setValue("unsafeModes", checked)
                     }
                 }
+
+                Column {
+                    spacing: _margins / 2
+
+                    QGCLabel {
+                        id:         _virtualJoystickSettings
+                        text:       "Virtual Joystick Settings"
+                        font.family: ScreenTools.demiboldFontFamily
+                    }
+
+                    FactCheckBox {
+                        text:       qsTr("Virtual Joystick has Spring Loaded Throttle")
+                        visible:    _virtualJoystickSpringLoaded.visible
+                        fact:       _virtualJoystickSpringLoaded
+
+                        property Fact _virtualJoystickSpringLoaded: QGroundControl.settingsManager.appSettings.virtualJoystickSpringLoaded
+                    }
+
+                    ListModel {
+                        id: channelOpts
+
+                        ListElement { name: "disabled" }
+                        ListElement { name: "dial" }
+                        ListElement { name: "switch" }
+                    }
+
+                    Grid {
+                        width:      parent.width
+                        spacing:    ScreenTools.defaultFontPixelWidth
+                        columns:    2
+
+                        QGCLabel {
+                            id:                 joystickModeLabel
+                            text:               qsTr("Joystick mode:")
+                        }
+
+                        QGCComboBox {
+                            id:             joystickModeCombo
+                            currentIndex:   _activeVehicle.joystickMode
+                            width:          ScreenTools.defaultFontPixelWidth * 20
+                            model:          _activeVehicle.joystickModes
+
+                            onActivated: _activeVehicle.joystickMode = index
+                        }
+
+
+
+                            QGCLabel {
+                                text: "channel6:"
+                            }
+                            QGCComboBox {
+                                id:             channel6combo
+                                currentIndex:   QGroundControl.hbSettings.value("vchannel6", 0)
+                                width:          ScreenTools.defaultFontPixelWidth * 20
+                                model:          channelOpts
+
+                                onActivated: QGroundControl.hbSettings.setValue("vchannel6", currentIndex)
+                            }
+
+
+                            QGCLabel {
+                                text : "channel7:"
+                            }
+                            QGCComboBox {
+                                id:             channel7combo
+                                currentIndex:   QGroundControl.hbSettings.value("vchannel7", 0)
+                                width:          ScreenTools.defaultFontPixelWidth * 20
+                                model:          channelOpts
+
+                                onActivated: QGroundControl.hbSettings.setValue("vchannel7", currentIndex)
+                            }
+
+
+                            QGCLabel {
+                                text : "channel8:"
+                            }
+                            QGCComboBox {
+                                id:             channel8combo
+                                currentIndex:   QGroundControl.hbSettings.value("vchannel8", 0)
+                                width:          ScreenTools.defaultFontPixelWidth * 20
+                                model:          channelOpts
+
+                                onActivated: QGroundControl.hbSettings.setValue("vchannel8", currentIndex)
+                            }
+                        }
+                } //virtual joystick settings
 
             } // flow
         } // QGCFlickable

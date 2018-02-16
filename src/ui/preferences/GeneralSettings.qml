@@ -333,13 +333,6 @@ QGCView {
                             property Fact _virtualJoystick: QGroundControl.settingsManager.appSettings.virtualJoystick
                         }
 
-                        FactCheckBox {
-                            text:       qsTr("Virtual Joystick has Spring Loaded Throttle")
-                            visible:    _virtualJoystickSpringLoaded.visible
-                            fact:       _virtualJoystickSpringLoaded
-
-                            property Fact _virtualJoystickSpringLoaded: QGroundControl.settingsManager.appSettings.virtualJoystickSpringLoaded
-                        }
                         //-----------------------------------------------------------------
                         //-- Default mission item altitude
                         Row {

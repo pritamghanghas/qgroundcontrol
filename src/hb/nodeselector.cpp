@@ -121,8 +121,6 @@ void NodeSelector::terminateMavProxy(const PiNode &node)
     }
 }
 
-
-
 void NodeSelector::selectNext()
 {
     PiNodeList nodes = m_discoverer->discoveredNodes();
