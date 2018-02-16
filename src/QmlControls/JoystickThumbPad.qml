@@ -23,6 +23,11 @@ Item {
     QGCMapPalette { id: mapPal }
 
     onStickPositionXChanged: {
+        updateXAxis()
+    }
+
+    function updateXAxis()
+    {
         var xAxisTemp = stickPositionX / width
         xAxisTemp *= 2.0
         xAxisTemp -= 1.0
@@ -30,6 +35,11 @@ Item {
     }
 
     onStickPositionYChanged: {
+        updateYAxis();
+    }
+
+    function updateYAxis()
+    {
         var yAxisTemp = stickPositionY / height
         yAxisTemp *= 2.0
         yAxisTemp -= 1.0

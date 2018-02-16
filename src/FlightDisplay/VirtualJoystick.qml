@@ -19,14 +19,35 @@ import QGroundControl.Vehicle       1.0
 Item {
     //property bool useLightColors - Must be passed in from loaded
 
+    // hack to ensure that joystick is in good position
+    // even when it has not been touched yet.
+    property var firstTrigger: 0
+
     Timer {
         interval:   40  // 25Hz, same as real joystick rate
         running:    QGroundControl.settingsManager.appSettings.virtualJoystick.value && _activeVehicle
         repeat:     true
         onTriggered: {
+            checkInitialPlacement()
             if (_activeVehicle) {
                 _activeVehicle.virtualTabletJoystickValue(rightStick.xAxis, rightStick.yAxis, leftStick.xAxis, leftStick.yAxis)
             }
+        }
+    }
+
+    function checkInitialPlacement()
+    {
+        if (firstTrigger == 0) {
+
+            firstTrigger = 1
+
+            leftStick.reCenter()
+            leftStick.updateXAxis()
+            leftStick.updateYAxis()
+
+            rightStick.reCenter()
+            rightStick.updateXAxis()
+            rightStick.updateYAxis()
         }
     }
 
