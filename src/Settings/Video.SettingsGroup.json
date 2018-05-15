@@ -7,6 +7,14 @@
     "defaultValue":     ""
 },
 {
+    "name":             "JitterBuffer",
+    "shortDescription": "Video Jitter Buffer (ms)",
+    "longDescription":  "the size of the buffer to maintain to account for link jitter.",
+    "type":             "uint16",
+    "min":              10,
+    "defaultValue":     20
+},
+{
     "name":             "VideoUDPPort",
     "shortDescription": "Video UDP Port",
     "longDescription":  "UDP port to bind to for video stream.",

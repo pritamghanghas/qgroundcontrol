@@ -2317,9 +2317,9 @@ void Vehicle::_remoteControlRSSIChanged(uint8_t rssi)
 void Vehicle::virtualTabletJoystickValue(double roll, double pitch, double yaw, double thrust)
 {
     // The following if statement prevents the virtualTabletJoystick from sending values if the standard joystick is enabled
-    qDebug("tyring to print joystick Valus");
+//    qDebug("tyring to print joystick Valus");
     if ( !_joystickEnabled ) {
-        qDebug("%f, %f, %f, %f", roll, pitch, yaw, thrust);
+//        qDebug("%f, %f, %f, %f", roll, pitch, yaw, thrust);
         _uas->setExternalControlSetpoint(roll, pitch, yaw, thrust, 0, _joystickMode);
     }
 }

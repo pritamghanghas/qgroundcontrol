@@ -68,6 +68,7 @@ signals:
 private slots:
     void _videoSourceChanged        ();
     void _udpPortChanged            ();
+    void _jitterBufferChanged       ();
     void _rtspUrlChanged            ();
     void _tcpUrlChanged             ();
 

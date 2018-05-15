@@ -60,6 +60,7 @@ VideoManager::setToolbox(QGCToolbox *toolbox)
    QString videoSource = _videoSettings->videoSource()->rawValue().toString();
    connect(_videoSettings->videoSource(),   &Fact::rawValueChanged, this, &VideoManager::_videoSourceChanged);
    connect(_videoSettings->udpPort(),       &Fact::rawValueChanged, this, &VideoManager::_udpPortChanged);
+   connect(_videoSettings->jitterBuffer(),  &Fact::rawValueChanged, this, &VideoManager::_jitterBufferChanged);
    connect(_videoSettings->rtspUrl(),       &Fact::rawValueChanged, this, &VideoManager::_rtspUrlChanged);
    connect(_videoSettings->tcpUrl(),        &Fact::rawValueChanged, this, &VideoManager::_tcpUrlChanged);
 
@@ -102,6 +103,13 @@ VideoManager::_videoSourceChanged()
 //-----------------------------------------------------------------------------
 void
 VideoManager::_udpPortChanged()
+{
+    _restartVideo();
+}
+
+//-----------------------------------------------------------------------------
+void
+VideoManager::_jitterBufferChanged()
 {
     _restartVideo();
 }

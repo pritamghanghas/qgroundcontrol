@@ -89,6 +89,7 @@ public slots:
     void previous           ();
     void stopRecording      ();
     void startRecording             (const QString& videoFile = QString());
+    void setJitter          (quint16  jitter);
 
 private slots:
     void _updateTimer               ();
@@ -147,6 +148,7 @@ private:
 
     NodeSelector*   _nodeSelector;
     QString         _uri;
+    quint16         _jitterLatency;
     quint32         _expectedLatency;
     QString         _imageFile;
     QString         _videoFile;

@@ -20,6 +20,7 @@
 const char* VideoSettings::videoSettingsGroupName = "Video";
 
 const char* VideoSettings::videoSourceName =        "VideoSource";
+const char* VideoSettings::jitterBufferName =       "JitterBuffer";
 const char* VideoSettings::udpPortName =            "VideoUDPPort";
 const char* VideoSettings::rtspUrlName =            "VideoRTSPUrl";
 const char* VideoSettings::tcpUrlName =             "VideoTCPUrl";
@@ -42,6 +43,7 @@ const char* VideoSettings::videoSourceTCP =         "TCP-MPEG2 Video Stream";
 VideoSettings::VideoSettings(QObject* parent)
     : SettingsGroup(videoSettingsGroupName, QString() /* root settings group */, parent)
     , _videoSourceFact(NULL)
+    , _jitterBufferFact(NULL)
     , _udpPortFact(NULL)
     , _tcpUrlFact(NULL)
     , _rtspUrlFact(NULL)
@@ -110,6 +112,15 @@ Fact* VideoSettings::udpPort(void)
         connect(_udpPortFact, &Fact::valueChanged, this, &VideoSettings::_configChanged);
     }
     return _udpPortFact;
+}
+
+Fact* VideoSettings::jitterBuffer(void)
+{
+    if(!_jitterBufferFact) {
+        _jitterBufferFact = _createSettingsFact(jitterBufferName);
+        connect(_jitterBufferFact, &Fact::valueChanged, this, &VideoSettings::_configChanged);
+    }
+    return _jitterBufferFact;
 }
 
 Fact* VideoSettings::rtspUrl(void)

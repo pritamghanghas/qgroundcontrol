@@ -20,6 +20,7 @@ public:
     VideoSettings(QObject* parent = NULL);
 
     Q_PROPERTY(Fact* videoSource            READ videoSource            CONSTANT)
+    Q_PROPERTY(Fact* jitterBuffer           READ jitterBuffer           CONSTANT)
     Q_PROPERTY(Fact* udpPort                READ udpPort                CONSTANT)
     Q_PROPERTY(Fact* tcpUrl                 READ tcpUrl                 CONSTANT)
     Q_PROPERTY(Fact* rtspUrl                READ rtspUrl                CONSTANT)
@@ -35,6 +36,7 @@ public:
     Q_PROPERTY(bool  streamConfigured       READ streamConfigured       NOTIFY streamConfiguredChanged)
 
     Fact* videoSource           (void);
+    Fact* jitterBuffer          (void);
     Fact* udpPort               (void);
     Fact* rtspUrl               (void);
     Fact* tcpUrl                (void);
@@ -52,6 +54,7 @@ public:
     static const char* videoSettingsGroupName;
 
     static const char* videoSourceName;
+    static const char* jitterBufferName;
     static const char* udpPortName;
     static const char* rtspUrlName;
     static const char* tcpUrlName;
@@ -79,6 +82,7 @@ private slots:
 
 private:
     SettingsFact* _videoSourceFact;
+    SettingsFact* _jitterBufferFact;
     SettingsFact* _udpPortFact;
     SettingsFact* _tcpUrlFact;
     SettingsFact* _rtspUrlFact;

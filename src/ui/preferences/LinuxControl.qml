@@ -151,11 +151,13 @@ QGCView {
                             anchors.centerIn:  parent
 
                             QGCButton {
-                                text:       "Shutdown Controller"
+                                id: shutdownButton
+                                text:       "Shutdown Flight Computer"
                                 onClicked: confirmAction(confirmShutdown)
                             }
                             QGCButton {
-                                text:       "Restart Controller"
+                                text:       "Restart Flight Computer"
+                                width: shutdownButton.width
                                 onClicked: confirmAction(confirmRestart)
                             }
                         }
