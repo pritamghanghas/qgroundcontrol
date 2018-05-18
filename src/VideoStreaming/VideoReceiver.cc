@@ -244,6 +244,7 @@ void VideoReceiver::delayedStart(const QString &optionsString, bool recording)
 
 void VideoReceiver::setJitter(quint16 jitter)
 {
+    qDebug() << "new jitter latency is " << jitter;
     _jitterLatency = jitter;
 }
 
@@ -355,6 +356,7 @@ void VideoReceiver::start()
                 break;
             }
 
+            qDebug() << "setting latency to " << _expectedLatency*2;
             // set jitter buffers latency to 2 times the initial estimates
             g_object_set(G_OBJECT(udpjitter), "latency", _expectedLatency*2, NULL);
             g_object_set(G_OBJECT(udpjitter), "do-lost",           true,     NULL);
@@ -392,6 +394,7 @@ void VideoReceiver::start()
         }
 
         gst_bin_add_many(GST_BIN(_pipeline), dataSource, udpjitter, demux, parser, _tee, queue, decoder, queue1, _videoSink, NULL);
+//        gst_bin_add_many(GST_BIN(_pipeline), dataSource, demux, parser, _tee, queue, decoder, queue1, _videoSink, NULL);
         pipelineUp = true;
 
         if(isUdp) {
@@ -400,6 +403,11 @@ void VideoReceiver::start()
                 qCritical() << "Unable to link UDP elements.";
                 break;
             }
+
+//            if(!gst_element_link_many(dataSource, demux, parser, _tee, queue, decoder, queue1, _videoSink, NULL)) {
+//                qCritical() << "Unable to link UDP elements.";
+//                break;
+//            }
         } else if (isTCP) {
             if(!gst_element_link(dataSource, demux)) {
                 qCritical() << "Unable to link TCP dataSource to Demux.";
@@ -418,7 +426,7 @@ void VideoReceiver::start()
             }
         }
 
-        dataSource = demux = parser = queue = decoder = queue1 = NULL;
+        dataSource = udpjitter = demux = parser = queue = decoder = queue1 = NULL;
 
         GstBus* bus = NULL;
 
@@ -490,7 +498,7 @@ void VideoReceiver::start()
     _starting = false;
 #endif
 
-    qDebug("done with actual start");
+    qDebug("done with actual start of pipeline");
 }
 
 //-----------------------------------------------------------------------------

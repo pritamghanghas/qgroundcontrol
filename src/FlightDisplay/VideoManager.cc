@@ -111,6 +111,7 @@ VideoManager::_udpPortChanged()
 void
 VideoManager::_jitterBufferChanged()
 {
+//   _videoReceiver->setJitter(_videoSettings->jitterBuffer()->rawValue().toUInt());
     _restartVideo();
 }
 
@@ -163,9 +164,10 @@ VideoManager::_updateSettings()
 {
     if(!_videoSettings || !_videoReceiver)
         return;
-    if (_videoSettings->videoSource()->rawValue().toString() == VideoSettings::videoSourceUDP)
-        _videoReceiver->setUri(QStringLiteral("udp://0.0.0.0:%1").arg(_videoSettings->udpPort()->rawValue().toInt()));
-    else if (_videoSettings->videoSource()->rawValue().toString() == VideoSettings::videoSourceRTSP)
+    if (_videoSettings->videoSource()->rawValue().toString() == VideoSettings::videoSourceUDP) {
+//        _videoReceiver->setUri(QStringLiteral("udp://0.0.0.0:%1").arg(_videoSettings->udpPort()->rawValue().toInt()));
+        _videoReceiver->setJitter(_videoSettings->jitterBuffer()->rawValue().toUInt());
+    } else if (_videoSettings->videoSource()->rawValue().toString() == VideoSettings::videoSourceRTSP)
         _videoReceiver->setUri(_videoSettings->rtspUrl()->rawValue().toString());
     else if (_videoSettings->videoSource()->rawValue().toString() == VideoSettings::videoSourceTCP)
         _videoReceiver->setUri(QStringLiteral("tcp://%1").arg(_videoSettings->tcpUrl()->rawValue().toString()));
