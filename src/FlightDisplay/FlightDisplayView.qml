@@ -443,8 +443,8 @@ QGCView {
         Loader {
             id:                         virtualJoystickMultiTouch
             z:                          _panel.z + 5
-            width:                      parent.width  - (_flightVideoPipControl.width / 2)
-            height:                     Math.min(ScreenTools.availableHeight * 0.25, ScreenTools.defaultFontPixelWidth * 16)
+            width:                      parent.width  - (_flightVideoPipControl.width / 2) - ScreenTools.defaultFontPixelWidth * 4
+            height:                     Math.min(ScreenTools.availableHeight * 0.4, ScreenTools.defaultFontPixelWidth * 26)
             visible:                    (_virtualJoystick ? _virtualJoystick.value : false) && !QGroundControl.videoManager.fullScreen
             anchors.bottom:             _flightVideoPipControl.top
             anchors.bottomMargin:       ScreenTools.defaultFontPixelHeight * 2
