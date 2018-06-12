@@ -245,6 +245,8 @@ int NodeSelector::startStreaming(const PiNode &node, const QString &optionsStrin
     if (node.caps & PiNode::PICAM) { // has picam capability
         if (optionsString.contains("nostream")) { // check if this goes well with wiered
             servercmd = "http://$SERVER_IP:8080/picam/?command=terminate";
+        } else if (optionsString.contains("mapping")) { // check if this goes well with wiered
+            servercmd = "http://$SERVER_IP:8080/picam/?command=mapping";
         } else {
             servercmd = "http://$SERVER_IP:8080/picam/?command=" + picamRemoteCommand;
             servercmd = servercmd.replace("$SERVER_IP", node.addressString);

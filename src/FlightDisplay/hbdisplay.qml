@@ -34,6 +34,7 @@ Item {
 //    property bool   _hasVideoNode:           QGroundControl.nodeSelector.hasVideoNode // this won't work, there is no notify
     property bool   _hasVideoNode:           true // we should make it dynamic later.
     property real   _margins:               ScreenTools.defaultFontPixelWidth
+    property real   _mapping:               resolutionSelectionComboBox.currentIndex === 6
 
     QGCPalette { id: qgcPal; colorGroupEnabled: enabled }
 
@@ -87,6 +88,10 @@ Item {
         ListElement {
             text: "0.2mbps"
             bitrate: 200000
+        }
+        ListElement {
+            text: "nostream"
+            bitrate: 0
         }
     }
 
@@ -151,9 +156,20 @@ Item {
             bitrateIndex:    4;
             // desired bitrate of 1.3mps
         }
-//        ListElement {
-//            text: "photo";
-//        }
+        ListElement {
+            text: "mapping";
+            width:          2592;
+            height:         1944;
+            fps:            1;
+            bitrateIndex:   8;
+        }
+        ListElement {
+            text: "nostream";
+            width:          0;
+            height:         0;
+            fps:            0;
+            bitrateIndex:   8;
+        }
     }
 
     ListModel {
@@ -561,6 +577,7 @@ Item {
 //                anchors.leftMargin: _margins*2
 //                width: combo.width*0.12
                 visible:    true
+                enabled:  !_mapping
                 model:      recordingModesList
 
                 onCurrentIndexChanged: {
@@ -572,6 +589,7 @@ Item {
                 id:         exposureComboBox
 //                width: combo.width*0.16
                 visible:    true
+                enabled:  !_mapping
                 model:      exposureModesList
 
                 onCurrentIndexChanged: {
@@ -583,6 +601,7 @@ Item {
                 id:         awbComboBox
 //                width: combo.width*0.13
                 visible:    true
+                enabled:  !_mapping
                 model:      awbModesList
 
                 onCurrentIndexChanged: {
@@ -606,6 +625,7 @@ Item {
                 id:         bitrateSelectionComboBox
 //                width: combo.width*0.13
                 visible:    true
+                enabled:  !_mapping
                 model:      bitrateList
 
                 onCurrentIndexChanged: {
@@ -617,6 +637,7 @@ Item {
                 id:         iframeSelectionComboBox
 //                width: combo.width*0.08
                 visible:    true
+                enabled:  !_mapping
                 model:      iframeList
 
                 onCurrentIndexChanged: {
@@ -628,6 +649,7 @@ Item {
                 id: orientationSelectionComboBox
 //                width: combo.width*0.11
                 visible: true
+                enabled:  !_mapping
                 model: orientationModeList
 
                 onCurrentIndexChanged: {
