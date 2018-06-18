@@ -243,17 +243,19 @@ int NodeSelector::startStreaming(const PiNode &node, const QString &optionsStrin
 
     QString servercmd;
     if (node.caps & PiNode::PICAM) { // has picam capability
-        if (optionsString.contains("nostream")) { // check if this goes well with wiered
+        if (optionsString.contains("-fps 0")) { // 0 fps means terminate camera, check if this goes well with wired
             servercmd = "http://$SERVER_IP:8080/picam/?command=terminate";
-        } else if (optionsString.contains("mapping")) { // check if this goes well with wiered
+        } else if (optionsString.contains("-fps 1")) { //only mjpeg does fps 1, check if this goes well with wired
             servercmd = "http://$SERVER_IP:8080/picam/?command=mapping";
         } else {
             servercmd = "http://$SERVER_IP:8080/picam/?command=" + picamRemoteCommand;
-            servercmd = servercmd.replace("$SERVER_IP", node.addressString);
-            servercmd = servercmd.replace("$CLIENT_IP", deviceAddress(node));
-            servercmd = servercmd.replace("$UDP_PORT", QString::number(node.targetStreamingPort));
-            servercmd = servercmd.replace("$OPT_STRING", optionsString);
         }
+
+        servercmd = servercmd.replace("$SERVER_IP", node.addressString);
+        servercmd = servercmd.replace("$CLIENT_IP", deviceAddress(node));
+        servercmd = servercmd.replace("$UDP_PORT", QString::number(node.targetStreamingPort));
+        servercmd = servercmd.replace("$OPT_STRING", optionsString);
+
         QVariantMap map;
         map.insert("requestFor", PiNode::PICAM);
         map.insert("nodeIndex", m_currentIndex);
