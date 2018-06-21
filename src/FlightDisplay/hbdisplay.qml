@@ -353,7 +353,7 @@ Item {
 
     Column {
         id:                         toolColumn
-        visible:                    !_mainIsMap && _hasVideoNode
+        visible:                    _hasVideoNode
         anchors.margins:            _margins
         anchors.topMargin:          _margins*2
         anchors.left:               parent.left
