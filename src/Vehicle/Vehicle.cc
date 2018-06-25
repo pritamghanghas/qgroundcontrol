@@ -40,8 +40,6 @@
 #include "VideoManager.h"
 #include "hbsettings.h"
 
-#include "sensornotification.h"
-
 QGC_LOGGING_CATEGORY(VehicleLog, "VehicleLog")
 
 #define UPDATE_TIMER 50
@@ -270,9 +268,6 @@ Vehicle::Vehicle(LinkInterface*             link,
     // listen on heading change
     // FixME:: needs more care, documentation says one shouldn't connect to this.
     connect(heading(), &Fact::valueChanged, this, &Vehicle::_onHeadingChanged);
-
-    SensorNotification *sensorNotification = new SensorNotification(this);
-    QObject::connect(sensorNotification, &SensorNotification::newFlyToCoord, this, &Vehicle::flyToLocation);
 
     _1STimer.setInterval(1000);
     connect(&_1STimer, &QTimer::timeout, this, &Vehicle::_on1STimerTimeout);
