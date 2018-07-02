@@ -8,7 +8,7 @@ static const QString PICAM_REMOTE_CMD("raspivid -t 0 $OPT_STRING -o - | gst-laun
 static const QString PICAM_REMOTE_CMD_RECORDING("raspivid -t 0 $OPT_STRING -o - | gst-launch-1.0 fdsrc ! tee name=t t. ! queue ! filesink location=/home/pi/media/videos/$TIMESTAMP.h264 t. ! queue ! h264parse ! rtph264pay config-interval=1 pt=96 ! udpsink host=$CLIENT_IP port=$UDP_PORT");
 
 //static const QString MAVPROXY_REMOTE_CMD("screen -S MAVPROXY /usr/local/bin/mavproxy.py --master=127.0.0.1:1440 --baudrate 57600 --out $CLIENT_IP:14550 --aircraft MyCopter");
-static const QString MAVPROXY_REMOTE_CMD("/home/pi/ardupilot/bin/start_ardupilot.sh $CLIENT_IP");
+static const QString MAVPROXY_REMOTE_CMD("/home/pi/ardupilot/bin/start_mavproxy.sh $CLIENT_IP");
 // FIXME:: Find a way to fix this with respect to wired
 //static const QString MAVPROXY_REMOTE_CMD("/home/pi/bin/mavproxy_wrapper.sh $CLIENT_IP");
 
