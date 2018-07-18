@@ -550,7 +550,7 @@ Item {
         anchors.margins: _margins
 //        x: parent.width - width;
 //        y: parent.height * 0.12;
-        visible: videoSettings.checked && !_mainIsMap;
+        visible: videoSettings.checked;
 
         Row {
             spacing: _margins

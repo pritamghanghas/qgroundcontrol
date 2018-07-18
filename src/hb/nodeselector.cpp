@@ -245,7 +245,7 @@ int NodeSelector::startStreaming(const PiNode &node, const QString &optionsStrin
     if (node.caps & PiNode::PICAM) { // has picam capability
         if (optionsString.contains("-fps 0")) { // 0 fps means terminate camera, check if this goes well with wired
             servercmd = "http://$SERVER_IP:8080/picam/?command=terminate";
-        } else if (optionsString.contains("-fps 1")) { //only mjpeg does fps 1, check if this goes well with wired
+        } else if (optionsString.contains("-fps 1 ")) { //only mjpeg does fps 1, check if this goes well with wired
             servercmd = "http://$SERVER_IP:8080/picam/?command=mapping";
         } else {
             servercmd = "http://$SERVER_IP:8080/picam/?command=" + picamRemoteCommand;
