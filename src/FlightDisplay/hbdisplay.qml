@@ -89,10 +89,6 @@ Item {
             text: "0.2mbps"
             bitrate: 200000
         }
-        ListElement {
-            text: "nostream"
-            bitrate: 0
-        }
     }
 
     ListModel {
