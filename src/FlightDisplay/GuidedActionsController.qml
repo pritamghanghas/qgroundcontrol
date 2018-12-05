@@ -106,6 +106,7 @@ Item {
     property bool showOrbit:            _guidedActionsEnabled && !_hideOrbit && _vehicleFlying && _activeVehicle.orbitModeSupported && !_missionActive
     property bool showLandAbort:        _guidedActionsEnabled && _vehicleFlying && _activeVehicle.fixedWing && _vehicleLanding
     property bool showGotoLocation:     _guidedActionsEnabled && _vehicleFlying
+    property bool swarmMode:            false
 
     // Note: The '_missionItemCount - 2' is a hack to not trigger resume mission when a mission ends with an RTL item
     property bool showResumeMission:    _activeVehicle && !_vehicleArmed && _vehicleWasFlying && _missionAvailable && _resumeMissionIndex > 0 && (_resumeMissionIndex < _missionItemCount - 2)
@@ -206,6 +207,40 @@ Item {
         _vehicleInRTLMode =     _activeVehicle ? _flightMode === _activeVehicle.rtlFlightMode : false
         _vehicleInLandMode =    _activeVehicle ? _flightMode === _activeVehicle.landFlightMode : false
         _vehicleInMissionMode = _activeVehicle ? _flightMode === _activeVehicle.missionFlightMode : false // Must be last to get correct signalling for showStartMission popups
+    }
+
+    function allGuidedModeRTL()
+    {
+        var rgVehicle = QGroundControl.multiVehicleManager.vehicles
+        var i = 0
+        for (i = 0; i < rgVehicle.count; i++) {
+            rgVehicle.get(i).guidedModeRTL()
+        }
+    }
+    function allGuidedModeLand()
+    {
+        var rgVehicle = QGroundControl.multiVehicleManager.vehicles
+        var i = 0
+        for (i = 0; i < rgVehicle.count; i++) {
+            rgVehicle.get(i).guidedModeLand()
+        }
+    }
+
+    function allGuidedModeTakeOff(altitude)
+    {
+        var rgVehicle = QGroundControl.multiVehicleManager.vehicles
+        var i = 0
+        for (i = 0; i < rgVehicle.count; i++) {
+            rgVehicle.get(i).guidedModeTakeoff(altitude)
+        }
+    }
+
+    function allGuidedModeGotoLocation(actionData) {
+        var rgVehicle = QGroundControl.multiVehicleManager.vehicles
+        var i = 0
+        for (i = 0; i < rgVehicle.count; i++) {
+            rgVehicle.get(i).guidedModeGotoLocation(actionData)
+        }
     }
 
     // Called when an action is about to be executed in order to confirm
@@ -343,13 +378,25 @@ Item {
         var rgVehicle;
         switch (actionCode) {
         case actionRTL:
-            _activeVehicle.guidedModeRTL()
+            if (swarmMode) {
+                allGuidedModeRTL()
+            } else {
+                _activeVehicle.guidedModeRTL()
+            }
             break
         case actionLand:
-            _activeVehicle.guidedModeLand()
+            if (swarmMode) {
+                allGuidedModeLand()
+            } else {
+                _activeVehicle.guidedModeLand()
+            }
             break
         case actionTakeoff:
-            _activeVehicle.guidedModeTakeoff(actionAltitudeChange)
+            if (swarmMode) {
+                allGuidedModeTakeOff(actionAltitudeChange)
+            } else {
+                _activeVehicle.guidedModeTakeoff(actionAltitudeChange)
+            }
             break
         case actionResumeMission:
         case actionResumeMissionUploadFail:
@@ -378,7 +425,11 @@ Item {
             _activeVehicle.guidedModeChangeAltitude(actionAltitudeChange)
             break
         case actionGoto:
-            _activeVehicle.guidedModeGotoLocation(actionData)
+            if (swarmMode) {
+                allGuidedModeGotoLocation(actionData)
+            } else {
+                _activeVehicle.guidedModeGotoLocation(actionData)
+            }
             break
         case actionSetWaypoint:
             _activeVehicle.setCurrentMissionSequence(actionData)

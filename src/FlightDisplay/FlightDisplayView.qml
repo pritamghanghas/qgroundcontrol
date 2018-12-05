@@ -335,6 +335,9 @@ QGCView {
                 qgcView:                    root
                 multiVehicleView:           !singleVehicleView.checked
                 scaleState:                 (_mainIsMap && flyViewOverlay.item) ? (flyViewOverlay.item.scaleState ? flyViewOverlay.item.scaleState : "bottomMode") : "bottomMode"
+                onMultiVehicleViewChanged: {
+                    _guidedController.swarmMode = !singleVehicleView.checked
+                }
             }
         }
 
