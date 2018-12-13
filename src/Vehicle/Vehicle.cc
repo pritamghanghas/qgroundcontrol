@@ -11,6 +11,7 @@
 #include <QDateTime>
 #include <QLocale>
 #include <QQuaternion>
+#include <QtMath>
 
 #include "Vehicle.h"
 #include "MAVLinkProtocol.h"
@@ -50,6 +51,7 @@ QGC_LOGGING_CATEGORY(VehicleLog, "VehicleLog")
 #define UPDATE_TIMER 50
 #define DEFAULT_LAT  38.965767f
 #define DEFAULT_LON -120.083923f
+#define CONSTANTS_RADIUS_OF_EARTH 6371000
 
 const QString guided_mode_not_supported_by_vehicle = QObject::tr("Guided mode not supported by Vehicle.");
 
@@ -4076,4 +4078,62 @@ VehicleEstimatorStatusFactGroup::VehicleEstimatorStatusFactGroup(QObject* parent
     _addFact(&_tasRatioFact,                    _tasRatioFactName);
     _addFact(&_horizPosAccuracyFact,            _horizPosAccuracyFactName);
     _addFact(&_vertPosAccuracyFact,             _vertPosAccuracyFactName);
+}
+
+
+QList<QGeoCoordinate> Vehicle::formation(const QGeoCoordinate &ref, qreal refHeading, const QGeoCoordinate &final,
+                                         const QString &formationType, int num, int distance)
+{
+    Q_UNUSED(formationType)
+    Q_UNUSED(ref)
+    Q_UNUSED(refHeading)
+
+    QList<QGeoCoordinate> finalCoordinateList;
+//    // first one is same because it will function as ref
+//    finalCoordinateList << final;
+
+    for(int i = 0; i < num; i++)
+    {
+        finalCoordinateList << formation(ref, refHeading, final, formationType, num, i, distance);
+    }
+
+}
+
+QGeoCoordinate Vehicle::formation(const QGeoCoordinate &ref, qreal refHeading, const QGeoCoordinate &final,
+                                         const QString &formationType, int num, int index, int distance)
+{
+    Q_UNUSED(formationType)
+    Q_UNUSED(ref)
+    Q_UNUSED(refHeading)
+    Q_UNUSED(num)
+
+    if (index == 0)
+        return final;
+
+    int row = qFloor(index/4);
+    int col = index % 4;
+    qreal relativeDegrees = qRadiansToDegrees(qAtan2(col*distance, -row*distance));
+    qDebug() << "calculated relative degrees for index: " << index << "is: " << relativeDegrees;
+    auto vectorLength = hypot((col*distance), (row*distance));
+    auto targetLocation = gpsOffset(final, 0, relativeDegrees, vectorLength, 0);
+    qDebug() << "target location is " << targetLocation;
+    return targetLocation;
+}
+
+QGeoCoordinate Vehicle::gpsOffset(const QGeoCoordinate &origin, qreal refHeading,
+                                  qreal relativeDegrees, qreal distance, qreal altitueOffset)
+{
+    Q_UNUSED(refHeading)
+    Q_UNUSED(altitueOffset)
+
+    double lat1 = qDegreesToRadians(origin.latitude());
+    double lon1 = qDegreesToRadians(origin.longitude());
+    qreal brng = qDegreesToRadians(relativeDegrees);
+    qreal dr = distance/CONSTANTS_RADIUS_OF_EARTH;
+
+    qreal lat2 = qAsin(qSin(lat1)*qCos(dr) +
+                       qCos(lat1)*qSin(dr)*qCos(brng));
+    qreal lon2 = lon1 + qAtan2(qSin(brng)*qSin(dr)*qCos(lat1),
+                              qCos(dr)-qSin(lat1)*qSin(lat2));
+    return QGeoCoordinate(qRadiansToDegrees(lat2), qRadiansToDegrees(lon2), origin.altitude());
 }

@@ -482,7 +482,6 @@ private:
 #endif
 };
 
-
 class Vehicle : public FactGroup
 {
     Q_OBJECT
@@ -755,6 +754,14 @@ public:
     ///     @param motor Motor number, 1-based
     ///     @param percent 0-no power, 100-full power
     Q_INVOKABLE void motorTest(int motor, int percent);
+
+
+    // translation functions
+    Q_INVOKABLE QList<QGeoCoordinate> formation(const QGeoCoordinate &ref, qreal refHeading, const QGeoCoordinate &final, const QString &formationType, int num, int distance);
+    Q_INVOKABLE QGeoCoordinate formation(const QGeoCoordinate &ref, qreal refHeading, const QGeoCoordinate &final, const QString &formationType, int num, int index, int distance);
+
+    Q_INVOKABLE QGeoCoordinate gpsOffset(const QGeoCoordinate &origin, qreal refHeading, qreal relativeDegrees,
+                                         qreal distance, qreal altitueOffset);
 
     bool guidedModeSupported    (void) const;
     bool pauseVehicleSupported  (void) const;

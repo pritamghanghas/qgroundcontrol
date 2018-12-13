@@ -228,6 +228,7 @@ Item {
 
     function allGuidedModeTakeOff(altitude)
     {
+        // we can probably put a altitude difference here
         var rgVehicle = QGroundControl.multiVehicleManager.vehicles
         var i = 0
         for (i = 0; i < rgVehicle.count; i++) {
@@ -238,8 +239,11 @@ Item {
     function allGuidedModeGotoLocation(actionData) {
         var rgVehicle = QGroundControl.multiVehicleManager.vehicles
         var i = 0
+
+        // FIXME:: assuming that id start from 1 to num
         for (i = 0; i < rgVehicle.count; i++) {
-            rgVehicle.get(i).guidedModeGotoLocation(actionData)
+            var newLocation = rgVehicle.get(0).formation(actionData, 0, actionData, "square", rgVehicle.count,  rgVehicle.get(i).id-1, 100)
+            rgVehicle.get(i).guidedModeGotoLocation(newLocation)
         }
     }
 
