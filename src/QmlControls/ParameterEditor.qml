@@ -32,6 +32,8 @@ QGCView {
     property bool   _searchFilter:      searchText.text.trim() != ""   ///< true: showing results of search
     property var    _searchResults              ///< List of parameter names from search results
     property bool   _showRCToParam:     !ScreenTools.isMobile && QGroundControl.multiVehicleManager.activeVehicle.px4Firmware
+    property var    _activeVehicle:     QGroundControl.multiVehicleManager.activeVehicle
+    property var    _appSettings:       QGroundControl.settingsManager.appSettings
 
     ParameterEditorController {
         id:         controller;
@@ -104,34 +106,25 @@ QGCView {
                 }
                 MenuItem {
                     text:           qsTr("Reset all to defaults")
+                    visible:        !_activeVehicle.apmFirmware
                     onTriggered:    showDialog(resetToDefaultConfirmComponent, qsTr("Reset All"), qgcView.showDialogDefaultWidth, StandardButton.Cancel | StandardButton.Reset)
                 }
                 MenuSeparator { }
                 MenuItem {
                     text:           qsTr("Load from file...")
                     onTriggered: {
-                        var appSettings = QGroundControl.settingsManager.appSettings
-
                         fileDialog.qgcView =        qgcView
-                        fileDialog.title =          qsTr("Select Parameter File")
+                        fileDialog.title =          qsTr("Load Parameters")
                         fileDialog.selectExisting = true
-                        fileDialog.folder =         appSettings.parameterSavePath
-                        fileDialog.fileExtension =  appSettings.parameterFileExtension
-                        fileDialog.nameFilters =    [ qsTr("Parameter Files (*.%1)").arg(appSettings.parameterFileExtension) , qsTr("All Files (*.*)") ]
                         fileDialog.openForLoad()
                     }
                 }
                 MenuItem {
                     text:           qsTr("Save to file...")
                     onTriggered: {
-                        var appSettings = QGroundControl.settingsManager.appSettings
-
                         fileDialog.qgcView =        qgcView
                         fileDialog.title =          qsTr("Save Parameters")
                         fileDialog.selectExisting = false
-                        fileDialog.folder =         appSettings.parameterSavePath
-                        fileDialog.fileExtension =  appSettings.parameterFileExtension
-                        fileDialog.nameFilters =    [ qsTr("Parameter Files (*.%1)").arg(appSettings.parameterFileExtension) , qsTr("All Files (*.*)") ]
                         fileDialog.openForSave()
                     }
                 }
@@ -253,7 +246,7 @@ QGCView {
                         id:     valueLabel
                         width:  ScreenTools.defaultFontPixelWidth  * 20
                         color:  factRow.modelFact.defaultValueAvailable ? (factRow.modelFact.valueEqualsDefault ? __qgcPal.text : __qgcPal.warningText) : __qgcPal.text
-                        text:   factRow.modelFact.enumStrings.length == 0 ? factRow.modelFact.valueString + " " + factRow.modelFact.units : factRow.modelFact.enumStringValue
+                        text:   factRow.modelFact.enumStrings.length === 0 ? factRow.modelFact.valueString + " " + factRow.modelFact.units : factRow.modelFact.enumStringValue
                         clip:   true
                     }
 
@@ -290,7 +283,10 @@ QGCView {
     } // QGCViewPanel
 
     QGCFileDialog {
-        id: fileDialog
+        id:             fileDialog
+        folder:         _appSettings.parameterSavePath
+        fileExtension:  _appSettings.parameterFileExtension
+        nameFilters:    [ qsTr("Parameter Files (*.%1)").arg(_appSettings.parameterFileExtension) , qsTr("All Files (*.*)") ]
 
         onAcceptedForSave: {
             controller.saveToFile(file)
@@ -334,7 +330,7 @@ QGCView {
 
         QGCViewDialog {
             function accept() {
-                QGroundControl.multiVehicleManager.activeVehicle.rebootVehicle()
+                _activeVehicle.rebootVehicle()
                 hideDialog()
             }
 

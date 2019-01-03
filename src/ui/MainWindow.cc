@@ -67,7 +67,6 @@ enum DockWidgetTypes {
     MAVLINK_INSPECTOR,
     CUSTOM_COMMAND,
     ONBOARD_FILES,
-    DEPRECATED_WIDGET,
     HIL_CONFIG,
     ANALYZE
 };
@@ -76,7 +75,6 @@ static const char *rgDockWidgetNames[] = {
     "MAVLink Inspector",
     "Custom Command",
     "Onboard Files",
-    "Deprecated Widget",
     "HIL Config",
     "Analyze"
 };
@@ -154,7 +152,7 @@ MainWindow::MainWindow()
 
     // Image provider
     QQuickImageProvider* pImgProvider = dynamic_cast<QQuickImageProvider*>(qgcApp()->toolbox()->imageProvider());
-    _mainQmlWidgetHolder->getEngine()->addImageProvider(QLatin1String("QGCImages"), pImgProvider);
+    _mainQmlWidgetHolder->getEngine()->addImageProvider(QStringLiteral("QGCImages"), pImgProvider);
 
     // Set dock options
     setDockOptions(0);

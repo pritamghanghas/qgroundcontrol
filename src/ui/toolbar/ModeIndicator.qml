@@ -24,7 +24,10 @@ Item {
     anchors.bottom: parent.bottom
     width:          flightModeSelector.width
 
-    property var _activeVehicle: QGroundControl.multiVehicleManager.activeVehicle
+    property var _activeVehicle:    QGroundControl.multiVehicleManager.activeVehicle
+    property var _flightModes:      _activeVehicle ? _activeVehicle.flightModes : [ ]
+
+    on_FlightModesChanged: flightModeSelector.updateFlightModesMenu()
 
     QGCLabel {
         id:                     flightModeSelector
@@ -52,18 +55,14 @@ Item {
                 var flightmodes = _activeVehicle.flightModes
 
                 // Add new items
-                for (var i = 0; i < flightmodes.length; i++) {
-                    var menuItem = flightModeMenuItemComponent.createObject(null, { "text": _activeVehicle.flightModes[i] })
+                for (var i = 0; i < _flightModes.length; i++) {
+                    var menuItem = flightModeMenuItemComponent.createObject(null, { "text": _flightModes[i] })
                     flightModesMenuItems.push(menuItem)
                     flightModesMenu.insertItem(i, menuItem)
                 }
             }
         }
         Component.onCompleted: flightModeSelector.updateFlightModesMenu()
-        Connections {
-            target:                 QGroundControl.multiVehicleManager
-            onActiveVehicleChanged: flightModeSelector.updateFlightModesMenu()
-        }
         MouseArea {
             visible:        _activeVehicle && _activeVehicle.flightModeSetAvailable
             anchors.fill:   parent

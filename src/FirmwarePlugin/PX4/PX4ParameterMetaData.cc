@@ -44,11 +44,13 @@ QVariant PX4ParameterMetaData::_stringToTypedVariant(const QString& string, Fact
     case FactMetaData::valueTypeUint8:
     case FactMetaData::valueTypeUint16:
     case FactMetaData::valueTypeUint32:
+    case FactMetaData::valueTypeUint64:
         convertTo = QVariant::UInt;
         break;
     case FactMetaData::valueTypeInt8:
     case FactMetaData::valueTypeInt16:
     case FactMetaData::valueTypeInt32:
+    case FactMetaData::valueTypeInt64:
         convertTo = QVariant::Int;
         break;
     case FactMetaData::valueTypeFloat:
@@ -330,7 +332,7 @@ void PX4ParameterMetaData::loadParameterFactMetaDataFile(const QString& metaData
                             QString text = xml.readElementText();
                             increment = text.toDouble(&ok);
                             if (ok) {
-                                metaData->setIncrement(increment);
+                                metaData->setRawIncrement(increment);
                             } else {
                                 qCWarning(PX4ParameterMetaDataLog) << "Invalid value for increment, name:" << metaData->name() << " increment:" << text;
                             }

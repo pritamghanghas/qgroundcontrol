@@ -15,7 +15,7 @@ Item {
     visible:    false
 
     property var    qgcView
-    property string folder
+    property string folder              // Due to Qt bug with file url parsing this must be an absolute path
     property var    nameFilters
     property string fileExtension       // Primary file extension to search for
     property string fileExtension2: ""  // Secondary file extension to search for
@@ -75,7 +75,7 @@ Item {
     // the FileDialog fallback mechanism on android 5.9 builds.
     HackFileDialog {
         id:             fullFileDialog
-        folder:         "file://" + _root.folder
+        folder:         "file:///" + _root.folder
         nameFilters:    _root.nameFilters ? _root.nameFilters : []
         title:          _root.title
         selectExisting: _root.selectExisting
@@ -107,7 +107,7 @@ Item {
                     spacing:        ScreenTools.defaultFontPixelHeight / 2
 
                     Repeater {
-                        id:     fileList
+                        id:     fileRepeater
                         model:  controller.getFiles(folder, _rgExtensions)
 
                         FileButton {
@@ -136,7 +136,10 @@ Item {
 
                                 MenuItem {
                                     text:           qsTr("Delete")
-                                    onTriggered:    controller.deleteFile(hamburgerMenu.fileToDelete);
+                                    onTriggered: {
+                                        controller.deleteFile(hamburgerMenu.fileToDelete)
+                                        fileRepeater.model = controller.getFiles(folder, _rgExtensions)
+                                    }
                                 }
                             }
                         }
@@ -144,7 +147,7 @@ Item {
 
                     QGCLabel {
                         text:       qsTr("No files")
-                        visible:    fileList.model.length == 0
+                        visible:    fileRepeater.model.length === 0
                     }
                 }
             }
@@ -217,9 +220,11 @@ Item {
                     }
 
                     Repeater {
-                        model: controller.getFiles(folder, [ fileExtension ])
+                        id:     fileRepeater
+                        model:  controller.getFiles(folder, [ fileExtension ])
 
                         FileButton {
+                            id:             fileButton
                             anchors.left:   parent.left
                             anchors.right:  parent.right
                             text:           modelData
@@ -240,14 +245,14 @@ Item {
 
                                 property string fileToDelete
 
-                                onAboutToHide: {
-                                    fileButton.highlight = false
-                                    hideDialog()
+                                onAboutToHide: fileButton.highlight = false
 
-                                }
                                 MenuItem {
                                     text:           qsTr("Delete")
-                                    onTriggered:    controller.deleteFile(hamburgerMenu.fileToDelete);
+                                    onTriggered: {
+                                        controller.deleteFile(hamburgerMenu.fileToDelete)
+                                        fileRepeater.model = controller.getFiles(folder, [ fileExtension ])
+                                    }
                                 }
                             }
                         }

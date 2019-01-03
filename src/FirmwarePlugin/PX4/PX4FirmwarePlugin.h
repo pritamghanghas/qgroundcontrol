@@ -46,7 +46,6 @@ public:
     void                guidedModeRTL                   (Vehicle* vehicle) override;
     void                guidedModeLand                  (Vehicle* vehicle) override;
     void                guidedModeTakeoff               (Vehicle* vehicle, double takeoffAltRel) override;
-    void                guidedModeOrbit                 (Vehicle* vehicle, const QGeoCoordinate& centerCoord = QGeoCoordinate(), double radius = NAN, double velocity = NAN, double altitude = NAN) override;
     void                guidedModeGotoLocation          (Vehicle* vehicle, const QGeoCoordinate& gotoCoord) override;
     void                guidedModeChangeAltitude        (Vehicle* vehicle, double altitudeRel) override;
     double              minimumTakeoffAltitude          (Vehicle* vehicle) override;
@@ -70,6 +69,8 @@ public:
     QString             autoDisarmParameter             (Vehicle* vehicle) override { Q_UNUSED(vehicle); return QStringLiteral("COM_DISARM_LAND"); }
     QGCCameraManager*   createCameraManager             (Vehicle* vehicle) override;
     QGCCameraControl*   createCameraControl             (const mavlink_camera_information_t* info, Vehicle* vehicle, int compID, QObject* parent = NULL) override;
+    uint32_t            highLatencyCustomModeTo32Bits   (uint16_t hlCustomMode) override;
+    bool                supportsTerrainFrame            (void) const override { return false; }
 
 protected:
     typedef struct {
@@ -100,6 +101,7 @@ protected:
     QString _missionFlightMode;
     QString _rtlFlightMode;
     QString _landingFlightMode;
+    QString _preclandFlightMode;
     QString _rtgsFlightMode;
     QString _followMeFlightMode;
     QString _simpleFlightMode;

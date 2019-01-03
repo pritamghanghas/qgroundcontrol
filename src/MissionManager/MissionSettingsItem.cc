@@ -27,8 +27,8 @@ const char* MissionSettingsItem::_plannedHomePositionAltitudeName = "PlannedHome
 
 QMap<QString, FactMetaData*> MissionSettingsItem::_metaDataMap;
 
-MissionSettingsItem::MissionSettingsItem(Vehicle* vehicle, QObject* parent)
-    : ComplexMissionItem                (vehicle, parent)
+MissionSettingsItem::MissionSettingsItem(Vehicle* vehicle, bool flyView, QObject* parent)
+    : ComplexMissionItem                (vehicle, flyView, parent)
     , _plannedHomePositionAltitudeFact  (0, _plannedHomePositionAltitudeName,   FactMetaData::valueTypeDouble)
     , _plannedHomePositionFromVehicle   (false)
     , _missionEndRTL                    (false)
@@ -57,7 +57,7 @@ MissionSettingsItem::MissionSettingsItem(Vehicle* vehicle, QObject* parent)
 
     connect(this,               &MissionSettingsItem::terrainAltitudeChanged,           this, &MissionSettingsItem::_setHomeAltFromTerrain);
 
-    connect(&_plannedHomePositionAltitudeFact,  &Fact::valueChanged,                    this, &MissionSettingsItem::_updateAltitudeInCoordinate);
+    connect(&_plannedHomePositionAltitudeFact,  &Fact::rawValueChanged,                 this, &MissionSettingsItem::_updateAltitudeInCoordinate);
 
     connect(&_cameraSection,    &CameraSection::dirtyChanged,   this, &MissionSettingsItem::_sectionDirtyChanged);
     connect(&_speedSection,     &SpeedSection::dirtyChanged,    this, &MissionSettingsItem::_sectionDirtyChanged);
@@ -231,7 +231,7 @@ void MissionSettingsItem::setHomePositionFromVehicle(const QGeoCoordinate& coord
 void MissionSettingsItem::setCoordinate(const QGeoCoordinate& coordinate)
 {
     if (_plannedHomePositionCoordinate != coordinate) {
-        // ArduPilot tends to send crap home positions at initial vehicel boot, discard them
+        // ArduPilot tends to send crap home positions at initial vehicle boot, discard them
         if (coordinate.isValid() && (coordinate.latitude() != 0 || coordinate.longitude() != 0)) {
             _plannedHomePositionCoordinate = coordinate;
             emit coordinateChanged(coordinate);
@@ -269,7 +269,6 @@ void MissionSettingsItem::_updateAltitudeInCoordinate(QVariant value)
     double newAltitude = value.toDouble();
 
     if (!qFuzzyCompare(_plannedHomePositionCoordinate.altitude(), newAltitude)) {
-
         _plannedHomePositionCoordinate.setAltitude(newAltitude);
         emit coordinateChanged(_plannedHomePositionCoordinate);
         emit exitCoordinateChanged(_plannedHomePositionCoordinate);
@@ -295,7 +294,12 @@ void MissionSettingsItem::setMissionEndRTL(bool missionEndRTL)
 
 void MissionSettingsItem::_setHomeAltFromTerrain(double terrainAltitude)
 {
-    if (!_plannedHomePositionFromVehicle) {
+    if (!_plannedHomePositionFromVehicle && !qIsNaN(terrainAltitude)) {
         _plannedHomePositionAltitudeFact.setRawValue(terrainAltitude);
     }
+}
+
+QString MissionSettingsItem::abbreviation(void) const
+{
+    return _flyView ? tr("H") : tr("Planned Home");
 }

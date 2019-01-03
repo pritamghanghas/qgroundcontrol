@@ -43,6 +43,16 @@ SetupPage {
 
 //            readonly property string _maxAngleDesText:
 //            readonly property string _angularPIDesText: qsTr("Maximum angular correction sensitivity, higher for wind jolt resistance");
+            property bool _rcFeelAvailable:     controller.parameterExists(-1, "RC_FEEL")
+            property bool _atcInputTCAvailable: controller.parameterExists(-1, "ATC_INPUT_TC")
+            property Fact _rcFeel:              controller.getParameterFact(-1, "RC_FEEL", false)
+            property Fact _atcInputTC:          controller.getParameterFact(-1, "ATC_INPUT_TC", false)
+            property Fact _rateRollP:           controller.getParameterFact(-1, "r.ATC_RAT_RLL_P")
+            property Fact _rateRollI:           controller.getParameterFact(-1, "r.ATC_RAT_RLL_I")
+            property Fact _ratePitchP:          controller.getParameterFact(-1, "r.ATC_RAT_PIT_P")
+            property Fact _ratePitchI:          controller.getParameterFact(-1, "r.ATC_RAT_PIT_I")
+            property Fact _rateClimbP:          controller.getParameterFact(-1, "r.PSC_ACCZ_P")
+            property Fact _rateClimbI:          controller.getParameterFact(-1, "r.PSC_ACCZ_I")
 
             property Fact _ch7Opt:  controller.getParameterFact(-1, "CH7_OPT")
             property Fact _ch8Opt:  controller.getParameterFact(-1, "CH8_OPT")
@@ -72,9 +82,19 @@ SetupPage {
                 // handler which updates your property with the new value, this first value change will trash
                 // your bound values. In order to work around this we don't set the values into the Sliders until
                 // after Qml load is done. We also don't track value changes until Qml load completes.
+//<<<<<<< HEAD
 
                 for (var i=0; i<tuningParams.count; i++) {
                     tuningSliders.itemAt(i).paramSliderValue = controller.getParameterFact(-1, tuningParams.get(i).param).value
+//=======
+//                rollPitch.value = _rateRollP.value
+//                climb.value = _rateClimbP.value
+//                if (_rcFeelAvailable) {
+//                    rcFeel.value = _rcFeel.value
+//                }
+//                if (_atcInputTCAvailable) {
+//                    atcInputTC.value = _atcInputTC.value
+//>>>>>>> upstream/Stable_V3.4
                 }
                 _loadComplete = true
 

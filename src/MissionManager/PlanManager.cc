@@ -22,21 +22,21 @@
 QGC_LOGGING_CATEGORY(PlanManagerLog, "PlanManagerLog")
 
 PlanManager::PlanManager(Vehicle* vehicle, MAV_MISSION_TYPE planType)
-    : _vehicle(vehicle)
-    , _planType(planType)
-    , _dedicatedLink(NULL)
-    , _ackTimeoutTimer(NULL)
-    , _expectedAck(AckNone)
-    , _transactionInProgress(TransactionNone)
-    , _resumeMission(false)
-    , _lastMissionRequest(-1)
-    , _currentMissionIndex(-1)
-    , _lastCurrentIndex(-1)
+    : _vehicle                  (vehicle)
+    , _planType                 (planType)
+    , _dedicatedLink            (NULL)
+    , _ackTimeoutTimer          (NULL)
+    , _expectedAck              (AckNone)
+    , _transactionInProgress    (TransactionNone)
+    , _resumeMission            (false)
+    , _lastMissionRequest       (-1)
+    , _missionItemCountToRead   (-1)
+    , _currentMissionIndex      (-1)
+    , _lastCurrentIndex         (-1)
 {
     _ackTimeoutTimer = new QTimer(this);
     _ackTimeoutTimer->setSingleShot(true);
-    _ackTimeoutTimer->setInterval(_ackTimeoutMilliseconds);
-    
+
     connect(_ackTimeoutTimer, &QTimer::timeout, this, &PlanManager::_ackTimeout);
 }
 
@@ -59,9 +59,8 @@ void PlanManager::_writeMissionItemsWorker(void)
         _itemIndicesToWrite << i;
     }
 
-    _transactionInProgress = TransactionWrite;
     _retryCount = 0;
-    emit inProgressChanged(true);
+    _setTransactionInProgress(TransactionWrite);
     _connectToMavlink();
     _writeMissionCount();
 }
@@ -137,8 +136,7 @@ void PlanManager::loadFromVehicle(void)
     }
 
     _retryCount = 0;
-    _transactionInProgress = TransactionRead;
-    emit inProgressChanged(true);
+    _setTransactionInProgress(TransactionRead);
     _connectToMavlink();
     _requestList();
 }
@@ -244,6 +242,24 @@ void PlanManager::_ackTimeout(void)
 
 void PlanManager::_startAckTimeout(AckType_t ack)
 {
+    switch (ack) {
+    case AckMissionItem:
+        // We are actively trying to get the mission item, so we don't want to wait as long.
+        _ackTimeoutTimer->setInterval(_retryTimeoutMilliseconds);
+        break;
+    case AckNone:
+        // FALLTHROUGH
+    case AckMissionCount:
+        // FALLTHROUGH
+    case AckMissionRequest:
+        // FALLTHROUGH
+    case AckMissionClearAll:
+        // FALLTHROUGH
+    case AckGuidedItem:
+        _ackTimeoutTimer->setInterval(_ackTimeoutMilliseconds);
+        break;
+    }
+
     _expectedAck = ack;
     _ackTimeoutTimer->start();
 }
@@ -317,6 +333,7 @@ void PlanManager::_handleMissionCount(const mavlink_message_t& message)
         for (int i=0; i<missionCount.count; i++) {
             _itemIndicesToRead << i;
         }
+        _missionItemCountToRead = missionCount.count;
         _requestNextMissionItem();
     }
 }
@@ -375,8 +392,8 @@ void PlanManager::_handleMissionItem(const mavlink_message_t& message, bool miss
         mavlink_msg_mission_item_int_decode(&message, &missionItem);
 
         command =       (MAV_CMD)missionItem.command,
-                frame =         (MAV_FRAME)missionItem.frame,
-                param1 =        missionItem.param1;
+        frame =         (MAV_FRAME)missionItem.frame,
+        param1 =        missionItem.param1;
         param2 =        missionItem.param2;
         param3 =        missionItem.param3;
         param4 =        missionItem.param4;
@@ -391,8 +408,8 @@ void PlanManager::_handleMissionItem(const mavlink_message_t& message, bool miss
         mavlink_msg_mission_item_decode(&message, &missionItem);
 
         command =       (MAV_CMD)missionItem.command,
-                frame =         (MAV_FRAME)missionItem.frame,
-                param1 =        missionItem.param1;
+        frame =         (MAV_FRAME)missionItem.frame,
+        param1 =        missionItem.param1;
         param2 =        missionItem.param2;
         param3 =        missionItem.param3;
         param4 =        missionItem.param4;
@@ -460,7 +477,7 @@ void PlanManager::_handleMissionItem(const mavlink_message_t& message, bool miss
         return;
     }
 
-    emit progressPct((double)seq / (double)_missionItems.count());
+    emit progressPct((double)seq / (double)_missionItemCountToRead);
     
     _retryCount = 0;
     if (_itemIndicesToRead.count() == 0) {
@@ -569,6 +586,14 @@ void PlanManager::_handleMissionAck(const mavlink_message_t& message)
         // if there was a previous transaction with a different mission_type, it can happen that we receive
         // a stale message here, for example when the MAV ran into a timeout and sent a message twice
         qCDebug(PlanManagerLog) << QStringLiteral("_handleMissionAck %1 Incorrect mission_type received expected:actual").arg(_planTypeString()) << _planType << missionAck.mission_type;
+        return;
+    }
+
+    if (_vehicle->apmFirmware() && missionAck.type == MAV_MISSION_INVALID_SEQUENCE) {
+        // ArduPilot sends these Acks which can happen just due to noisy links causing duplicated requests being responded to.
+        // As far as I'm concerned this is incorrect protocol implementation but we need to deal with it anyway. So we just
+        // ignore it and if things really go haywire the timeouts will fire to fail the overall transaction.
+        qCDebug(PlanManagerLog) << QStringLiteral("_handleMissionAck ArduPilot sending possibly bogus MAV_MISSION_INVALID_SEQUENCE").arg(_planTypeString()) << _planType;
         return;
     }
 
@@ -693,7 +718,7 @@ QString PlanManager::_ackTypeToString(AckType_t ackType)
 
 QString PlanManager::_lastMissionReqestString(MAV_MISSION_RESULT result)
 {
-    if (_lastMissionRequest != -1 && _lastMissionRequest >= 0 && _lastMissionRequest < _writeMissionItems.count()) {
+    if (_lastMissionRequest >= 0 && _lastMissionRequest < _writeMissionItems.count()) {
         MissionItem* item = _writeMissionItems[_lastMissionRequest];
 
         switch (result) {
@@ -803,12 +828,7 @@ void PlanManager::_finishTransaction(bool success, bool apmGuidedItemWrite)
 
     // First thing we do is clear the transaction. This way inProgesss is off when we signal transaction complete.
     TransactionType_t currentTransactionType = _transactionInProgress;
-    _transactionInProgress = TransactionNone;
-    if (currentTransactionType != TransactionNone) {
-        _transactionInProgress = TransactionNone;
-        qCDebug(PlanManagerLog) << QStringLiteral("inProgressChanged %1").arg(_planTypeString());
-        emit inProgressChanged(false);
-    }
+    _setTransactionInProgress(TransactionNone);
 
     switch (currentTransactionType) {
     case TransactionRead:
@@ -901,9 +921,8 @@ void PlanManager::removeAll(void)
         emit lastCurrentIndexChanged(-1);
     }
 
-    _transactionInProgress = TransactionRemoveAll;
     _retryCount = 0;
-    emit inProgressChanged(true);
+    _setTransactionInProgress(TransactionRemoveAll);
 
     _removeAllWorker();
 }
@@ -949,5 +968,14 @@ QString PlanManager::_planTypeString(void)
     default:
         qWarning() << "Unknown plan type" << _planType;
         return QStringLiteral("T:Unknown");
+    }
+}
+
+void PlanManager::_setTransactionInProgress(TransactionType_t type)
+{
+    if (_transactionInProgress  != type) {
+        qCDebug(PlanManagerLog) << "_setTransactionInProgress" << _planTypeString() << type;
+        _transactionInProgress = type;
+        emit inProgressChanged(inProgress());
     }
 }

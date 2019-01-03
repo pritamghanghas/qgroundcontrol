@@ -42,6 +42,7 @@
 class QGCSingleton;
 class MainWindow;
 class QGCToolbox;
+class QGCFileDownload;
 
 /**
  * @brief The main application and management class.
@@ -69,8 +70,11 @@ public:
     /// @brief Clears the persistent flag to delete all settings the next time QGroundControl is started.
     void clearDeleteAllSettingsNextBoot(void);
 
-    /// @brief Returns truee if unit test are being run
+    /// @brief Returns true if unit tests are being run
     bool runningUnitTests(void) { return _runningUnitTests; }
+
+    /// @brief Returns true if Qt debug output should be logged to a file
+    bool logOutput(void) { return _logOutput; }
 
     /// Used to report a missing Parameter. Warning will be displayed to user. Method may be called
     /// multiple times.
@@ -149,15 +153,20 @@ public:
 
 private slots:
     void _missingParamsDisplay(void);
+    void _currentVersionDownloadFinished(QString remoteFile, QString localFile);
+    void _currentVersionDownloadError(QString errorMsg);
+    bool _parseVersionText(const QString& versionString, int& majorVersion, int& minorVersion, int& buildVersion);
 
 private:
     QObject* _rootQmlObject(void);
+    void _checkForNewVersion(void);
 
 #ifdef __mobile__
     QQmlApplicationEngine* _qmlAppEngine;
 #endif
 
     bool _runningUnitTests; ///< true: running unit tests, false: normal app
+    bool _logOutput;        ///< true: Log Qt debug output to file
 
     static const char*  _darkStyleFile;
     static const char*  _lightStyleFile;
@@ -166,6 +175,10 @@ private:
     QStringList         _missingParams;                                     ///< List of missing facts to be displayed
     bool				_fakeMobile;                                        ///< true: Fake ui into displaying mobile interface
     bool                _settingsUpgraded;                                  ///< true: Settings format has been upgrade to new version
+    int                 _majorVersion;
+    int                 _minorVersion;
+    int                 _buildVersion;
+    QGCFileDownload*    _currentVersionDownload;
 
 #ifdef QT_DEBUG
     bool _testHighDPI;  ///< true: double fonts sizes for simulating high dpi devices

@@ -20,13 +20,12 @@
 
 #include "QGCMAVLink.h"
 #include "QGC.h"
-#include "MavlinkQmlSingleton.h"
 #include "QmlObjectListModel.h"
 #include "Fact.h"
 #include "QGCLoggingCategory.h"
 #include "QmlObjectListModel.h"
 
-class SurveyMissionItem;
+class SurveyComplexItem;
 class SimpleMissionItem;
 class MissionController;
 #ifdef UNITTEST_BUILD
@@ -97,7 +96,6 @@ public:
     void setParam5          (double param5);
     void setParam6          (double param6);
     void setParam7          (double param7);
-    void setCoordinate      (const QGeoCoordinate& coordinate);
     
     void save(QJsonObject& json) const;
     bool load(QTextStream &loadStream);
@@ -152,7 +150,7 @@ private:
     static const char*  _jsonParam3Key;
     static const char*  _jsonParam4Key;
 
-    friend class SurveyMissionItem;
+    friend class SurveyComplexItem;
     friend class SimpleMissionItem;
     friend class MissionController;
 #ifdef UNITTEST_BUILD

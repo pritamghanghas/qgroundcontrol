@@ -92,7 +92,7 @@ signals:
     void orientationCalSidesRotateChanged(void);
     void resetStatusTextArea(void);
     void waitingForCancelChanged(void);
-    void setCompassRotations(void);
+    void magCalComplete(void);
 
 private slots:
     void _handleUASTextMessage(int uasId, int compId, int severity, QString text);
@@ -131,7 +131,9 @@ private:
     bool _gyroCalInProgress;
     bool _magCalInProgress;
     bool _accelCalInProgress;
-    
+    bool _airspeedCalInProgress;
+    bool _levelCalInProgress;
+
     bool _orientationCalDownSideDone;
     bool _orientationCalUpsideDownSideDone;
     bool _orientationCalLeftSideDone;

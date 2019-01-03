@@ -131,18 +131,14 @@ Item {
 
         onResetStatusTextArea: statusLog.text = statusTextAreaDefaultText
 
-        onSetCompassRotations: {
-            if (!_sensorsHaveFixedOrientation && (showCompass0Rot || showCompass1Rot || showCompass2Rot)) {
-                setOrientationsDialogShowBoardOrientation = false
-                showDialog(setOrientationsDialogComponent, qsTr("Set Compass Rotation(s)"), qgcView.showDialogDefaultWidth, StandardButton.Ok)
-            }
+        onMagCalComplete: {
+            setOrientationsDialogShowBoardOrientation = false
+            showDialog(setOrientationsDialogComponent, qsTr("Compass Calibration Complete"), qgcView.showDialogDefaultWidth, StandardButton.Ok)
         }
 
         onWaitingForCancelChanged: {
             if (controller.waitingForCancel) {
-                showMessage(qsTr("Calibration Cancel"), qsTr("Waiting for Vehicle to response to Cancel. This may take a few seconds."), 0)
-            } else {
-                hideDialog()
+                showDialog(waitForCancelDialogComponent, qsTr("Calibration Cancel"), qgcView.showDialogDefaultWidth, 0)
             }
         }
     }
@@ -151,6 +147,24 @@ Item {
         var usingUDP = controller.usingUDPLink()
         if (usingUDP && !_wifiReliableForCalibration) {
             showMessage(qsTr("Sensor Calibration"), qsTr("Performing sensor calibration over a WiFi connection is known to be unreliable. You should disconnect and perform calibration using a direct USB connection instead."), StandardButton.Ok)
+        }
+    }
+
+    Component {
+        id: waitForCancelDialogComponent
+
+        QGCViewMessage {
+            message: qsTr("Waiting for Vehicle to response to Cancel. This may take a few seconds.")
+
+            Connections {
+                target: controller
+
+                onWaitingForCancelChanged: {
+                    if (!controller.waitingForCancel) {
+                        hideDialog()
+                    }
+                }
+            }
         }
     }
 
@@ -239,7 +253,24 @@ Item {
                     QGCLabel {
                         width:      parent.width
                         wrapMode:   Text.WordWrap
+                        text:       _sensorsHaveFixedOrientation ?
+                                        qsTr("Make sure to reboot the vehicle prior to flight.") :
+                                        qsTr("Set your compass orientations below and the make sure to reboot the vehicle prior to flight.")
+                    }
+
+                    QGCButton {
+                        text: qsTr("Reboot Vehicle")
+                        onClicked: {
+                            controller.vehicle.rebootVehicle()
+                            hideDialog()
+                        }
+                    }
+
+                    QGCLabel {
+                        width:      parent.width
+                        wrapMode:   Text.WordWrap
                         text:       boardRotationText
+                        visible:    !_sensorsHaveFixedOrientation
                     }
 
                     Column {
@@ -257,8 +288,10 @@ Item {
                         }
                     }
 
+                    // Compass 0 rotation
                     Column {
-                        // Compass 0 rotation
+                        visible: !_sensorsHaveFixedOrientation
+
                         Component {
                             id: compass0ComponentLabel2
 
@@ -282,8 +315,10 @@ Item {
                         Loader { sourceComponent: showCompass0Rot ? compass0ComponentCombo2 : null }
                     }
 
+                    // Compass 1 rotation
                     Column {
-                        // Compass 1 rotation
+                        visible: !_sensorsHaveFixedOrientation
+
                         Component {
                             id: compass1ComponentLabel2
 
@@ -307,10 +342,11 @@ Item {
                         Loader { sourceComponent: showCompass1Rot ? compass1ComponentCombo2 : null }
                     }
 
+                    // Compass 2 rotation
                     Column {
+                        visible: !_sensorsHaveFixedOrientation
                         spacing: ScreenTools.defaultFontPixelWidth
 
-                        // Compass 2 rotation
                         Component {
                             id: compass2ComponentLabel2
 
@@ -349,11 +385,12 @@ Item {
             spacing:    ScreenTools.defaultFontPixelHeight / 2
 
             IndicatorButton {
+                property bool 	_hasMag: controller.parameterExists(-1, "SYS_HAS_MAG") ? controller.getParameterFact(-1, "SYS_HAS_MAG").value !== 0 : true
                 id:             compassButton
                 width:          _buttonWidth
                 text:           qsTr("Compass")
-                indicatorGreen: cal_mag0_id.value != 0
-                visible:        QGroundControl.corePlugin.options.showSensorCalibrationCompass && showSensorCalibrationCompass
+                indicatorGreen: cal_mag0_id.value !== 0
+                visible:        _hasMag && QGroundControl.corePlugin.options.showSensorCalibrationCompass && showSensorCalibrationCompass
 
                 onClicked: {
                     preCalibrationDialogType = "compass"
@@ -366,7 +403,7 @@ Item {
                 id:             gyroButton
                 width:          _buttonWidth
                 text:           qsTr("Gyroscope")
-                indicatorGreen: cal_gyro0_id.value != 0
+                indicatorGreen: cal_gyro0_id.value !== 0
                 visible:        QGroundControl.corePlugin.options.showSensorCalibrationGyro && showSensorCalibrationGyro
 
                 onClicked: {
@@ -380,7 +417,7 @@ Item {
                 id:             accelButton
                 width:          _buttonWidth
                 text:           qsTr("Accelerometer")
-                indicatorGreen: cal_acc0_id.value != 0
+                indicatorGreen: cal_acc0_id.value !== 0
                 visible:        QGroundControl.corePlugin.options.showSensorCalibrationAccel && showSensorCalibrationAccel
 
                 onClicked: {
@@ -394,8 +431,8 @@ Item {
                 id:             levelButton
                 width:          _buttonWidth
                 text:           qsTr("Level Horizon")
-                indicatorGreen: sens_board_x_off.value != 0 || sens_board_y_off.value != 0 | sens_board_z_off.value != 0
-                enabled:        cal_acc0_id.value != 0 && cal_gyro0_id.value != 0
+                indicatorGreen: sens_board_x_off.value !== 0 || sens_board_y_off.value !== 0 | sens_board_z_off.value !== 0
+                enabled:        cal_acc0_id.value !== 0 && cal_gyro0_id.value !== 0
                 visible:        QGroundControl.corePlugin.options.showSensorCalibrationLevel && showSensorCalibrationLevel
 
                 onClicked: {
@@ -410,11 +447,11 @@ Item {
                 width:          _buttonWidth
                 text:           qsTr("Airspeed")
                 visible:        (controller.vehicle.fixedWing || controller.vehicle.vtol) &&
-                                controller.getParameterFact(-1, "FW_ARSP_MODE").value == false &&
-                                controller.getParameterFact(-1, "CBRK_AIRSPD_CHK").value != 162128 &&
+                                controller.getParameterFact(-1, "FW_ARSP_MODE").value == 0 &&
+                                controller.getParameterFact(-1, "CBRK_AIRSPD_CHK").value !== 162128 &&
                                 QGroundControl.corePlugin.options.showSensorCalibrationAirspeed &&
                                 showSensorCalibrationAirspeed
-                indicatorGreen: sens_dpres_off.value != 0
+                indicatorGreen: sens_dpres_off.value !== 0
 
                 onClicked: {
                     preCalibrationDialogType = "airspeed"

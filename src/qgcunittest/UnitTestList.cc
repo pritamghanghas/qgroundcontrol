@@ -20,7 +20,7 @@
 #include "MessageBoxTest.h"
 #include "MissionItemTest.h"
 #include "SimpleMissionItemTest.h"
-#include "SurveyMissionItemTest.h"
+#include "SurveyComplexItemTest.h"
 #include "MissionControllerTest.h"
 #include "MissionManagerTest.h"
 #include "RadioConfigTest.h"
@@ -40,6 +40,10 @@
 #include "QGCMapPolygonTest.h"
 #include "AudioOutputTest.h"
 #include "StructureScanComplexItemTest.h"
+#include "QGCMapPolylineTest.h"
+#include "CorridorScanComplexItemTest.h"
+#include "TransectStyleComplexItemTest.h"
+#include "CameraCalcTest.h"
 
 UT_REGISTER_TEST(FactSystemTestGeneric)
 UT_REGISTER_TEST(FactSystemTestPX4)
@@ -59,7 +63,7 @@ UT_REGISTER_TEST(ParameterManagerTest)
 UT_REGISTER_TEST(MissionCommandTreeTest)
 UT_REGISTER_TEST(LogDownloadTest)
 UT_REGISTER_TEST(SendMavCommandTest)
-UT_REGISTER_TEST(SurveyMissionItemTest)
+UT_REGISTER_TEST(SurveyComplexItemTest)
 UT_REGISTER_TEST(CameraSectionTest)
 UT_REGISTER_TEST(SpeedSectionTest)
 UT_REGISTER_TEST(PlanMasterControllerTest)
@@ -67,6 +71,10 @@ UT_REGISTER_TEST(MissionSettingsTest)
 UT_REGISTER_TEST(QGCMapPolygonTest)
 UT_REGISTER_TEST(AudioOutputTest)
 UT_REGISTER_TEST(StructureScanComplexItemTest)
+UT_REGISTER_TEST(CorridorScanComplexItemTest)
+UT_REGISTER_TEST(TransectStyleComplexItemTest)
+UT_REGISTER_TEST(QGCMapPolylineTest)
+UT_REGISTER_TEST(CameraCalcTest)
 
 // List of unit test which are currently disabled.
 // If disabling a new test, include reason in comment.
