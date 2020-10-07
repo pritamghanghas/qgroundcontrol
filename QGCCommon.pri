@@ -29,7 +29,7 @@ linux {
         message("Linux R-Pi2 build")
         CONFIG += LinuxBuild
         DEFINES += __STDC_LIMIT_MACROS __rasp_pi2__
-    } else : android-g++ {
+    } else : android-g++ | android-clang {
         CONFIG += AndroidBuild MobileBuild
         DEFINES += __android__
         DEFINES += __STDC_LIMIT_MACROS
@@ -43,7 +43,7 @@ linux {
             message("Android Arm build")
         }
     } else {
-        error("Unsuported Linux toolchain, only GCC 32- or 64-bit is supported")
+        error("Unsuported Linux toolchain, only GCC 32- or 64-bit and androdi clang are supported")
     }
 } else : win32 {
     win32-msvc2010 | win32-msvc2012 | win32-msvc2013 | win32-msvc2015 {
