@@ -205,7 +205,7 @@ QGCView {
         id:             videoWindow
         width:          !_mainIsMap ? _panel.width  : _pipSize
         height:         !_mainIsMap ? _panel.height : _pipSize * (9/16)
-        visible:        false
+        visible:        true
 
         Item {
             id:             videoItem
@@ -289,7 +289,7 @@ QGCView {
             height:         !_mainIsMap ? _panel.height : _pipSize * (9/16)
             anchors.left:   _panel.left
             anchors.bottom: _panel.bottom
-            visible:        QGroundControl.videoManager.hasVideo && (!_mainIsMap || _isPipVisible)
+            visible:        false
 
             onParentChanged: {
                 /* If video comes back from popup
@@ -394,7 +394,8 @@ QGCView {
             anchors.left:       _panel.left
             anchors.bottom:     _panel.bottom
             anchors.margins:    ScreenTools.defaultFontPixelHeight
-            visible:            QGroundControl.videoManager.hasVideo && !QGroundControl.videoManager.fullScreen && _flightVideo.state != "popup"
+//            visible:            QGroundControl.videoManager.hasVideo && !QGroundControl.videoManager.fullScreen && _flightVideo.state != "popup"
+            visible:  true
             isHidden:           !_isPipVisible
             isDark:             isBackgroundDark
             enablePopup:        _mainIsMap

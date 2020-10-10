@@ -49,9 +49,9 @@ Item {
     }
     Rectangle {
         anchors.fill:   parent
-        color:          "black"
-        visible:        _videoReceiver && _videoReceiver.videoSurface
-//        visible:        true // for debbugging if you don't see video control
+        color:          "red"
+//        visible:        _videoReceiver && _videoReceiver.videoSurface
+        visible:        true // for debbugging if you don't see video control
 
 
         QGCVideoBackground {
@@ -61,8 +61,8 @@ Item {
             anchors.centerIn: parent
             receiver:       _videoReceiver
             display:        _videoReceiver && _videoReceiver.videoSurface
-            visible:        _videoReceiver && _videoReceiver.videoRunning
-//            visible:        true // for debbugging if you don't see video control
+//            visible:        _videoReceiver && _videoReceiver.videoRunning
+            visible:        true // for debbugging if you don't see video control
             Connections {
                 target:         _videoReceiver
                 onImageFileChanged: {
