@@ -550,24 +550,16 @@ QGCView {
                                 visible:                QGroundControl.settingsManager.videoSettings.videoSource.visible
                             }
 
-                        }
-                        Row {
-                            spacing:    ScreenTools.defaultFontPixelWidth
-                            visible:    QGroundControl.settingsManager.videoSettings.jitterBuffer.visible
                             QGCLabel {
                                 text:               qsTr("Jitter Buffer (ms)")
-                                width:              _labelWidth
-                                anchors.verticalCenter: parent.verticalCenter
+                                visible:    QGroundControl.settingsManager.videoSettings.jitterBuffer.visible
                             }
                             FactTextField {
-                                width:      _editFieldWidth
+                                Layout.preferredWidth:  _comboFieldWidth
                                 fact:       QGroundControl.settingsManager.videoSettings.jitterBuffer
-                                anchors.verticalCenter: parent.verticalCenter
+                                visible:    QGroundControl.settingsManager.videoSettings.jitterBuffer.visible
                             }
-                        }
-                        Row {
-                            spacing:    ScreenTools.defaultFontPixelWidth
-                            visible:    QGroundControl.settingsManager.videoSettings.udpPort.visible && QGroundControl.videoManager.isGStreamer && videoSource.currentIndex === 1
+
 
                             QGCLabel {
                                 text:       qsTr("UDP Port")
